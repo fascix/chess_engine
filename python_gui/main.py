@@ -1,6 +1,7 @@
 import pygame
 import chess
 import time
+import chess.engine
 from settings import *
 from support import *
 
@@ -417,5 +418,76 @@ def solo_game(timer):
         pygame.display.flip()
 
     pygame.quit()
+
+def chess_engine(timer):
+    global white_timer, black_timer, current_turn_start_time
+    current_turn_start_time = time.time()
+    if timer == 600:
+        white_timer = black_timer = 600
+    elif timer == 300:
+        white_timer = black_timer = 300
+
+    screen = pygame.display.set_mode((WINDOW_SIZE + 300, WINDOW_SIZE))
+    # Initialiser le moteur UCI (à coder encore !)
+    # test avec stockfish : engine = chess.engine.SimpleEngine.popen_uci("/opt/homebrew/bin/stockfish")
+    #engine = chess.engine.SimpleEngine.popen_uci("?")
+    try:
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    handle_click(event, board)
+                    # Après le coup du joueur, si c'est au bot de jouer (noir par défaut à modifier après)
+                    if not board.turn:
+                        result = engine.play(board, chess.engine.Limit(time=1.0))
+                        board.push(result.move)
+
+                elif event.type == pygame.MOUSEMOTION:
+                    handle_drag(event, board)
+
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    handle_drop(event, board)
+                    # Après le coup du joueur, si c'est au bot de jouer (noir par défaut à modifier après)
+                    if not board.turn:
+                        result = engine.play(board, chess.engine.Limit(time=1.0))
+                        board.push(result.move)
+
+            # Mise à jour du timer
+            if current_turn_start_time is not None:
+                elapsed_time = time.time() - current_turn_start_time
+                if board.turn == chess.WHITE:
+                    white_timer -= elapsed_time
+                else:
+                    black_timer -= elapsed_time
+                current_turn_start_time = time.time()
+
+            # Vérification si un joueur a épuisé son temps
+            if white_timer <= 0:
+                print("Temps écoulé ! Les noirs gagnent !")
+                running = False
+            elif black_timer <= 0:
+                print("Temps écoulé ! Les blancs gagnent !")
+                running = False
+
+            draw_board(screen)
+            highlight_selected_piece(screen, selected_piece)
+            draw_pieces(screen, board, images, selected_piece if drag_mode else None)
+            highlight_legal_moves(screen, legal_moves)
+            draw_timer(screen, white_timer, black_timer, pygame.font.Font(None, 48))
+            highlight_en_passant_moves(screen, legal_moves)
+            draw_captured_pieces(screen)
+            if drag_mode and selected_piece:
+                piece = board.piece_at(selected_piece)
+                if piece:
+                    piece_color = 'w' if piece.color == chess.WHITE else 'b'
+                    piece_type = piece.symbol().lower()
+                    dragged_piece = images[piece_color + piece_type]
+                    screen.blit(dragged_piece, dragged_pos)
+            pygame.display.flip()
+    finally:
+        engine.quit()
 
 main_menu()
