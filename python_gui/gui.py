@@ -32,14 +32,14 @@ def draw_engine_status(screen, font):
     """Affiche le statut du moteur quand il réfléchit."""
     from game_logic import engine_thinking, game_paused
     
-    # Effacer d'abord la zone du statut
-    pygame.draw.rect(screen, (0, 0, 0), (WINDOW_SIZE + 60, WINDOW_SIZE//2 - 20, 200, 40))
+    # Effacer d'abord la zone du statut (plus grande pour couvrir les 2 lignes)
+    pygame.draw.rect(screen, (0, 0, 0), (WINDOW_SIZE + 60, WINDOW_SIZE//2 - 30, 200, 80))
     
     if engine_thinking:
         status_text = font.render("L'ordinateur", True, (255, 255, 0))
         status_text2 = font.render("réfléchit...", True, (255, 255, 0))
-        screen.blit(status_text, (WINDOW_SIZE + 60, WINDOW_SIZE//2 - 10))
-        screen.blit(status_text2, (WINDOW_SIZE + 60, WINDOW_SIZE//2 + 10))
+        screen.blit(status_text, (WINDOW_SIZE + 60, WINDOW_SIZE//2 - 15))
+        screen.blit(status_text2, (WINDOW_SIZE + 60, WINDOW_SIZE//2 + 15))
     elif game_paused:
         status_text = font.render("PAUSE", True, (255, 0, 0))
         screen.blit(status_text, (WINDOW_SIZE + 60, WINDOW_SIZE//2))
