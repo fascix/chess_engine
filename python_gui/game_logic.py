@@ -3,10 +3,10 @@ Module contenant toute la logique de jeu d'échecs
 """
 import pygame
 import chess
+import chess.engine
 import time
 import threading
 import queue
-import random
 from settings import *
 
 # Variables globales pour le jeu
@@ -52,20 +52,12 @@ def reset_game():
 def engine_worker(board_copy, result_queue):
     """Worker thread pour calculer le coup du moteur sans bloquer l'interface."""
     try:
-        # Simulation avec stockfish ou autre moteur
-        # engine = chess.engine.SimpleEngine.popen_uci("/opt/homebrew/bin/stockfish")
-        # result = engine.play(board_copy, chess.engine.Limit(time=1.0))
-        # result_queue.put(result.move)
-        # engine.quit()
-        
-        # Pour l'instant, coup aléatoire pour éviter les erreurs
-        legal_moves = list(board_copy.legal_moves)
-        if legal_moves:
-            move = random.choice(legal_moves)
-            time.sleep(1)  # Simule le temps de calcul
-            result_queue.put(move)
-        else:
-            result_queue.put(None)
+        # Le chemin vers le moteur Stockfish peut varier.
+        # Assurez-vous que Stockfish est installé et que le chemin est correct.
+        engine = chess.engine.SimpleEngine.popen_uci("/opt/homebrew/bin/stockfish")
+        result = engine.play(board_copy, chess.engine.Limit(time=1.0))
+        result_queue.put(result.move)
+        engine.quit()
     except Exception as e:
         print(f"Erreur dans le moteur: {e}")
         result_queue.put(None)
@@ -142,8 +134,8 @@ def handle_drop(event, board):
             
             # Vérification de la promotion
             if board.piece_at(move.from_square) and board.piece_at(move.from_square).piece_type == chess.PAWN:
-                if (chess.square_rank(move.to_square) == 7 and board.turn == chess.WHITE) or \
-                        (chess.square_rank(move.to_square) == 0 and board.turn == chess.BLACK):
+                if ((chess.square_rank(move.to_square) == 7 and board.turn == chess.WHITE) or
+                        (chess.square_rank(move.to_square) == 0 and board.turn == chess.BLACK)):
                     from gui import promote_pawn, images
                     promote_pawn(pygame.display.get_surface(), board, move, images)
                     
