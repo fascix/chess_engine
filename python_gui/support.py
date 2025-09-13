@@ -2,6 +2,23 @@ import pygame
 import chess
 from settings import *
 
+def get_display_coords(square, player_is_white=True):
+    """Convertit les coordonnées d'échiquier en coordonnées d'affichage selon l'orientation."""
+    col, row = chess.square_file(square), chess.square_rank(square)
+    if player_is_white:
+        return col * TILE_SIZE, (7 - row) * TILE_SIZE
+    else:
+        return (7 - col) * TILE_SIZE, row * TILE_SIZE
+
+def get_square_from_pos(mouse_x, mouse_y, player_is_white=True):
+    """Convertit les coordonnées de souris en case d'échiquier selon l'orientation."""
+    if player_is_white:
+        col, row = mouse_x // TILE_SIZE, mouse_y // TILE_SIZE
+        return chess.square(col, 7 - row)
+    else:
+        col, row = mouse_x // TILE_SIZE, mouse_y // TILE_SIZE
+        return chess.square(7 - col, row)
+
 
 # Permet de charger les images des différentes pièces blanches et noires
 def load_images():
@@ -24,7 +41,7 @@ def draw_board(screen):
             pygame.draw.rect(screen, color, (col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
 # Permet de dessiner les pièces avec les images chargé plus tôt
-def draw_pieces(screen, board, images, selected_piece=None):
+def draw_pieces(screen, board, images, selected_piece=None, player_is_white=True):
     for square in chess.SQUARES:
         piece = board.piece_at(square)
         if piece:
@@ -36,24 +53,24 @@ def draw_pieces(screen, board, images, selected_piece=None):
             if selected_piece is not None and square == selected_piece:
                 continue
 
-            col, row = chess.square_file(square), chess.square_rank(square)
-            screen.blit(piece_image, (col * TILE_SIZE, (7 - row) * TILE_SIZE))
+            x, y = get_display_coords(square, player_is_white)
+            screen.blit(piece_image, (x, y))
 
 # Permet de mettre en surbrillance les pièces qu'on sélectionne
-def highlight_selected_piece(screen, selected_piece):
+def highlight_selected_piece(screen, selected_piece, player_is_white=True):
     """Met en surbrillance la pièce sélectionnée."""
     if selected_piece is not None:
-        col, row = chess.square_file(selected_piece), chess.square_rank(selected_piece)
-        pygame.draw.rect(screen, (0, 0, 255, 100), (col * TILE_SIZE, (7 - row) * TILE_SIZE, TILE_SIZE, TILE_SIZE), 5)
+        x, y = get_display_coords(selected_piece, player_is_white)
+        pygame.draw.rect(screen, (0, 0, 255, 100), (x, y, TILE_SIZE, TILE_SIZE), 5)
 
 # Permet de mettre en surbrillance les coups légaux par de petit cercle
-def highlight_legal_moves(screen, legal_moves):
+def highlight_legal_moves(screen, legal_moves, player_is_white=True):
     """Met en surbrillance les coups légaux en affichant les cercles en dessous des pièces."""
     overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
     for move in legal_moves:
-        col, row = chess.square_file(move.to_square), chess.square_rank(move.to_square)
+        x, y = get_display_coords(move.to_square, player_is_white)
         pygame.draw.circle(overlay, (0, 255, 0, 180),
-                           (col * TILE_SIZE + TILE_SIZE // 2, (7 - row) * TILE_SIZE + TILE_SIZE // 2), 15)
+                           (x + TILE_SIZE // 2, y + TILE_SIZE // 2), 15)
     screen.blit(overlay, (0, 0))
 
 # Permet de faire la promotion d'un pion
