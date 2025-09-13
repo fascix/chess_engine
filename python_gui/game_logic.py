@@ -51,17 +51,20 @@ def reset_game():
 
 def engine_worker(board_copy, result_queue):
     """Worker thread pour calculer le coup du moteur sans bloquer l'interface."""
+    engine = None
     try:
-        # Le chemin vers le moteur Stockfish peut varier.
-        # Assurez-vous que Stockfish est installé et que le chemin est correct.
         engine = chess.engine.SimpleEngine.popen_uci("/opt/homebrew/bin/stockfish")
         result = engine.play(board_copy, chess.engine.Limit(time=1.0))
         result_queue.put(result.move)
-        engine.quit()
     except Exception as e:
         print(f"Erreur dans le moteur: {e}")
         result_queue.put(None)
-
+    finally:
+        if engine is not None:
+            try:
+                engine.quit()
+            except:
+                pass
 def start_engine_calculation(board):
     """Démarre le calcul du moteur dans un thread séparé."""
     global engine_thinking, engine_move_ready, pending_engine_move
