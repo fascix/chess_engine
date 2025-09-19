@@ -1,5 +1,7 @@
 // board.c
 #include "board.h"
+#include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -7,7 +9,6 @@ void board_init(Board *board) {
   // Initialise position de départ
   memset(board, 0, sizeof(Board));
   // Met tous les champs de Board à zéro avant initialisation
-
 
   // Position initiale des pièces blanches
   board->pieces[WHITE][ROOK] = 0x81ULL;   // a1, h1
@@ -44,4 +45,121 @@ void board_init(Board *board) {
   board->en_passant = -1;
   board->halfmove_clock = 0;
   board->move_number = 1;
+}
+
+bool is_square_occupied(const Board *board, Square square) {
+  return GET_BIT(board->all_pieces, square);
+}
+
+Couleur get_piece_color(const Board *board, Square square) {
+  assert(is_square_occupied(board, square));
+  if (GET_BIT(board->occupied[WHITE], square)) {
+    return WHITE;
+  } else {
+    return BLACK;
+  }
+}
+
+PieceType get_piece_type(const Board *board, Square square) {
+  // 1. Vérification sécurisée
+  if (!is_square_occupied(board, square))
+    return EMPTY;
+
+  // 2. Déterminer couleur (permet de réduire la boucle du test de type à
+  // 6 au lieu de 12)
+  Couleur couleur = get_piece_color(board, square);
+
+  // 3. Boucle sur les types
+  for (PieceType type = PAWN; type <= KING; type++) {
+    if (GET_BIT(board->pieces[couleur][type], square))
+      return type;
+  }
+  return EMPTY; // Impossible mais petite sécurité au cas où
+}
+
+char get_piece_char(const Board *board, Square square) {
+  if (!is_square_occupied(board, square))
+    return '.';
+
+  static const char pieces[] = "PNBRQK"; // Indices = enum values
+  PieceType type = get_piece_type(board, square);
+  Couleur couleur = get_piece_color(board, square);
+
+  char c = pieces[type];
+  return (couleur == BLACK) ? tolower(c) : c;
+}
+
+void print_board(const Board *board) {
+  for (int ligne = 0; ligne < 8; ligne++) {
+    printf("%d  ", 8 - ligne);
+    for (int colonne = 0; colonne < 8; colonne++) {
+      Square square = (7 - ligne) * 8 + colonne;
+      printf("%c ", get_piece_char(board, square));
+    }
+    printf("\n");
+  }
+  printf("   a b c d e f g h\n");
+}
+
+void fen_char_to_piece_info(char c, PieceType *type, Couleur *couleur) {
+  *couleur = isupper(c) ? WHITE : BLACK;
+
+  switch (tolower(c)) {
+  case 'p':
+    *type = PAWN;
+    break;
+  case 'n':
+    *type = KNIGHT;
+    break;
+  case 'b':
+    *type = BISHOP;
+    break;
+  case 'r':
+    *type = ROOK;
+    break;
+  case 'q':
+    *type = QUEEN;
+    break;
+  case 'k':
+    *type = KING;
+    break;
+  default:
+    *type = EMPTY;
+    break; // Sécurité
+  }
+}
+
+void board_from_fen(Board *board, const char *fen) {
+  memset(board, 0, sizeof(Board));
+
+  int square = 56; // Commence par A8
+
+  // Parser la partie pièces jusqu'au premier espace
+  for (const char *p = fen; *p && *p != ' '; p++) {
+    char c = *p;
+
+    if (c == '/') {
+      // Aller au début de la rangée précédente
+      square -= (square % 8) + 8;
+    } else if (isdigit(c)) {
+      // Sauter des cases vides
+      square += (c - '0');
+    } else {
+      // Placer une pièce
+      PieceType type;
+      Couleur couleur;
+      fen_char_to_piece_info(c, &type, &couleur);
+      SET_BIT(board->pieces[couleur][type], square);
+      square++;
+    }
+  }
+
+  // Recalculer les bitboards dérivés
+  for (Couleur couleur = WHITE; couleur <= BLACK; couleur++) {
+    board->occupied[couleur] = 0;
+    for (PieceType type = PAWN; type <= KING; type++) {
+      board->occupied[couleur] |= board->pieces[couleur][type];
+    }
+  }
+  board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
 }
