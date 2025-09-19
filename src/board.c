@@ -140,7 +140,7 @@ void board_from_fen(Board *board, const char *fen) {
 
     if (c == '/') {
       // Aller au début de la rangée précédente
-      square -= (square % 8) + 8;
+      square = ((square - 1) / 8 - 1) * 8;
     } else if (isdigit(c)) {
       // Sauter des cases vides
       square += (c - '0');
