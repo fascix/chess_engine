@@ -162,4 +162,74 @@ void board_from_fen(Board *board, const char *fen) {
     }
   }
   board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
+
+  // Parser le reste du FEN : joueur actuel, droits de roque, en passant, etc.
+  const char *current = fen;
+
+  // Aller au premier espace (fin des pièces)
+  while (*current && *current != ' ')
+    current++;
+  if (!*current)
+    return; // FEN incomplet, arrêter ici
+
+  current++; // Passer l'espace
+
+  // Parser le joueur actuel
+  if (*current == 'w') {
+    board->to_move = WHITE;
+  } else if (*current == 'b') {
+    board->to_move = BLACK;
+  }
+  current++;
+
+  if (!*current || *current != ' ')
+    return;  // FEN incomplet
+  current++; // Passer l'espace
+
+  // Parser les droits de roque
+  board->castle_rights = 0;
+  if (*current != '-') {
+    while (*current && *current != ' ') {
+      switch (*current) {
+      case 'K':
+        board->castle_rights |= WHITE_KINGSIDE;
+        break;
+      case 'Q':
+        board->castle_rights |= WHITE_QUEENSIDE;
+        break;
+      case 'k':
+        board->castle_rights |= BLACK_KINGSIDE;
+        break;
+      case 'q':
+        board->castle_rights |= BLACK_QUEENSIDE;
+        break;
+      }
+      current++;
+    }
+  } else {
+    current++; // Passer le '-'
+  }
+
+  if (!*current || *current != ' ')
+    return;  // FEN incomplet
+  current++; // Passer l'espace
+
+  // Parser en passant (simple pour l'instant)
+  if (*current == '-') {
+    board->en_passant = -1;
+  } else {
+    // Conversion notation algebraique -> Square (ex: "e3" -> E3)
+    if (*current >= 'a' && *current <= 'h' && *(current + 1) >= '1' &&
+        *(current + 1) <= '8') {
+      int file = *current - 'a';
+      int rank = *(current + 1) - '1';
+      board->en_passant = rank * 8 + file;
+    } else {
+      board->en_passant = -1;
+    }
+  }
+
+  // Valeurs par défaut pour les compteurs
+  board->halfmove_clock = 0;
+  board->move_number = 1;
 }

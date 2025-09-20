@@ -36,6 +36,16 @@ Move create_promotion_move(Square from, Square to, PieceType promotion);
 // Génération de coups
 void generate_moves(const Board *board, MoveList *moves);
 void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves);
+void generate_rook_moves(const Board *board, Couleur color, MoveList *moves);
+void generate_bishop_moves(const Board *board, Couleur color, MoveList *moves);
+void generate_knight_moves(const Board *board, Couleur color, MoveList *moves);
+void generate_queen_moves(const Board *board, Couleur color, MoveList *moves);
+void generate_king_moves(const Board *board, Couleur color, MoveList *moves);
+
+// Détection d'échec
+int is_square_attacked(const Board *board, Square square,
+                       Couleur attacking_color);
+int is_in_check(const Board *board, Couleur color);
 
 // Utilitaires d'affichage
 void print_move(const Move *move);

@@ -1,5 +1,6 @@
 #include "movegen.h"
 #include <stdio.h>
+#include <stdlib.h> // Pour abs()
 #include <string.h>
 
 // Initialise une liste de coups vide
@@ -74,15 +75,30 @@ void print_movelist(const MoveList *list) {
   }
 }
 
-// TODO: Implémentation des fonctions de génération
+// Génération complète de tous les coups légaux pour une position
 void generate_moves(const Board *board, MoveList *moves) {
+  // Vérifications de sécurité
+  if (!moves || !board)
+    return;
+
   movelist_init(moves);
 
-  // Pour l'instant, générer seulement les coups de pions
-  generate_pawn_moves(board, board->to_move, moves);
+  // Générer les coups de toutes les pièces selon le joueur actuel
+  Couleur color = board->to_move;
+
+  generate_pawn_moves(board, color, moves);
+  generate_rook_moves(board, color, moves);
+  generate_bishop_moves(board, color, moves);
+  generate_knight_moves(board, color, moves);
+  generate_queen_moves(board, color, moves);
+  generate_king_moves(board, color, moves);
 }
 
 void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
+  // Initialiser la liste des mouvements (éviter les coups corrompus)
+  if (!moves)
+    return;
+
   // Récupérer le bitboard des pions de cette couleur
   Bitboard pawns = board->pieces[color][PAWN];
 
@@ -196,4 +212,489 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
       }
     }
   }
+}
+
+// Fonction générique pour les mouvements de sliding pieces (tours, fous)
+void slide_direction(const Board *board, Square from, int offset, Couleur color,
+                     MoveList *moves) {
+  // Pré-calculer le nombre maximum de pas dans cette direction
+  int max_steps;
+  int rank = from / 8;
+  int file = from % 8;
+
+  switch (offset) {
+  case +8:
+    max_steps = (7 - rank);
+    break; // Nord: cases jusqu'au bord
+  case -8:
+    max_steps = rank;
+    break; // Sud: cases jusqu'au bord
+  case +1:
+    max_steps = (7 - file);
+    break; // Est: cases jusqu'au bord
+  case -1:
+    max_steps = file;
+    break; // Ouest: cases jusqu'au bord
+  // Directions diagonales
+  case +9:
+    max_steps = (7 - rank < 7 - file) ? (7 - rank) : (7 - file);
+    break; // Nord-Est: limité par bord haut OU droit
+  case +7:
+    max_steps = (7 - rank < file) ? (7 - rank) : file;
+    break; // Nord-Ouest: limité par bord haut OU gauche
+  case -7:
+    max_steps = (rank < 7 - file) ? rank : (7 - file);
+    break; // Sud-Est: limité par bord bas OU droit
+  case -9:
+    max_steps = (rank < file) ? rank : file;
+    break; // Sud-Ouest: limité par bord bas OU gauche
+  default:
+    return; // Direction invalide
+  }
+
+  // Parcourir dans cette direction jusqu'à obstacle ou bord
+  for (int step = 1; step <= max_steps; step++) {
+    Square to = from + (step * offset);
+
+    // Vérification de sécurité (ne devrait pas arriver avec le pré-calcul)
+    if (to < A1 || to > H8)
+      break;
+
+    // Case vide → mouvement normal, continuer
+    if (!is_square_occupied(board, to)) {
+      movelist_add(moves, create_move(from, to, MOVE_NORMAL));
+      continue;
+    }
+
+    // Case occupée → vérifier si capture possible
+    if (get_piece_color(board, to) != color) {
+      // Pièce ennemie → capture et s'arrêter
+      Move capture = create_move(from, to, MOVE_CAPTURE);
+      capture.captured_piece = get_piece_type(board, to);
+      movelist_add(moves, capture);
+    }
+    // Dans tous les cas (pièce amie ou ennemie), s'arrêter
+    break;
+  }
+}
+
+// Génération des mouvements de tour
+void generate_rook_moves(const Board *board, Couleur color, MoveList *moves) {
+  // Vérifications de sécurité
+  if (!moves || !board)
+    return;
+
+  // Récupérer le bitboard des tours de cette couleur
+  Bitboard rooks = board->pieces[color][ROOK];
+
+  // Parcourir toutes les tours avec la méthode bitboard
+  while (rooks != 0) {
+    Square from = __builtin_ctzll(rooks); // Trouve la première tour
+    rooks &= (rooks - 1);                 // Efface ce bit
+
+    // Vérifier la validité de la case
+    if (from < A1 || from > H8) {
+      continue;
+    }
+
+    // Générer les mouvements dans les 4 directions orthogonales
+    slide_direction(board, from, +8, color, moves); // Nord
+    slide_direction(board, from, -8, color, moves); // Sud
+    slide_direction(board, from, +1, color, moves); // Est
+    slide_direction(board, from, -1, color, moves); // Ouest
+  }
+}
+
+// Génération des mouvements de fou
+void generate_bishop_moves(const Board *board, Couleur color, MoveList *moves) {
+  // Vérifications de sécurité
+  if (!moves || !board)
+    return;
+
+  // Récupérer le bitboard des fous de cette couleur
+  Bitboard bishops = board->pieces[color][BISHOP];
+
+  // Parcourir tous les fous avec la méthode bitboard
+  while (bishops != 0) {
+    Square from = __builtin_ctzll(bishops); // Trouve le premier fou
+    bishops &= (bishops - 1);               // Efface ce bit
+
+    // Vérifier la validité de la case
+    if (from < A1 || from > H8) {
+      continue;
+    }
+
+    // Générer les mouvements dans les 4 directions diagonales
+    slide_direction(board, from, +9, color, moves); // Nord-Est
+    slide_direction(board, from, +7, color, moves); // Nord-Ouest
+    slide_direction(board, from, -7, color, moves); // Sud-Est
+    slide_direction(board, from, -9, color, moves); // Sud-Ouest
+  }
+}
+
+// Génération des mouvements de cavalier
+void generate_knight_moves(const Board *board, Couleur color, MoveList *moves) {
+  // Vérifications de sécurité
+  if (!moves || !board)
+    return;
+
+  // Offsets des 8 mouvements possibles du cavalier (en forme de L)
+  static const int knight_offsets[8] = {
+      +17, +15, +10, +6, // Mouvements vers le haut
+      -6,  -10, -15, -17 // Mouvements vers le bas
+  };
+
+  // Récupérer le bitboard des cavaliers de cette couleur
+  Bitboard knights = board->pieces[color][KNIGHT];
+
+  // Parcourir tous les cavaliers avec la méthode bitboard
+  while (knights != 0) {
+    Square from = __builtin_ctzll(knights); // Trouve le premier cavalier
+    knights &= (knights - 1);               // Efface ce bit
+
+    // Vérifier la validité de la case
+    if (from < A1 || from > H8) {
+      continue;
+    }
+
+    int from_file = from % 8;
+    int from_rank = from / 8;
+
+    // Tester les 8 mouvements possibles
+    for (int i = 0; i < 8; i++) {
+      Square to = from + knight_offsets[i];
+
+      // Vérification basique : case dans les limites du plateau
+      if (to < A1 || to > H8) {
+        continue;
+      }
+
+      int to_file = to % 8;
+      int to_rank = to / 8;
+
+      // Vérification smart anti-wrap : déplacement colonne/rangée cohérent
+      int file_diff = abs(to_file - from_file);
+      int rank_diff = abs(to_rank - from_rank);
+
+      // Cavalier : soit (1,2) soit (2,1) en déplacement colonne/rangée
+      if (!((file_diff == 1 && rank_diff == 2) ||
+            (file_diff == 2 && rank_diff == 1))) {
+        continue; // Mouvement invalide (wrap-around détecté)
+      }
+
+      // Case vide → mouvement normal
+      if (!is_square_occupied(board, to)) {
+        movelist_add(moves, create_move(from, to, MOVE_NORMAL));
+      }
+      // Case occupée par pièce ennemie → capture
+      else if (get_piece_color(board, to) != color) {
+        Move capture = create_move(from, to, MOVE_CAPTURE);
+        capture.captured_piece = get_piece_type(board, to);
+        movelist_add(moves, capture);
+      }
+      // Case occupée par pièce amie → ignorer
+    }
+  }
+}
+
+// Génération des mouvements de dame (combinaison tour + fou)
+void generate_queen_moves(const Board *board, Couleur color, MoveList *moves) {
+  // Vérifications de sécurité
+  if (!moves || !board)
+    return;
+
+  // Récupérer le bitboard des dames de cette couleur
+  Bitboard queens = board->pieces[color][QUEEN];
+
+  // Parcourir toutes les dames avec la méthode bitboard
+  while (queens != 0) {
+    Square from = __builtin_ctzll(queens); // Trouve la première dame
+    queens &= (queens - 1);                // Efface ce bit
+
+    // Vérifier la validité de la case
+    if (from < A1 || from > H8) {
+      continue;
+    }
+
+    // Générer les mouvements dans les 8 directions (tour + fou)
+    // Directions orthogonales (tour)
+    slide_direction(board, from, +8, color, moves); // Nord
+    slide_direction(board, from, -8, color, moves); // Sud
+    slide_direction(board, from, +1, color, moves); // Est
+    slide_direction(board, from, -1, color, moves); // Ouest
+
+    // Directions diagonales (fou)
+    slide_direction(board, from, +9, color, moves); // Nord-Est
+    slide_direction(board, from, +7, color, moves); // Nord-Ouest
+    slide_direction(board, from, -7, color, moves); // Sud-Est
+    slide_direction(board, from, -9, color, moves); // Sud-Ouest
+  }
+}
+
+// Génération des mouvements de roi (mouvements de base uniquement)
+void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
+  // Vérifications de sécurité
+  if (!moves || !board)
+    return;
+
+  // Offsets des 8 mouvements possibles du roi (1 case dans chaque direction)
+  static const int king_offsets[8] = {
+      +8, // Nord
+      -8, // Sud
+      +1, // Est
+      -1, // Ouest
+      +9, // Nord-Est
+      +7, // Nord-Ouest
+      -7, // Sud-Est
+      -9  // Sud-Ouest
+  };
+
+  // Récupérer le bitboard du roi de cette couleur
+  Bitboard kings = board->pieces[color][KING];
+
+  // Parcourir le roi (normalement un seul)
+  while (kings != 0) {
+    Square from = __builtin_ctzll(kings); // Trouve le roi
+    kings &= (kings - 1);                 // Efface ce bit
+
+    // Vérifier la validité de la case
+    if (from < A1 || from > H8) {
+      continue;
+    }
+
+    int from_file = from % 8;
+    int from_rank = from / 8;
+
+    // Tester les 8 mouvements possibles
+    for (int i = 0; i < 8; i++) {
+      Square to = from + king_offsets[i];
+
+      // Vérification basique : case dans les limites du plateau
+      if (to < A1 || to > H8) {
+        continue;
+      }
+
+      int to_file = to % 8;
+      int to_rank = to / 8;
+
+      // Vérification anti-wrap : déplacement max 1 case en colonne/rangée
+      int file_diff = abs(to_file - from_file);
+      int rank_diff = abs(to_rank - from_rank);
+
+      if (file_diff > 1 || rank_diff > 1) {
+        continue; // Mouvement invalide (wrap-around détecté)
+      }
+
+      // Case vide → mouvement normal
+      if (!is_square_occupied(board, to)) {
+        movelist_add(moves, create_move(from, to, MOVE_NORMAL));
+      }
+      // Case occupée par pièce ennemie → capture
+      else if (get_piece_color(board, to) != color) {
+        Move capture = create_move(from, to, MOVE_CAPTURE);
+        capture.captured_piece = get_piece_type(board, to);
+        movelist_add(moves, capture);
+      }
+      // Case occupée par pièce amie → ignorer
+    }
+  }
+
+  // Ajouter les roques si conditions remplies
+  if (!is_in_check(board, color)) { // Le roi ne doit pas être en échec
+
+    // PETIT ROQUE (roi vers g1/g8, tour vers f1/f8)
+    if ((color == WHITE && (board->castle_rights & WHITE_KINGSIDE)) ||
+        (color == BLACK && (board->castle_rights & BLACK_KINGSIDE))) {
+
+      Square king_pos = __builtin_ctzll(board->pieces[color][KING]);
+      Square rook_pos = (color == WHITE) ? H1 : H8;
+      Square king_dest = (color == WHITE) ? G1 : G8;
+      Square rook_dest = (color == WHITE) ? F1 : F8;
+
+      // Vérifier que les cases entre roi et tour sont vides
+      int squares_clear = 1;
+      for (Square sq = king_pos + 1; sq < rook_pos; sq++) {
+        if (is_square_occupied(board, sq)) {
+          squares_clear = 0;
+          break;
+        }
+      }
+
+      // Vérifier que les cases de passage du roi ne sont pas attaquées
+      Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+      if (squares_clear &&
+          !is_square_attacked(board, king_pos + 1, opponent) && // case f1/f8
+          !is_square_attacked(board, king_dest, opponent)) {    // case g1/g8
+        movelist_add(moves, create_move(king_pos, king_dest, MOVE_CASTLE));
+      }
+    }
+
+    // GRAND ROQUE (roi vers c1/c8, tour vers d1/d8)
+    if ((color == WHITE && (board->castle_rights & WHITE_QUEENSIDE)) ||
+        (color == BLACK && (board->castle_rights & BLACK_QUEENSIDE))) {
+
+      Square king_pos = __builtin_ctzll(board->pieces[color][KING]);
+      Square rook_pos = (color == WHITE) ? A1 : A8;
+      Square king_dest = (color == WHITE) ? C1 : C8;
+      Square rook_dest = (color == WHITE) ? D1 : D8;
+
+      // Vérifier que les cases entre roi et tour sont vides
+      int squares_clear = 1;
+      for (Square sq = rook_pos + 1; sq < king_pos; sq++) {
+        if (is_square_occupied(board, sq)) {
+          squares_clear = 0;
+          break;
+        }
+      }
+
+      // Vérifier que les cases de passage du roi ne sont pas attaquées
+      Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+      if (squares_clear &&
+          !is_square_attacked(board, king_pos - 1, opponent) && // case d1/d8
+          !is_square_attacked(board, king_dest, opponent)) {    // case c1/c8
+        movelist_add(moves, create_move(king_pos, king_dest, MOVE_CASTLE));
+      }
+    }
+  }
+}
+
+// Vérifie si une case est attaquée par la couleur adverse
+int is_square_attacked(const Board *board, Square square,
+                       Couleur attacking_color) {
+  if (!board || square < A1 || square > H8) {
+    return 0; // Case invalide
+  }
+
+  // Vérifier les attaques de pions
+  int pawn_direction = (attacking_color == WHITE) ? 8 : -8;
+  int left_attack = square - pawn_direction - 1;
+  int right_attack = square - pawn_direction + 1;
+
+  // Pion attaque depuis la gauche
+  if (left_attack >= A1 && left_attack <= H8 &&
+      (square % 8) != 0) { // Éviter wrap A↔H
+    if (is_square_occupied(board, left_attack) &&
+        get_piece_color(board, left_attack) == attacking_color &&
+        get_piece_type(board, left_attack) == PAWN) {
+      return 1;
+    }
+  }
+
+  // Pion attaque depuis la droite
+  if (right_attack >= A1 && right_attack <= H8 &&
+      (square % 8) != 7) { // Éviter wrap H↔A
+    if (is_square_occupied(board, right_attack) &&
+        get_piece_color(board, right_attack) == attacking_color &&
+        get_piece_type(board, right_attack) == PAWN) {
+      return 1;
+    }
+  }
+
+  // Vérifier les attaques de cavalier
+  static const int knight_offsets[8] = {+17, +15, +10, +6, -6, -10, -15, -17};
+
+  for (int i = 0; i < 8; i++) {
+    Square from = square + knight_offsets[i];
+    if (from >= A1 && from <= H8) {
+      int file_diff = abs((from % 8) - (square % 8));
+      int rank_diff = abs((from / 8) - (square / 8));
+
+      // Vérifier mouvement en L valide
+      if ((file_diff == 1 && rank_diff == 2) ||
+          (file_diff == 2 && rank_diff == 1)) {
+        if (is_square_occupied(board, from) &&
+            get_piece_color(board, from) == attacking_color &&
+            get_piece_type(board, from) == KNIGHT) {
+          return 1;
+        }
+      }
+    }
+  }
+
+  // Vérifier les attaques de tour/dame (orthogonales)
+  static const int rook_directions[4] = {+8, -8, +1, -1};
+  for (int dir = 0; dir < 4; dir++) {
+    for (Square from = square + rook_directions[dir]; from >= A1 && from <= H8;
+         from += rook_directions[dir]) {
+      // Vérifier débordement colonne pour Est/Ouest
+      if (rook_directions[dir] == +1 || rook_directions[dir] == -1) {
+        int prev_file = (from - rook_directions[dir]) % 8;
+        int curr_file = from % 8;
+        if (abs(curr_file - prev_file) != 1)
+          break; // Débordement détecté
+      }
+
+      if (is_square_occupied(board, from)) {
+        if (get_piece_color(board, from) == attacking_color) {
+          PieceType piece = get_piece_type(board, from);
+          if (piece == ROOK || piece == QUEEN) {
+            return 1;
+          }
+        }
+        break; // Obstacle rencontré
+      }
+    }
+  }
+
+  // Vérifier les attaques de fou/dame (diagonales)
+  static const int bishop_directions[4] = {+9, +7, -7, -9};
+  for (int dir = 0; dir < 4; dir++) {
+    for (Square from = square + bishop_directions[dir];
+         from >= A1 && from <= H8; from += bishop_directions[dir]) {
+      // Vérifier débordement pour diagonales
+      int prev_file = (from - bishop_directions[dir]) % 8;
+      int curr_file = from % 8;
+      int file_diff = abs(curr_file - prev_file);
+      if (file_diff != 1)
+        break; // Débordement détecté
+
+      if (is_square_occupied(board, from)) {
+        if (get_piece_color(board, from) == attacking_color) {
+          PieceType piece = get_piece_type(board, from);
+          if (piece == BISHOP || piece == QUEEN) {
+            return 1;
+          }
+        }
+        break; // Obstacle rencontré
+      }
+    }
+  }
+
+  // Vérifier les attaques de roi (1 case dans toutes directions)
+  static const int king_directions[8] = {+8, -8, +1, -1, +9, +7, -7, -9};
+  for (int dir = 0; dir < 8; dir++) {
+    Square from = square + king_directions[dir];
+    if (from >= A1 && from <= H8) {
+      int file_diff = abs((from % 8) - (square % 8));
+      int rank_diff = abs((from / 8) - (square / 8));
+
+      // Vérifier déplacement max 1 case
+      if (file_diff <= 1 && rank_diff <= 1) {
+        if (is_square_occupied(board, from) &&
+            get_piece_color(board, from) == attacking_color &&
+            get_piece_type(board, from) == KING) {
+          return 1;
+        }
+      }
+    }
+  }
+
+  return 0; // Aucune attaque détectée
+}
+
+// Vérifie si le roi de la couleur donnée est en échec
+int is_in_check(const Board *board, Couleur color) {
+  if (!board)
+    return 0;
+
+  // Trouver le roi
+  Bitboard kings = board->pieces[color][KING];
+  if (kings == 0)
+    return 0; // Pas de roi (situation anormale)
+
+  Square king_square = __builtin_ctzll(kings);
+
+  // Vérifier si le roi est attaqué par la couleur adverse
+  Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+  return is_square_attacked(board, king_square, opponent);
 }

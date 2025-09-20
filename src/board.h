@@ -81,6 +81,12 @@ typedef enum {
   H8
 } Square;
 
+// Constantes pour les droits de roque (bitfield)
+#define WHITE_KINGSIDE 0x01  // 0001
+#define WHITE_QUEENSIDE 0x02 // 0010
+#define BLACK_KINGSIDE 0x04  // 0100
+#define BLACK_QUEENSIDE 0x08 // 1000
+
 typedef struct {
   // Bitboard par pièce et par couleur
   Bitboard pieces[2][6];
