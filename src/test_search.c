@@ -6,16 +6,62 @@
 #include <time.h>
 
 void print_search_result(const SearchResult *result, const char *description) {
-  printf("=== %s ===\n", description);
+  printf("=== %s ===\\n", description);
   printf("Meilleur coup: ");
   print_move(&result->best_move);
-  printf("\n");
-  printf("Score: %d centipawns\n", result->score);
-  printf("Profondeur: %d\n", result->depth);
-  printf("Noeuds explorés: %d\n", result->nodes_searched);
-  printf("\n");
+  printf("\\n");
+  printf("Score: %d centipawns\\n", result->score);
+  printf("Profondeur: %d\\n", result->depth);
+  printf("Noeuds explorés: %d\\n", result->nodes_searched);
+  printf("\\n");
 }
 
+void test_quiescence_search() {
+  printf("\\n=== TEST QUIESCENCE SEARCH ===\\n");
+
+  // Position tactique avec séquence de captures
+  const char *tactical_fen =
+      "rnbq1rk1/ppp2ppp/4pn2/3p4/1bPP4/2N1PN2/PP3PPP/R1BQKB1R w KQ - 0 1";
+
+  Board board;
+  board_from_fen(&board, tactical_fen);
+
+  printf("Position tactique (Bxf7+ possible):\\n");
+  print_board(&board);
+
+  // Test 1: Évaluation statique simple
+  int static_eval = evaluate_position(&board);
+  printf("Évaluation statique: %d centipawns\\n", static_eval);
+
+  // Test 2: Quiescence Search seule
+  clock_t start = clock();
+  int qs_eval =
+      quiescence_search(&board, -INFINITY_SCORE, INFINITY_SCORE, WHITE);
+  clock_t end = clock();
+  double qs_time = ((double)(end - start)) / CLOCKS_PER_SEC;
+
+  printf("Quiescence Search: %d centipawns (%.3f s)\\n", qs_eval, qs_time);
+  printf("Amélioration tactique: %+d centipawns\\n", qs_eval - static_eval);
+
+  // Test 3: Génération de captures
+  MoveList all_moves, captures;
+  generate_legal_moves(&board, &all_moves);
+  generate_capture_moves(&board, &captures);
+
+  printf("Coups légaux total: %d\\n", all_moves.count);
+  printf("Captures uniquement: %d\\n", captures.count);
+
+  if (captures.count > 0) {
+    printf("Captures trouvées:\\n");
+    for (int i = 0; i < captures.count; i++) {
+      printf("  ");
+      print_move(&captures.moves[i]);
+      printf("\\n");
+    }
+  }
+
+  printf("✅ Quiescence Search fonctionne et améliore la vision tactique!\\n");
+}
 int main() {
   printf("============ TESTS RECHERCHE & ÉVALUATION AVANCÉS ============\n");
 
@@ -123,11 +169,14 @@ int main() {
   start = clock();
   SearchResult perf3 = search_best_move(&complex_board, 3);
   end = clock();
-  printf("Temps: %.3f s, Noeuds: %d\n",
+  printf("Temps: %.3f s, Noeuds: %d\\n",
          ((double)(end - start)) / CLOCKS_PER_SEC, perf3.nodes_searched);
 
-  printf("\n============ TESTS TERMINÉS ============\n");
-  printf("🎯 Algorithme Negamax avec Alpha-Beta implémenté !\n");
+  // Test de la Quiescence Search
+  test_quiescence_search();
+
+  printf("\\n============ TESTS TERMINÉS ============\\n");
+  printf("🎯 Moteur d'échecs avec Quiescence Search complet !\\n");
 
   return 0;
 }

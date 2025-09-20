@@ -2,26 +2,50 @@ CC = clang
 CFLAGS = -Wall -Wextra -std=c99 -O2
 SRC_DIR = src
 TARGET = chess_engine
-TEST_TARGET = test_compile
 
-# Fichiers sources
-SRCS = $(SRC_DIR)/board.c $(SRC_DIR)/main.c
-TEST_SRCS = $(SRC_DIR)/board.c $(SRC_DIR)/test_compile.c
+# Fichiers sources du moteur
+CORE_SRCS = $(SRC_DIR)/board.c $(SRC_DIR)/movegen.c $(SRC_DIR)/evaluation.c $(SRC_DIR)/search.c $(SRC_DIR)/utils.c
+MAIN_SRCS = $(CORE_SRCS) $(SRC_DIR)/main.c
+UCI_SRCS = $(CORE_SRCS) $(SRC_DIR)/uci.c
+
+# Fichiers de test
+TEST_BOARD_SRCS = $(SRC_DIR)/board.c $(SRC_DIR)/test_compile.c
+TEST_MOVEGEN_SRCS = $(CORE_SRCS) $(SRC_DIR)/test_movegen.c
+TEST_SEARCH_SRCS = $(CORE_SRCS) $(SRC_DIR)/test_search.c
 
 # Règle par défaut
 all: $(TARGET)
 
-# Compilation du projet principal
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS)
+# Compilation du moteur principal
+$(TARGET): $(MAIN_SRCS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(MAIN_SRCS)
 
-# Test de compilation
-test: $(TEST_SRCS)
-	$(CC) $(CFLAGS) -o $(TEST_TARGET) $(TEST_SRCS)
-	./$(TEST_TARGET)
+# UCI interface
+uci: $(UCI_SRCS)
+	$(CC) $(CFLAGS) -o chess_uci $(UCI_SRCS)
+
+# Tests individuels
+test_board: $(TEST_BOARD_SRCS)
+	$(CC) $(CFLAGS) -o test_board $(TEST_BOARD_SRCS)
+	./test_board
+
+test_movegen: $(TEST_MOVEGEN_SRCS)
+	$(CC) $(CFLAGS) -o test_movegen $(TEST_MOVEGEN_SRCS)
+	./test_movegen
+
+test_search: $(TEST_SEARCH_SRCS)
+	$(CC) $(CFLAGS) -o test_search $(TEST_SEARCH_SRCS)
+	./test_search
+
+# Exécuter tous les tests
+test_all: test_board test_movegen test_search
+	@echo "✅ Tous les tests passés avec succès !"
+
+# Test de compilation simple (legacy)
+test: test_board
 
 # Nettoyage
 clean:
-	rm -f $(TARGET) $(TEST_TARGET)
+	rm -f $(TARGET) chess_uci test_board test_movegen test_search
 
-.PHONY: all test clean
+.PHONY: all uci test_board test_movegen test_search test_all test clean
