@@ -212,6 +212,52 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
       }
     }
   }
+
+  // 4. EN PASSANT
+  if (board->en_passant != -1) {
+    // Vérifier si des pions peuvent capturer en passant
+    Square ep_square = board->en_passant;
+    int ep_file = ep_square % 8;
+    int ep_rank = ep_square / 8;
+
+    // La prise se fait sur la case en_passant, le pion adverse est sur la
+    // rangée du pion qui bouge
+    Square target_pawn_square;
+    if (color == WHITE) {
+      target_pawn_square =
+          ep_square - 8; // Pion noir sur rangée 5, capture sur rangée 6
+    } else {
+      target_pawn_square =
+          ep_square + 8; // Pion blanc sur rangée 4, capture sur rangée 3
+    }
+
+    // Chercher les pions qui peuvent capturer (à gauche et à droite du pion
+    // cible)
+    Square left_attacker = target_pawn_square - 1;
+    Square right_attacker = target_pawn_square + 1;
+
+    // Attaquant depuis la gauche
+    if (ep_file > 0 && left_attacker >= A1 && left_attacker <= H8) {
+      if (is_square_occupied(board, left_attacker) &&
+          get_piece_color(board, left_attacker) == color &&
+          get_piece_type(board, left_attacker) == PAWN) {
+        Move ep_move = create_move(left_attacker, ep_square, MOVE_EN_PASSANT);
+        ep_move.captured_piece = PAWN;
+        movelist_add(moves, ep_move);
+      }
+    }
+
+    // Attaquant depuis la droite
+    if (ep_file < 7 && right_attacker >= A1 && right_attacker <= H8) {
+      if (is_square_occupied(board, right_attacker) &&
+          get_piece_color(board, right_attacker) == color &&
+          get_piece_type(board, right_attacker) == PAWN) {
+        Move ep_move = create_move(right_attacker, ep_square, MOVE_EN_PASSANT);
+        ep_move.captured_piece = PAWN;
+        movelist_add(moves, ep_move);
+      }
+    }
+  }
 }
 
 // Fonction générique pour les mouvements de sliding pieces (tours, fous)
@@ -596,8 +642,8 @@ int is_square_attacked(const Board *board, Square square,
   for (int i = 0; i < 8; i++) {
     Square from = square + knight_offsets[i];
     if (from >= A1 && from <= H8) {
-      int file_diff = abs((from % 8) - (square % 8));
-      int rank_diff = abs((from / 8) - (square / 8));
+      int file_diff = ((from % 8) - (square % 8));
+      int rank_diff = ((from / 8) - (square / 8));
 
       // Vérifier mouvement en L valide
       if ((file_diff == 1 && rank_diff == 2) ||
@@ -665,8 +711,8 @@ int is_square_attacked(const Board *board, Square square,
   for (int dir = 0; dir < 8; dir++) {
     Square from = square + king_directions[dir];
     if (from >= A1 && from <= H8) {
-      int file_diff = abs((from % 8) - (square % 8));
-      int rank_diff = abs((from / 8) - (square / 8));
+      int file_diff = ((from % 8) - (square % 8));
+      int rank_diff = ((from / 8) - (square / 8));
 
       // Vérifier déplacement max 1 case
       if (file_diff <= 1 && rank_diff <= 1) {
@@ -697,4 +743,149 @@ int is_in_check(const Board *board, Couleur color) {
   // Vérifier si le roi est attaqué par la couleur adverse
   Couleur opponent = (color == WHITE) ? BLACK : WHITE;
   return is_square_attacked(board, king_square, opponent);
+}
+
+// Effectue temporairement un mouvement pour tester sa légalité
+void make_move_temp(Board *board, const Move *move, Board *backup) {
+  // Sauvegarder l'état actuel
+  *backup = *board;
+
+  // Effacer la pièce de la case de départ
+  PieceType piece_type = get_piece_type(board, move->from);
+  Couleur piece_color = get_piece_color(board, move->from);
+
+  board->pieces[piece_color][piece_type] &= ~(1ULL << move->from);
+  board->occupied[piece_color] &= ~(1ULL << move->from);
+
+  // Gérer la capture
+  if (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT) {
+    if (move->type == MOVE_EN_PASSANT) {
+      // En passant : retirer le pion capturé
+      Square captured_square =
+          (piece_color == WHITE) ? move->to - 8 : move->to + 8;
+      Couleur opponent = (piece_color == WHITE) ? BLACK : WHITE;
+      board->pieces[opponent][PAWN] &= ~(1ULL << captured_square);
+      board->occupied[opponent] &= ~(1ULL << captured_square);
+    } else {
+      // Capture normale : retirer la pièce capturée
+      Couleur opponent = (piece_color == WHITE) ? BLACK : WHITE;
+      board->pieces[opponent][move->captured_piece] &= ~(1ULL << move->to);
+      board->occupied[opponent] &= ~(1ULL << move->to);
+    }
+  }
+
+  // Placer la pièce sur la case d'arrivée
+  if (move->type == MOVE_PROMOTION) {
+    board->pieces[piece_color][move->promotion] |= (1ULL << move->to);
+  } else {
+    board->pieces[piece_color][piece_type] |= (1ULL << move->to);
+  }
+  board->occupied[piece_color] |= (1ULL << move->to);
+
+  // Gérer le roque
+  if (move->type == MOVE_CASTLE) {
+    Square rook_from, rook_to;
+    if (move->to > move->from) { // Petit roque
+      rook_from = (piece_color == WHITE) ? H1 : H8;
+      rook_to = (piece_color == WHITE) ? F1 : F8;
+    } else { // Grand roque
+      rook_from = (piece_color == WHITE) ? A1 : A8;
+      rook_to = (piece_color == WHITE) ? D1 : D8;
+    }
+
+    // Déplacer la tour
+    board->pieces[piece_color][ROOK] &= ~(1ULL << rook_from);
+    board->pieces[piece_color][ROOK] |= (1ULL << rook_to);
+    board->occupied[piece_color] &= ~(1ULL << rook_from);
+    board->occupied[piece_color] |= (1ULL << rook_to);
+  }
+
+  // Recalculer all_pieces
+  board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
+}
+
+// Restaure l'état du board
+void unmake_move_temp(Board *board, const Board *backup) { *board = *backup; }
+
+// Vérifie si un mouvement est légal (ne met pas le roi en échec)
+int is_move_legal(const Board *board, const Move *move) {
+  Board temp_board, backup;
+  temp_board = *board;
+
+  make_move_temp(&temp_board, move, &backup);
+
+  // Vérifier si le roi est en échec après le mouvement
+  Couleur moving_color = get_piece_color(board, move->from);
+  int legal = !is_in_check(&temp_board, moving_color);
+
+  return legal;
+}
+
+// Filtre les mouvements illégaux d'une liste
+void filter_legal_moves(const Board *board, MoveList *moves) {
+  MoveList legal_moves;
+  movelist_init(&legal_moves);
+
+  for (int i = 0; i < moves->count; i++) {
+    if (is_move_legal(board, &moves->moves[i])) {
+      movelist_add(&legal_moves, moves->moves[i]);
+    }
+  }
+
+  *moves = legal_moves;
+}
+
+// Génération de mouvements légaux uniquement
+void generate_legal_moves(const Board *board, MoveList *moves) {
+  generate_moves(board, moves);
+  filter_legal_moves(board, moves);
+}
+
+// Détecte si la position est pat (aucun mouvement légal, roi pas en échec)
+int is_stalemate(const Board *board) {
+  if (is_in_check(board, board->to_move)) {
+    return 0; // Roi en échec = pas pat
+  }
+
+  MoveList moves;
+  generate_legal_moves(board, &moves);
+  return (moves.count == 0); // Aucun mouvement légal = pat
+}
+
+// Détecte si la position est mat (aucun mouvement légal, roi en échec)
+int is_checkmate(const Board *board) {
+  if (!is_in_check(board, board->to_move)) {
+    return 0; // Roi pas en échec = pas mat
+  }
+
+  MoveList moves;
+  generate_legal_moves(board, &moves);
+  return (moves.count == 0); // Aucun mouvement légal + échec = mat
+}
+
+// Vérifie la règle des 50 coups (50 demi-coups sans pion bougé ni capture)
+int is_fifty_move_rule(const Board *board) {
+  return (board->halfmove_clock >= 100); // 100 demi-coups = 50 coups complets
+}
+
+// Détecte si la partie est terminée
+
+GameResult get_game_result(const Board *board) {
+  // Vérifier règle des 50 coups
+  if (is_fifty_move_rule(board)) {
+    return GAME_FIFTY_MOVE_RULE;
+  }
+
+  // Vérifier mat
+  if (is_checkmate(board)) {
+    return (board->to_move == WHITE) ? GAME_CHECKMATE_WHITE
+                                     : GAME_CHECKMATE_BLACK;
+  }
+
+  // Vérifier pat
+  if (is_stalemate(board)) {
+    return GAME_STALEMATE;
+  }
+
+  return GAME_ONGOING;
 }

@@ -47,6 +47,25 @@ int is_square_attacked(const Board *board, Square square,
                        Couleur attacking_color);
 int is_in_check(const Board *board, Couleur color);
 
+// Mouvements légaux et fin de partie
+void generate_legal_moves(const Board *board, MoveList *moves);
+int is_move_legal(const Board *board, const Move *move);
+void filter_legal_moves(const Board *board, MoveList *moves);
+int is_stalemate(const Board *board);
+int is_checkmate(const Board *board);
+int is_fifty_move_rule(const Board *board);
+
+// Résultat de partie
+typedef enum {
+  GAME_ONGOING,
+  GAME_CHECKMATE_WHITE,
+  GAME_CHECKMATE_BLACK,
+  GAME_STALEMATE,
+  GAME_FIFTY_MOVE_RULE
+} GameResult;
+
+GameResult get_game_result(const Board *board);
+
 // Utilitaires d'affichage
 void print_move(const Move *move);
 void print_movelist(const MoveList *list);

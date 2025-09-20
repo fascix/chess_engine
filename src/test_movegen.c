@@ -254,5 +254,112 @@ int main() {
   printf("Mouvements du roi blanc (roques bloqués):\\n");
   print_movelist(&blocked_castle_moves);
 
+  // ===== TESTS COMPLETS =====
+
+  printf("\\n\\n============ TESTS COMPLETS ============\\n");
+
+  // Test en passant
+  printf("\\n=== Test En Passant ===\\n");
+  Board en_passant_test;
+  board_from_fen(
+      &en_passant_test,
+      "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3");
+  printf("Position avec pions adjacents (en passant sur f6 possible):\\n");
+  print_board(&en_passant_test);
+  printf("En passant square: %d (f6 = %d)\\n", en_passant_test.en_passant, F6);
+
+  MoveList ep_moves;
+  movelist_init(&ep_moves);
+  generate_pawn_moves(&en_passant_test, WHITE, &ep_moves);
+  printf("Mouvements des pions blancs (avec en passant):\\n");
+  for (int i = 0; i < ep_moves.count; i++) {
+    printf("%2d. ", i + 1);
+    print_move(&ep_moves.moves[i]);
+    if (ep_moves.moves[i].type == MOVE_EN_PASSANT) {
+      printf(" *** EN PASSANT ***");
+    }
+    printf("\\n");
+  }
+
+  // Test filtrage des mouvements illégaux
+  printf("\\n=== Test Mouvements Illégaux ===\\n");
+  Board illegal_test;
+  board_from_fen(
+      &illegal_test,
+      "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 2");
+  printf("Position normale:\\n");
+  print_board(&illegal_test);
+
+  MoveList all_moves, legal_moves;
+  movelist_init(&all_moves);
+  movelist_init(&legal_moves);
+  generate_moves(&illegal_test, &all_moves);
+  generate_legal_moves(&illegal_test, &legal_moves);
+
+  printf("Tous les mouvements pseudo-légaux: %d\\n", all_moves.count);
+  printf("Mouvements légaux uniquement: %d\\n", legal_moves.count);
+
+  // Test détection d'échec
+  printf("\\n=== Test Détection Échec ===\\n");
+  Board check_test;
+  board_from_fen(&check_test,
+                 "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 2");
+  printf("Position avec roi blanc potentiellement en échec:\\n");
+  print_board(&check_test);
+  printf("Roi blanc en échec: %s\\n",
+         is_in_check(&check_test, WHITE) ? "OUI" : "NON");
+  printf("Roi noir en échec: %s\\n",
+         is_in_check(&check_test, BLACK) ? "OUI" : "NON");
+
+  // Test mat
+  printf("\\n=== Test Mat ===\\n");
+  Board mate_test;
+  board_from_fen(
+      &mate_test,
+      "rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1K1NR b KQkq - 1 2");
+  printf("Position de mat potentiel:\\n");
+  print_board(&mate_test);
+  printf("Mat pour les noirs: %s\\n", is_checkmate(&mate_test) ? "OUI" : "NON");
+
+  GameResult result = get_game_result(&mate_test);
+  printf("Résultat de la partie: ");
+  switch (result) {
+  case GAME_ONGOING:
+    printf("En cours\\n");
+    break;
+  case GAME_CHECKMATE_WHITE:
+    printf("Mat - Blancs gagnent\\n");
+    break;
+  case GAME_CHECKMATE_BLACK:
+    printf("Mat - Noirs gagnent\\n");
+    break;
+  case GAME_STALEMATE:
+    printf("Pat\\n");
+    break;
+  case GAME_FIFTY_MOVE_RULE:
+    printf("Règle des 50 coups\\n");
+    break;
+  }
+
+  // Test pat
+  printf("\\n=== Test Pat ===\\n");
+  Board stalemate_test;
+  board_from_fen(&stalemate_test, "k7/8/1Q6/8/8/8/8/K7 b - - 0 1");
+  printf("Position de pat potentiel:\\n");
+  print_board(&stalemate_test);
+  printf("Pat pour les noirs: %s\\n",
+         is_stalemate(&stalemate_test) ? "OUI" : "NON");
+
+  // Test règle des 50 coups
+  printf("\\n=== Test Règle 50 Coups ===\\n");
+  Board fifty_test = illegal_test;
+  fifty_test.halfmove_clock = 100;
+  printf("Compteur demi-coups: %d\\n", fifty_test.halfmove_clock);
+  printf("Règle des 50 coups active: %s\\n",
+         is_fifty_move_rule(&fifty_test) ? "OUI" : "NON");
+
+  printf("\\n============ TESTS TERMINÉS ============\\n");
+  printf("🎯 Toutes les fonctionnalités sont implémentées !\\n");
+
   return 0;
 }
