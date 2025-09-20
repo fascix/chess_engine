@@ -53,11 +53,16 @@ def engine_worker(board_copy, result_queue):
     """Worker thread pour calculer le coup du moteur sans bloquer l'interface."""
     engine = None
     try:
-        engine = chess.engine.SimpleEngine.popen_uci("/opt/homebrew/bin/stockfish")
+        print(f"🔍 DEBUG: Démarrage moteur avec position: {board_copy.fen()}")
+        engine = chess.engine.SimpleEngine.popen_uci("../chess_uci")
+        print(f"🔍 DEBUG: Moteur démarré, lancement recherche...")
         result = engine.play(board_copy, chess.engine.Limit(time=1.0))
+        print(f"🔍 DEBUG: Coup reçu du moteur: {result.move}")
         result_queue.put(result.move)
     except Exception as e:
-        print(f"Erreur dans le moteur: {e}")
+        print(f"❌ Erreur dans le moteur: {e}")
+        import traceback
+        traceback.print_exc()
         result_queue.put(None)
     finally:
         if engine is not None:

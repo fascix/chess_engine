@@ -6,7 +6,7 @@ TARGET = chess_engine
 # Fichiers sources du moteur
 CORE_SRCS = $(SRC_DIR)/board.c $(SRC_DIR)/movegen.c $(SRC_DIR)/evaluation.c $(SRC_DIR)/search.c $(SRC_DIR)/utils.c
 MAIN_SRCS = $(CORE_SRCS) $(SRC_DIR)/main.c
-UCI_SRCS = $(CORE_SRCS) $(SRC_DIR)/uci.c
+UCI_SRCS = $(CORE_SRCS) $(SRC_DIR)/uci.c $(SRC_DIR)/main.c
 
 # Fichiers de test
 TEST_BOARD_SRCS = $(SRC_DIR)/board.c $(SRC_DIR)/test_compile.c

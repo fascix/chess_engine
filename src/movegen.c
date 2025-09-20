@@ -85,8 +85,9 @@ char *move_to_string(const Move *move) {
 
   switch (move->type) {
   case MOVE_PROMOTION: {
-    const char pieces[] = "PNBRQK";
-    sprintf(buffer + strlen(buffer), "=%c", pieces[move->promotion]);
+    const char pieces[] = "pnbrqk"; // UCI utilise minuscules
+    sprintf(buffer + strlen(buffer), "%c",
+            pieces[move->promotion]); // UCI sans '='
     break;
   }
   default:

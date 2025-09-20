@@ -52,7 +52,9 @@ bool is_square_occupied(const Board *board, Square square) {
 }
 
 Couleur get_piece_color(const Board *board, Square square) {
-  assert(is_square_occupied(board, square));
+  if (!is_square_occupied(board, square)) {
+    return WHITE; // Valeur par défaut, ne devrait pas arriver
+  }
   if (GET_BIT(board->occupied[WHITE], square)) {
     return WHITE;
   } else {

@@ -332,12 +332,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
     best_result = current_result;
 
-    // Affichage du progrès
-    printf("Profondeur %d: ", depth);
-    print_move(&current_result.best_move);
-    printf(" Score: %d (Noeuds: %d, Temps: %dms)\n", current_result.score,
-           current_result.nodes_searched, elapsed_ms);
-
+    // Debug supprimé pour compatibilité UCI
     // Arrêt si mat trouvé
     if (abs(current_result.score) >= MATE_SCORE - 100) {
       break;
