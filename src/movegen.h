@@ -55,6 +55,10 @@ int is_stalemate(const Board *board);
 int is_checkmate(const Board *board);
 int is_fifty_move_rule(const Board *board);
 
+// Fonctions make/unmake temporaires pour la recherche
+void make_move_temp(Board *board, const Move *move, Board *backup);
+void unmake_move_temp(Board *board, const Board *backup);
+
 // Résultat de partie
 typedef enum {
   GAME_ONGOING,
@@ -69,5 +73,6 @@ GameResult get_game_result(const Board *board);
 // Utilitaires d'affichage
 void print_move(const Move *move);
 void print_movelist(const MoveList *list);
+char *move_to_string(const Move *move);
 
 #endif // MOVEGEN_H

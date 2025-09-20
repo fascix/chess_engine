@@ -67,14 +67,34 @@ void print_move(const Move *move) {
 
 // Affiche toute la liste de coups
 void print_movelist(const MoveList *list) {
-  printf("Coups générés (%d) :\n", list->count);
+  printf("Coups générés (%d) :\\n", list->count);
   for (int i = 0; i < list->count; i++) {
     printf("%2d. ", i + 1);
     print_move(&list->moves[i]);
-    printf("\n");
+    printf("\\n");
   }
 }
 
+// Convertit un coup en string (thread-safe avec buffer static)
+char *move_to_string(const Move *move) {
+  static char buffer[16];
+  char from_str[3] = {'a' + (move->from % 8), '1' + (move->from / 8), '\0'};
+  char to_str[3] = {'a' + (move->to % 8), '1' + (move->to / 8), '\0'};
+
+  sprintf(buffer, "%s%s", from_str, to_str);
+
+  switch (move->type) {
+  case MOVE_PROMOTION: {
+    const char pieces[] = "PNBRQK";
+    sprintf(buffer + strlen(buffer), "=%c", pieces[move->promotion]);
+    break;
+  }
+  default:
+    break;
+  }
+
+  return buffer;
+}
 // Génération complète de tous les coups légaux pour une position
 void generate_moves(const Board *board, MoveList *moves) {
   // Vérifications de sécurité
