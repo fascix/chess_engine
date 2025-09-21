@@ -833,10 +833,12 @@ int is_move_legal(const Board *board, const Move *move) {
   Board temp_board, backup;
   temp_board = *board;
 
+  // CORRECTION: Récupérer la couleur AVANT de faire le mouvement
+  Couleur moving_color = get_piece_color(board, move->from);
+
   make_move_temp(&temp_board, move, &backup);
 
   // Vérifier si le roi est en échec après le mouvement
-  Couleur moving_color = get_piece_color(board, move->from);
   int legal = !is_in_check(&temp_board, moving_color);
 
   return legal;

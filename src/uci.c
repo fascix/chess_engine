@@ -140,7 +140,87 @@ Move parse_uci_move(const char *uci_str) {
   return move;
 }
 
+// Gestionnaire commande "go"
+void handle_go(Board *board, char *params) {
+  int depth = 5;
+  int movetime = 0;
+
+  // Parser les paramètres...
+  if (params && strstr(params, "depth")) {
+    char *depth_pos = strstr(params, "depth");
+    sscanf(depth_pos, "depth %d", &depth);
+  }
+
+  if (params && strstr(params, "movetime")) {
+    char *movetime_pos = strstr(params, "movetime");
+    sscanf(movetime_pos, "movetime %d", &movetime);
+  }
+
+  // Lancer la recherche
+  SearchResult result;
+  if (movetime > 0) {
+    result = search_iterative_deepening(board, depth, movetime);
+  } else {
+    result = search_best_move(board, depth);
+  }
+
+  // AJOUT: Vérification que le coup est vraiment légal
+  MoveList legal_moves;
+  generate_legal_moves(board, &legal_moves);
+
+  int move_is_legal = 0;
+  for (int i = 0; i < legal_moves.count; i++) {
+    if (legal_moves.moves[i].from == result.best_move.from &&
+        legal_moves.moves[i].to == result.best_move.to &&
+        legal_moves.moves[i].type == result.best_move.type) {
+      move_is_legal = 1;
+      result.best_move = legal_moves.moves[i]; // Utiliser la version complète
+      break;
+    }
+  }
+
+  if (!move_is_legal && legal_moves.count > 0) {
+    // Fallback: prendre le premier coup légal
+    result.best_move = legal_moves.moves[0];
+  }
+
+  // Envoyer le meilleur coup
+  printf("bestmove %s\n", move_to_string(&result.best_move));
+  fflush(stdout);
+}
+// Gestionnaire commande "stop"
+void handle_stop() {
+  // TODO: Implémenter arrêt de recherche propre
+  // Variable globale ou signal pour arrêter search_iterative_deepening
+  printf("# Search stopped\n");
+  fflush(stdout);
+}
+
+// Gestionnaire commande "quit"
+void handle_quit() {
+  if (uci_debug) {
+    printf("# Goodbye!\n");
+  }
+  exit(0);
+}
+
+// Version améliorée de make_move_temp qui met à jour to_move
+void apply_move_properly(Board *board, const Move *move) {
+  // Utiliser make_move_temp existant
+  Board backup; // Non utilisé, juste pour l'interface
+  make_move_temp(board, move, &backup);
+
+  // CORRECTION: Basculer le joueur actuel
+  board->to_move = (board->to_move == WHITE) ? BLACK : WHITE;
+
+  // Optionnel: incrémenter le numéro de coup si c'est un coup des noirs
+  if (board->to_move == WHITE) {
+    board->move_number++;
+  }
+}
+
 // Appliquer une séquence de coups UCI
+
 void apply_uci_moves(Board *board, char *moves_str) {
   char moves_copy[512];
   strncpy(moves_copy, moves_str, sizeof(moves_copy) - 1);
@@ -178,60 +258,9 @@ void apply_uci_moves(Board *board, char *moves_str) {
 
     // Appliquer le coup s'il est trouvé
     if (found) {
-      Board backup = *board;
-      make_move_temp(board, &actual_move, &backup);
+      apply_move_properly(board, &actual_move);
     }
 
     move_str = strtok(NULL, " ");
   }
-}
-
-// Gestionnaire commande "go"
-void handle_go(Board *board, char *params) {
-  int depth = 5;    // Profondeur par défaut
-  int movetime = 0; // Temps par coup (ms)
-
-  // Parser les paramètres
-  if (params && strstr(params, "depth")) {
-    char *depth_pos = strstr(params, "depth");
-    sscanf(depth_pos, "depth %d", &depth);
-  }
-
-  if (params && strstr(params, "movetime")) {
-    char *movetime_pos = strstr(params, "movetime");
-    sscanf(movetime_pos, "movetime %d", &movetime);
-  }
-
-  // TODO: Parser wtime, btime pour la gestion du temps en partie
-
-  // Lancer la recherche avec la couleur à jouer
-  SearchResult result;
-  if (movetime > 0) {
-    result = search_iterative_deepening(board, depth, movetime);
-  } else {
-    result = search_best_move(board, depth);
-  }
-
-  // Note: search_best_move et search_iterative_deepening utilisent
-  // board->to_move
-
-  // Envoyer le meilleur coup au format UCI
-  printf("bestmove %s\n", move_to_string(&result.best_move));
-  fflush(stdout);
-}
-
-// Gestionnaire commande "stop"
-void handle_stop() {
-  // TODO: Implémenter arrêt de recherche propre
-  // Variable globale ou signal pour arrêter search_iterative_deepening
-  printf("# Search stopped\n");
-  fflush(stdout);
-}
-
-// Gestionnaire commande "quit"
-void handle_quit() {
-  if (uci_debug) {
-    printf("# Goodbye!\n");
-  }
-  exit(0);
 }
