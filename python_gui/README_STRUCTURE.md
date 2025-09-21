@@ -15,10 +15,11 @@ python_gui/
 ├── gui.py              # Interface graphique et affichage
 ├── menu.py             # Tous les menus du jeu
 ├── game_modes.py       # Modes de jeu (2 joueurs, vs bot)
-├── main_old.py         # Ancien code monolithique (sauvegarde)
-└── assets/
-    ├── pieces/         # Images des pièces
-    └── background.jpg  # Image de fond
+├── main_old.py         # Ancien code non divisé en module qui est une sauvegarde
+├── background.jpg      # Image du fond (pas très esthétique mais provisoire)
+└── pieces/
+    ├── b/              # Images des pièces nires
+    └── w/              # Images des pièces blanches
 ```
 
 ## Description des modules
@@ -100,10 +101,3 @@ Pour lancer le jeu :
 cd python_gui
 python main.py
 ```
-
-## Notes techniques
-
-- Les variables globales sont centralisées dans `game_logic.py`
-- Les imports entre modules sont gérés proprement
-- L'ancien code est sauvegardé dans `main_old.py`
-- La structure permet des extensions futures faciles

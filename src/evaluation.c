@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 // Tables de position pour encourager le développement et la centralisation
+// Piece-Square Tables
 static const int pawn_position_table[64] = {
     0,  0,  0,  0,   0,   0,  0,  0,  50, 50, 50,  50, 50, 50,  50, 50,
     10, 10, 20, 30,  30,  20, 10, 10, 5,  5,  10,  25, 25, 10,  5,  5,
@@ -67,7 +68,10 @@ int evaluate_material(const Board *board) {
   int material = 0;
 
   for (PieceType piece = PAWN; piece <= KING; piece++) {
+    // __builtin_popcountll permet de compter le nombre de pièce :
+    // pour les blanc
     int white_count = __builtin_popcountll(board->pieces[WHITE][piece]);
+    // pour les noirs
     int black_count = __builtin_popcountll(board->pieces[BLACK][piece]);
 
     material += (white_count - black_count) * piece_value(piece);
@@ -87,6 +91,10 @@ int evaluate_position_bonus(const Board *board) {
 
   for (PieceType piece = PAWN; piece <= KING; piece++) {
     const int *table = position_tables[piece];
+
+    // Parcours toutes les pièces du bitboard
+    // __builtin_ctzll() retourne l'indice du premier bit à 1 (trailing zeros)
+    // white_pieces &= white_pieces - 1 supprime ce bit pour passer au suivant
 
     // Pièces blanches
     Bitboard white_pieces = board->pieces[WHITE][piece];

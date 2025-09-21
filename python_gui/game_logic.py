@@ -56,7 +56,8 @@ def engine_worker(board_copy, result_queue):
         print(f"🔍 DEBUG: Démarrage moteur avec position: {board_copy.fen()}")
         engine = chess.engine.SimpleEngine.popen_uci("../chess_uci")
         print(f"🔍 DEBUG: Moteur démarré, lancement recherche...")
-        result = engine.play(board_copy, chess.engine.Limit(time=1.0))
+        result = engine.play(board_copy, chess.engine.Limit(time=1.0)) 
+        # modification possible de la valuer pour améliorer la force de l'engine
         print(f"🔍 DEBUG: Coup reçu du moteur: {result.move}")
         result_queue.put(result.move)
     except Exception as e:
@@ -70,6 +71,7 @@ def engine_worker(board_copy, result_queue):
                 engine.quit()
             except:
                 pass
+
 def start_engine_calculation(board):
     """Démarre le calcul du moteur dans un thread séparé."""
     global engine_thinking, engine_move_ready, pending_engine_move

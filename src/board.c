@@ -11,6 +11,7 @@ void board_init(Board *board) {
   // Met tous les champs de Board à zéro avant initialisation
 
   // Position initiale des pièces blanches
+  // ULL = Unsigned Long Long
   board->pieces[WHITE][ROOK] = 0x81ULL;   // a1, h1
   board->pieces[WHITE][KNIGHT] = 0x42ULL; // b1, g1
   board->pieces[WHITE][BISHOP] = 0x24ULL; // c1, f1
@@ -63,12 +64,12 @@ Couleur get_piece_color(const Board *board, Square square) {
 }
 
 PieceType get_piece_type(const Board *board, Square square) {
-  // 1. Vérification sécurisée
+  // 1. Vérification de sécurité
   if (!is_square_occupied(board, square))
     return EMPTY;
 
-  // 2. Déterminer couleur (permet de réduire la boucle du test de type à
-  // 6 au lieu de 12)
+  // 2. Déterminer la couleur (cela permet de réduire la boucle du test de type
+  // à 6 au lieu de 12)
   Couleur couleur = get_piece_color(board, square);
 
   // 3. Boucle sur les types

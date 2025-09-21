@@ -87,6 +87,11 @@ typedef enum {
 #define BLACK_KINGSIDE 0x04  // 0100
 #define BLACK_QUEENSIDE 0x08 // 1000
 
+// Chaque droit de roque est représenté par un seul bit (vu sous unepuissance de
+// 2). 0x01=0001, 0x02=0010, 0x04=0100, 0x08=1000 → Cela permet de combiner
+// plusieurs droits dans une seule variable (avec un OR |) et de tester/retirer
+// facilement un droit spécifique (avec AND & et NOT ~).
+
 typedef struct {
   // Bitboard par pièce et par couleur
   Bitboard pieces[2][6];

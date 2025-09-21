@@ -35,6 +35,7 @@ def draw_engine_status(screen, font):
     # Effacer d'abord la zone du statut (plus grande pour couvrir les 2 lignes)
     pygame.draw.rect(screen, (0, 0, 0), (WINDOW_SIZE + 60, WINDOW_SIZE//2 - 30, 200, 80))
     
+    # ici blit() permet de copier le texte sur une surface
     if engine_thinking:
         status_text = font.render("L'ordinateur", True, (255, 255, 0))
         status_text2 = font.render("réfléchit...", True, (255, 255, 0))
