@@ -152,20 +152,33 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
         int rank = one_forward / 8;
         if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
           // Générer les 4 promotions possibles
-          movelist_add(moves, create_promotion_move(from, one_forward, QUEEN));
-          movelist_add(moves, create_promotion_move(from, one_forward, ROOK));
-          movelist_add(moves, create_promotion_move(from, one_forward, BISHOP));
-          movelist_add(moves, create_promotion_move(from, one_forward, KNIGHT));
+          Move m;
+          m = create_promotion_move(from, one_forward, QUEEN);
+          if (is_move_legal(board, &m))
+            movelist_add(moves, m);
+          m = create_promotion_move(from, one_forward, ROOK);
+          if (is_move_legal(board, &m))
+            movelist_add(moves, m);
+          m = create_promotion_move(from, one_forward, BISHOP);
+          if (is_move_legal(board, &m))
+            movelist_add(moves, m);
+          m = create_promotion_move(from, one_forward, KNIGHT);
+          if (is_move_legal(board, &m))
+            movelist_add(moves, m);
         } else {
           // Coup normal
-          movelist_add(moves, create_move(from, one_forward, MOVE_NORMAL));
+          Move m = create_move(from, one_forward, MOVE_NORMAL);
+          if (is_move_legal(board, &m))
+            movelist_add(moves, m);
         }
 
         // 2. DOUBLE SAUT - Si première rangée et case libre
         Square two_forward = from + (2 * direction);
         if ((from / 8) == start_rank && two_forward >= A1 &&
             two_forward <= H8 && !is_square_occupied(board, two_forward)) {
-          movelist_add(moves, create_move(from, two_forward, MOVE_NORMAL));
+          Move m = create_move(from, two_forward, MOVE_NORMAL);
+          if (is_move_legal(board, &m))
+            movelist_add(moves, m);
         }
       }
 
@@ -187,18 +200,22 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
             Move capture = create_promotion_move(from, left_capture, QUEEN);
             capture.type = MOVE_PROMOTION;
             capture.captured_piece = captured;
-            movelist_add(moves, capture);
-
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
             capture.promotion = ROOK;
-            movelist_add(moves, capture);
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
             capture.promotion = BISHOP;
-            movelist_add(moves, capture);
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
             capture.promotion = KNIGHT;
-            movelist_add(moves, capture);
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
           } else {
             Move capture = create_move(from, left_capture, MOVE_CAPTURE);
             capture.captured_piece = captured;
-            movelist_add(moves, capture);
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
           }
         }
       }
@@ -216,18 +233,22 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
             Move capture = create_promotion_move(from, right_capture, QUEEN);
             capture.type = MOVE_PROMOTION;
             capture.captured_piece = captured;
-            movelist_add(moves, capture);
-
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
             capture.promotion = ROOK;
-            movelist_add(moves, capture);
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
             capture.promotion = BISHOP;
-            movelist_add(moves, capture);
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
             capture.promotion = KNIGHT;
-            movelist_add(moves, capture);
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
           } else {
             Move capture = create_move(from, right_capture, MOVE_CAPTURE);
             capture.captured_piece = captured;
-            movelist_add(moves, capture);
+            if (is_move_legal(board, &capture))
+              movelist_add(moves, capture);
           }
         }
       }
@@ -264,7 +285,8 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
           get_piece_type(board, left_attacker) == PAWN) {
         Move ep_move = create_move(left_attacker, ep_square, MOVE_EN_PASSANT);
         ep_move.captured_piece = PAWN;
-        movelist_add(moves, ep_move);
+        if (is_move_legal(board, &ep_move))
+          movelist_add(moves, ep_move);
       }
     }
 
@@ -275,13 +297,14 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
           get_piece_type(board, right_attacker) == PAWN) {
         Move ep_move = create_move(right_attacker, ep_square, MOVE_EN_PASSANT);
         ep_move.captured_piece = PAWN;
-        movelist_add(moves, ep_move);
+        if (is_move_legal(board, &ep_move))
+          movelist_add(moves, ep_move);
       }
     }
   }
 }
 
-// Fonction générique pour les mouvements de sliding pieces (tours, fous)
+// Fonction générique pour les mouvements de sliding pieces (tours, fous, dame)
 void slide_direction(const Board *board, Square from, int offset, Couleur color,
                      MoveList *moves) {
   // Pré-calculer le nombre maximum de pas dans cette direction
@@ -319,29 +342,29 @@ void slide_direction(const Board *board, Square from, int offset, Couleur color,
     return; // Direction invalide
   }
 
-  // Parcourir dans cette direction jusqu'à obstacle ou bord
+  // Nouvelle boucle : vérifier toutes les cases intermédiaires libres avant
+  // d'ajouter un coup
   for (int step = 1; step <= max_steps; step++) {
-    Square to = from + (step * offset);
+    Square to = from + step * offset;
 
     // Vérification de sécurité (ne devrait pas arriver avec le pré-calcul)
     if (to < A1 || to > H8)
       break;
 
-    // Case vide → mouvement normal, continuer
-    if (!is_square_occupied(board, to)) {
-      movelist_add(moves, create_move(from, to, MOVE_NORMAL));
-      continue;
+    // Vérifier que toutes les cases intermédiaires sont libres
+    if (is_square_occupied(board, to)) {
+      if (get_piece_color(board, to) != color) {
+        Move capture = create_move(from, to, MOVE_CAPTURE);
+        capture.captured_piece = get_piece_type(board, to);
+        if (is_move_legal(board, &capture))
+          movelist_add(moves, capture);
+      }
+      break; // Obstacle rencontré
+    } else {
+      Move m = create_move(from, to, MOVE_NORMAL);
+      if (is_move_legal(board, &m))
+        movelist_add(moves, m);
     }
-
-    // Case occupée → vérifier si capture possible
-    if (get_piece_color(board, to) != color) {
-      // Pièce ennemie → capture et s'arrêter
-      Move capture = create_move(from, to, MOVE_CAPTURE);
-      capture.captured_piece = get_piece_type(board, to);
-      movelist_add(moves, capture);
-    }
-    // Dans tous les cas (pièce amie ou ennemie), s'arrêter
-    break;
   }
 }
 
@@ -451,13 +474,16 @@ void generate_knight_moves(const Board *board, Couleur color, MoveList *moves) {
 
       // Case vide → mouvement normal
       if (!is_square_occupied(board, to)) {
-        movelist_add(moves, create_move(from, to, MOVE_NORMAL));
+        Move m = create_move(from, to, MOVE_NORMAL);
+        if (is_move_legal(board, &m))
+          movelist_add(moves, m);
       }
       // Case occupée par pièce ennemie → capture
       else if (get_piece_color(board, to) != color) {
         Move capture = create_move(from, to, MOVE_CAPTURE);
         capture.captured_piece = get_piece_type(board, to);
-        movelist_add(moves, capture);
+        if (is_move_legal(board, &capture))
+          movelist_add(moves, capture);
       }
       // Case occupée par pièce amie → ignorer
     }
@@ -496,6 +522,96 @@ void generate_queen_moves(const Board *board, Couleur color, MoveList *moves) {
     slide_direction(board, from, -7, color, moves); // Sud-Est
     slide_direction(board, from, -9, color, moves); // Sud-Ouest
   }
+}
+
+// Helper : Vérifie si un déplacement du roi qui ressemble à un roque est
+// illégal (non autorisé par les droits de roque ou cases attaquées)
+int is_castle_illegal(const Board *board, const Move *m) {
+  if (!board || !m)
+    return 0;
+  // On ne s'intéresse qu'aux déplacements du roi de 2 cases latérales
+  int from = m->from;
+  int to = m->to;
+  Couleur color = get_piece_color(board, from);
+  int from_rank = from / 8;
+  int from_file = from % 8;
+  int to_rank = to / 8;
+  int to_file = to % 8;
+  // Pour les blancs : e1 (4) vers g1 (6) ou c1 (2)
+  // Pour les noirs : e8 (60) vers g8 (62) ou c8 (58)
+  if (get_piece_type(board, from) != KING)
+    return 0;
+  // Seuls les coups de type normal/capture sont concernés ici (pas MOVE_CASTLE)
+  if (abs(to_file - from_file) == 2 && from_rank == to_rank) {
+    // Ressemble à un roque
+    // Vérifier si le droit de roque est présent
+    if (color == WHITE && from == E1) {
+      if (to == G1) {
+        // Petit roque blanc
+        if (!(board->castle_rights & WHITE_KINGSIDE))
+          return 1;
+        // Cases entre e1 et h1 doivent être libres
+        for (Square sq = F1; sq < H1; sq++) {
+          if (is_square_occupied(board, sq))
+            return 1;
+        }
+        // Cases e1, f1, g1 ne doivent pas être attaquées
+        Couleur opp = BLACK;
+        if (is_in_check(board, color) || is_square_attacked(board, F1, opp) ||
+            is_square_attacked(board, G1, opp))
+          return 1;
+      } else if (to == C1) {
+        // Grand roque blanc
+        if (!(board->castle_rights & WHITE_QUEENSIDE))
+          return 1;
+        for (Square sq = B1 + 1; sq < E1; sq++) {
+          if (is_square_occupied(board, sq))
+            return 1;
+        }
+        Couleur opp = BLACK;
+        if (is_in_check(board, color) || is_square_attacked(board, D1, opp) ||
+            is_square_attacked(board, C1, opp))
+          return 1;
+      } else {
+        // Mouvement latéral de 2 cases non autorisé
+        return 1;
+      }
+    } else if (color == BLACK && from == E8) {
+      if (to == G8) {
+        if (!(board->castle_rights & BLACK_KINGSIDE))
+          return 1;
+        for (Square sq = F8; sq < H8; sq++) {
+          if (is_square_occupied(board, sq))
+            return 1;
+        }
+        Couleur opp = WHITE;
+        if (is_in_check(board, color) || is_square_attacked(board, F8, opp) ||
+            is_square_attacked(board, G8, opp))
+          return 1;
+      } else if (to == C8) {
+        if (!(board->castle_rights & BLACK_QUEENSIDE))
+          return 1;
+        for (Square sq = B8 + 1; sq < E8; sq++) {
+          if (is_square_occupied(board, sq))
+            return 1;
+        }
+        Couleur opp = WHITE;
+        if (is_in_check(board, color) || is_square_attacked(board, D8, opp) ||
+            is_square_attacked(board, C8, opp))
+          return 1;
+      } else {
+        return 1;
+      }
+    } else {
+      // Mouvement latéral de 2 cases ailleurs que depuis e1/e8
+      return 1;
+    }
+  }
+  // Si le roi tente un déplacement diagonal de 2 cases, interdit aussi
+  if (abs(to_file - from_file) == 2 && abs(to_rank - from_rank) == 2) {
+    return 1;
+  }
+  return 0;
 }
 
 // Génération des mouvements de roi (mouvements de base uniquement)
@@ -552,15 +668,18 @@ void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
         continue; // Mouvement invalide (wrap-around détecté)
       }
 
-      // Case vide → mouvement normal
+      // Application du motif demandé pour filtrer tous les coups du roi avec
+      // is_move_legal() et is_castle_illegal()
+      Move m;
       if (!is_square_occupied(board, to)) {
-        movelist_add(moves, create_move(from, to, MOVE_NORMAL));
-      }
-      // Case occupée par pièce ennemie → capture
-      else if (get_piece_color(board, to) != color) {
-        Move capture = create_move(from, to, MOVE_CAPTURE);
-        capture.captured_piece = get_piece_type(board, to);
-        movelist_add(moves, capture);
+        m = create_move(from, to, MOVE_NORMAL);
+        if (is_move_legal(board, &m) && !is_castle_illegal(board, &m))
+          movelist_add(moves, m);
+      } else if (get_piece_color(board, to) != color) {
+        m = create_move(from, to, MOVE_CAPTURE);
+        m.captured_piece = get_piece_type(board, to);
+        if (is_move_legal(board, &m) && !is_castle_illegal(board, &m))
+          movelist_add(moves, m);
       }
       // Case occupée par pièce amie → ignorer
     }
@@ -592,7 +711,10 @@ void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
       if (squares_clear &&
           !is_square_attacked(board, king_pos + 1, opponent) && // case f1/f8
           !is_square_attacked(board, king_dest, opponent)) {    // case g1/g8
-        movelist_add(moves, create_move(king_pos, king_dest, MOVE_CASTLE));
+        Move castle_move = create_move(king_pos, king_dest, MOVE_CASTLE);
+        if (is_move_legal(board, &castle_move)) {
+          movelist_add(moves, castle_move);
+        }
       }
     }
 
@@ -619,7 +741,10 @@ void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
       if (squares_clear &&
           !is_square_attacked(board, king_pos - 1, opponent) && // case d1/d8
           !is_square_attacked(board, king_dest, opponent)) {    // case c1/c8
-        movelist_add(moves, create_move(king_pos, king_dest, MOVE_CASTLE));
+        Move castle_move = create_move(king_pos, king_dest, MOVE_CASTLE);
+        if (is_move_legal(board, &castle_move)) {
+          movelist_add(moves, castle_move);
+        }
       }
     }
   }
