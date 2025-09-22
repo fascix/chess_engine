@@ -221,7 +221,7 @@ void board_from_fen(Board *board, const char *fen) {
   if (*current == '-') {
     board->en_passant = -1;
   } else {
-    // Conversion notation algebraique -> Square (ex: "e3" -> E3)
+    // Conversion notation algebrique -> Square (ex: "e3" -> E3)
     if (*current >= 'a' && *current <= 'h' && *(current + 1) >= '1' &&
         *(current + 1) <= '8') {
       int file = *current - 'a';

@@ -131,7 +131,7 @@ int is_endgame(const Board *board) {
 }
 
 // Fonction d'évaluation principale avec Tapered Eval
-int evaluate_position(const Board *board) {
+/*int evaluate_position(const Board *board) {
   // Vérifier les fins de partie immédiates
   GameResult result = get_game_result(board);
   switch (result) {
@@ -151,7 +151,7 @@ int evaluate_position(const Board *board) {
   float phase_factor = get_phase_factor(board);
 
   return evaluate_tapered(board, phase, phase_factor);
-}
+}*/
 
 // ========== ÉVALUATION AVANCÉE ==========
 
@@ -445,8 +445,6 @@ int evaluate_tapered(const Board *board, GamePhase phase, float phase_factor) {
                endgame_score * (1.0f - phase_factor));
 }
 
-// À ajouter dans evaluation.c
-
 // Vérifie si une pièce est "pendue" (attaquée et non défendue)
 int is_piece_hanging(const Board *board, Square square, Couleur piece_color) {
   if (!is_square_occupied(board, square))
@@ -546,7 +544,7 @@ int evaluate_safe_development(const Board *board) {
 }
 
 // Fonction d'évaluation MISE À JOUR pour éviter les pendus
-int evaluate_position_improved(const Board *board) {
+int evaluate_position(const Board *board) {
   GameResult result = get_game_result(board);
   switch (result) {
   case GAME_CHECKMATE_WHITE:
@@ -582,6 +580,3 @@ int evaluate_position_improved(const Board *board) {
 
   return score;
 }
-
-// REMPLACER evaluate_position par evaluate_position_improved
-// dans toutes les fonctions de recherche

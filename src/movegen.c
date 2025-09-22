@@ -524,7 +524,7 @@ void generate_queen_moves(const Board *board, Couleur color, MoveList *moves) {
   }
 }
 
-// Helper : Vérifie si un déplacement du roi qui ressemble à un roque est
+// Vérifie si un déplacement du roi qui ressemble à un roque est
 // illégal (non autorisé par les droits de roque ou cases attaquées)
 int is_castle_illegal(const Board *board, const Move *m) {
   if (!board || !m)

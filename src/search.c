@@ -96,12 +96,30 @@ int negamax(Board *board, int depth, Couleur color) {
 // Mise à jour de negamax_alpha_beta
 int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
                              Couleur color, int ply) {
+  // Sécurité: ply trop grand
+  if (ply >= 128) {
+    fprintf(stderr, "ERROR: ply=%d trop grand, retour score neutre\n", ply);
+    return 0; // score neutre
+  }
+  // Table de transposition : probe au début
+  TTEntry *entry = tt_probe(&tt_global, zobrist_hash(board));
+  if (entry != NULL && entry->depth >= depth) {
+    return entry->score;
+  }
+
   if (depth == 0) {
     return quiescence_search(board, alpha, beta, color);
   }
 
   MoveList moves;
   generate_legal_moves(board, &moves);
+
+  // Limiter la taille de moves pour OrderedMoveList à 256 coups max
+  if (moves.count > 256) {
+    fprintf(stderr, "WARNING: moves.count=%d > 256, tronqué à 256 coups\n",
+            moves.count);
+    moves.count = 256;
+  }
 
   if (moves.count == 0) {
     if (is_in_check(board, color)) {
@@ -112,12 +130,28 @@ int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
   }
 
   int max_score = -INFINITY_SCORE;
+  Move best_move = {0};
   OrderedMoveList ordered_moves;
   Move hash_move = {0};
+  if (entry != NULL) {
+    hash_move = entry->best_move;
+  }
   order_moves(board, &moves, &ordered_moves, hash_move, ply);
+  // Sécurité OrderedMoveList: limiter à 256
+  if (ordered_moves.count > 256) {
+    fprintf(stderr,
+            "WARNING: ordered_moves.count=%d > 256, tronqué à 256 coups\n",
+            ordered_moves.count);
+    ordered_moves.count = 256;
+  }
 
   for (int i = 0; i < ordered_moves.count; i++) {
-    // CORRECTION: Sauvegarder AVANT d'appliquer
+    // Sécurité avant apply_move
+    if (ply >= 128) {
+      fprintf(stderr, "ERROR: ply=%d trop grand avant apply_move, skip coup\n",
+              ply);
+      continue;
+    }
     apply_move(board, &ordered_moves.moves[i], ply);
 
     // Recherche récursive
@@ -125,16 +159,25 @@ int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
     int score = -negamax_alpha_beta_fixed(board, depth - 1, -beta, -alpha,
                                           opponent, ply + 1);
 
-    // CORRECTION: Restaurer depuis le bon backup
-    undo_move(board, ply);
+    // Sécurité avant undo_move
+    if (ply >= 128) {
+      fprintf(stderr, "ERROR: ply=%d trop grand avant undo_move, skip undo\n",
+              ply);
+    } else {
+      undo_move(board, ply);
+    }
 
     if (score > max_score) {
       max_score = score;
+      best_move = ordered_moves.moves[i];
     }
 
     if (score >= beta) {
       store_killer_move(ordered_moves.moves[i], ply);
       update_history(ordered_moves.moves[i], depth, color);
+      // Stocker dans la TT (fail-high)
+      tt_store(&tt_global, zobrist_hash(board), depth, beta, TT_LOWERBOUND,
+               ordered_moves.moves[i]);
       return beta;
     }
 
@@ -142,7 +185,9 @@ int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
       alpha = score;
     }
   }
-
+  // Stocker dans la TT (exact si max_score > alpha initial, sinon upperbound)
+  TTEntryType ttype = (max_score <= alpha) ? TT_UPPERBOUND : TT_EXACT;
+  tt_store(&tt_global, zobrist_hash(board), depth, max_score, ttype, best_move);
   return max_score;
 }
 
@@ -338,7 +383,6 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
     best_result = current_result;
 
-    // Debug supprimé pour compatibilité UCI
     // Arrêt si mat trouvé
     if (abs(current_result.score) >= MATE_SCORE - 100) {
       break;

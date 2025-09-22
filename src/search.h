@@ -16,9 +16,9 @@
 #define TT_MASK (TT_SIZE - 1)
 
 typedef enum {
-  TT_EXACT, // Score exact
-  TT_ALPHA, // Borne supérieure (fail-low)
-  TT_BETA   // Borne inférieure (fail-high)
+  TT_EXACT,      // Score exact
+  TT_UPPERBOUND, // Borne supérieure (fail-low)
+  TT_LOWERBOUND  // Borne inférieure (fail-high)
 } TTEntryType;
 
 typedef struct {
