@@ -955,11 +955,31 @@ void unmake_move_temp(Board *board, const Board *backup) { *board = *backup; }
 
 // Vérifie si un mouvement est légal (ne met pas le roi en échec)
 int is_move_legal(const Board *board, const Move *move) {
+  // 1. Vérifier que la case de départ contient bien une pièce du joueur actif
+  if (move->from < A1 || move->from > H8)
+    return 0;
+  if (!is_square_occupied(board, move->from)) {
+    return 0;
+  }
+  Couleur moving_color = get_piece_color(board, move->from);
+  if (moving_color != board->to_move) {
+    return 0;
+  }
+
+  // 2. Vérifier que la destination est valide :
+  // - soit vide
+  // - soit occupée par une pièce adverse (jamais une pièce amie)
+  if (move->to < A1 || move->to > H8)
+    return 0;
+  if (is_square_occupied(board, move->to)) {
+    Couleur dest_color = get_piece_color(board, move->to);
+    if (dest_color == moving_color) {
+      return 0;
+    }
+  }
+
   Board temp_board, backup;
   temp_board = *board;
-
-  // CORRECTION: Récupérer la couleur AVANT de faire le mouvement
-  Couleur moving_color = get_piece_color(board, move->from);
 
   make_move_temp(&temp_board, move, &backup);
 
