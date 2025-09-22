@@ -86,7 +86,12 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
 void generate_capture_moves(const Board *board, MoveList *moves);
 
 // Fonctions utilitaires pour make/unmake
-void apply_move(Board *board, const Move *move);
-void undo_move(Board *board, const Board *backup);
+void apply_move(Board *board, const Move *move, int ply);
+void undo_move(Board *board, int ply);
+
+// Helpers from search.c
+int gives_check(const Board *board, const Move *move);
+int moves_toward_center(const Board *board, const Move *move);
+int is_obviously_bad_move(const Board *board, const Move *move);
 
 #endif // SEARCH_H

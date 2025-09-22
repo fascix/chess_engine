@@ -444,3 +444,144 @@ int evaluate_tapered(const Board *board, GamePhase phase, float phase_factor) {
   return (int)(opening_score * phase_factor +
                endgame_score * (1.0f - phase_factor));
 }
+
+// À ajouter dans evaluation.c
+
+// Vérifie si une pièce est "pendue" (attaquée et non défendue)
+int is_piece_hanging(const Board *board, Square square, Couleur piece_color) {
+  if (!is_square_occupied(board, square))
+    return 0;
+
+  Couleur opponent = (piece_color == WHITE) ? BLACK : WHITE;
+
+  // La pièce est-elle attaquée ?
+  if (!is_square_attacked(board, square, opponent)) {
+    return 0; // Pas attaquée = pas pendue
+  }
+
+  // Est-elle défendue ?
+  if (is_square_attacked(board, square, piece_color)) {
+    return 0; // Défendue = pas vraiment pendue (échange possible)
+  }
+
+  return 1; // Attaquée et non défendue = PENDUE !
+}
+
+// Pénalité pour pièces pendues selon leur valeur
+int evaluate_hanging_pieces(const Board *board) {
+  int penalty = 0;
+
+  for (Couleur color = WHITE; color <= BLACK; color++) {
+    int color_multiplier =
+        (color == WHITE) ? -1 : 1; // Pénalité pour nos pièces
+
+    for (PieceType piece = PAWN; piece <= QUEEN; piece++) {
+      Bitboard pieces = board->pieces[color][piece];
+
+      while (pieces) {
+        Square square = __builtin_ctzll(pieces);
+        pieces &= pieces - 1;
+
+        if (is_piece_hanging(board, square, color)) {
+          // Pénalité = 90% de la valeur de la pièce
+          int piece_val = piece_value(piece);
+          penalty += (piece_val * 9 / 10) * color_multiplier;
+        }
+      }
+    }
+  }
+
+  return penalty;
+}
+
+// Bonus pour développement sécurisé en ouverture
+int evaluate_safe_development(const Board *board) {
+  if (board->move_number > 10)
+    return 0; // Après l'ouverture
+
+  int bonus = 0;
+
+  for (Couleur color = WHITE; color <= BLACK; color++) {
+    int color_multiplier = (color == WHITE) ? 1 : -1;
+
+    // Bonus pour cavaliers développés ET en sécurité
+    Bitboard knights = board->pieces[color][KNIGHT];
+    while (knights) {
+      Square square = __builtin_ctzll(knights);
+      knights &= knights - 1;
+
+      // Cavaliers développés (pas sur première rangée)
+      int rank = square / 8;
+      int home_rank = (color == WHITE) ? 0 : 7;
+
+      if (rank != home_rank) {
+        bonus += 25 * color_multiplier; // Développé
+
+        // Bonus supplémentaire s'il n'est pas pendu
+        if (!is_piece_hanging(board, square, color)) {
+          bonus += 15 * color_multiplier; // Sécurisé
+        }
+      }
+    }
+
+    // Même principe pour les fous
+    Bitboard bishops = board->pieces[color][BISHOP];
+    while (bishops) {
+      Square square = __builtin_ctzll(bishops);
+      bishops &= bishops - 1;
+
+      int rank = square / 8;
+      int home_rank = (color == WHITE) ? 0 : 7;
+
+      if (rank != home_rank) {
+        bonus += 20 * color_multiplier;
+        if (!is_piece_hanging(board, square, color)) {
+          bonus += 10 * color_multiplier;
+        }
+      }
+    }
+  }
+
+  return bonus;
+}
+
+// Fonction d'évaluation MISE À JOUR pour éviter les pendus
+int evaluate_position_improved(const Board *board) {
+  GameResult result = get_game_result(board);
+  switch (result) {
+  case GAME_CHECKMATE_WHITE:
+    return -MATE_SCORE;
+  case GAME_CHECKMATE_BLACK:
+    return MATE_SCORE;
+  case GAME_STALEMATE:
+  case GAME_FIFTY_MOVE_RULE:
+    return STALEMATE_SCORE;
+  case GAME_ONGOING:
+    break;
+  }
+
+  int score = 0;
+
+  // Évaluation de base
+  score += evaluate_material(board);
+  score += evaluate_position_bonus(board);
+
+  // NOUVELLES ÉVALUATIONS TACTIQUES
+  score += evaluate_hanging_pieces(board) * 2; // Très important !
+  score += evaluate_safe_development(board);   // Pour l'ouverture
+
+  // Autres évaluations selon la phase
+  GamePhase phase = get_game_phase(board);
+  if (phase == OPENING_PHASE) {
+    score += evaluate_center_control(board) * 2;
+    score += evaluate_king_safety(board);
+  } else {
+    score += evaluate_pawn_structure(board);
+    score += evaluate_mobility(board);
+  }
+
+  return score;
+}
+
+// REMPLACER evaluate_position par evaluate_position_improved
+// dans toutes les fonctions de recherche

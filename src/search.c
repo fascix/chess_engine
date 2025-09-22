@@ -18,16 +18,34 @@ static uint64_t zobrist_side_to_move;
 static Move killer_moves[128][2];     // [ply][killer_slot]
 static int history_scores[2][64][64]; // [color][from][to]
 
-// Applique temporairement un mouvement
+/*// Applique temporairement un mouvement
 void apply_move(Board *board, const Move *move) {
   // Cette fonction devra être implémentée pour modifier réellement le board
   // Pour l'instant, on utilise make_move_temp de movegen.c
   Board backup; // Non utilisé ici, juste pour l'interface
   make_move_temp(board, move, &backup);
+}*/
+
+static Board search_backup_stack[128]; // Stack pour sauvegardes (par ply)
+
+// Applique temporairement un mouvement avec sauvegarde correcte
+void apply_move(Board *board, const Move *move, int ply) {
+  // Sauvegarder l'état AVANT modification
+  search_backup_stack[ply] = *board;
+
+  // Appliquer le mouvement
+  Board dummy_backup; // Non utilisé dans make_move_temp
+  make_move_temp(board, move, &dummy_backup);
 }
 
 // Annule un mouvement (restaure depuis backup)
-void undo_move(Board *board, const Board *backup) { *board = *backup; }
+void undo_move(Board *board, int ply) { *board = search_backup_stack[ply]; }
+
+// Restaurer le plateau depuis un backup local (utilisé quand on sauvegarde
+// localement via `Board backup = *board;`)
+void restore_board_from_backup(Board *board, const Board *backup) {
+  *board = *backup;
+}
 
 // Implémentation Negamax de base
 int negamax(Board *board, int depth, Couleur color) {
@@ -56,15 +74,15 @@ int negamax(Board *board, int depth, Couleur color) {
   for (int i = 0; i < moves.count; i++) {
     Board backup = *board;
 
-    // Jouer le mouvement
-    apply_move(board, &moves.moves[i]);
+    // Jouer le mouvement (temporaire)
+    make_move_temp(board, &moves.moves[i], &backup);
 
     // Recherche récursive avec couleur opposée
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
     int score = -negamax(board, depth - 1, opponent);
 
-    // Annuler le mouvement
-    undo_move(board, &backup);
+    // Restaurer le plateau depuis le backup local
+    restore_board_from_backup(board, &backup);
 
     // Mise à jour du meilleur score
     if (score > max_score) {
@@ -75,61 +93,49 @@ int negamax(Board *board, int depth, Couleur color) {
   return max_score;
 }
 
-// Implémentation Negamax avec Alpha-Beta pruning avec Move Ordering
-int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
-                       Couleur color) {
-  // Cas de base : profondeur 0 -> Quiescence Search
+// Mise à jour de negamax_alpha_beta
+int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
+                             Couleur color, int ply) {
   if (depth == 0) {
     return quiescence_search(board, alpha, beta, color);
   }
 
-  // Générer tous les mouvements légaux
   MoveList moves;
   generate_legal_moves(board, &moves);
 
-  // Aucun mouvement = mat ou pat
   if (moves.count == 0) {
     if (is_in_check(board, color)) {
-      return -MATE_SCORE + (10 - depth);
+      return -MATE_SCORE + ply; // Plus ply est petit, plus c'est mauvais
     } else {
       return STALEMATE_SCORE;
     }
   }
 
   int max_score = -INFINITY_SCORE;
-  Move best_move = {0};
-
-  // Trier les mouvements par ordre de priorité
   OrderedMoveList ordered_moves;
-  Move hash_move = {0}; // TODO: récupérer de la TT
-  order_moves(board, &moves, &ordered_moves, hash_move, depth);
+  Move hash_move = {0};
+  order_moves(board, &moves, &ordered_moves, hash_move, ply);
 
-  // Parcourir tous les mouvements dans l'ordre de priorité
   for (int i = 0; i < ordered_moves.count; i++) {
-    Board backup = *board;
+    // CORRECTION: Sauvegarder AVANT d'appliquer
+    apply_move(board, &ordered_moves.moves[i], ply);
 
-    // Jouer le mouvement
-    apply_move(board, &ordered_moves.moves[i]);
-
-    // Recherche récursive avec couleur opposée
+    // Recherche récursive
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-    int score = -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent);
+    int score = -negamax_alpha_beta_fixed(board, depth - 1, -beta, -alpha,
+                                          opponent, ply + 1);
 
-    // Annuler le mouvement
-    undo_move(board, &backup);
+    // CORRECTION: Restaurer depuis le bon backup
+    undo_move(board, ply);
 
-    // Mise à jour du meilleur score
     if (score > max_score) {
       max_score = score;
-      best_move = ordered_moves.moves[i];
     }
 
-    // Alpha-Beta pruning
     if (score >= beta) {
-      // Stocker killer move et history heuristic
-      store_killer_move(ordered_moves.moves[i], depth);
+      store_killer_move(ordered_moves.moves[i], ply);
       update_history(ordered_moves.moves[i], depth, color);
-      return beta; // Coupure Beta
+      return beta;
     }
 
     if (score > alpha) {
@@ -171,17 +177,17 @@ SearchResult search_best_move(Board *board, int depth) {
   for (int i = 0; i < moves.count; i++) {
     Board backup = *board;
 
-    // Jouer le mouvement
-    apply_move(board, &moves.moves[i]);
+    // Jouer le mouvement (temporaire)
+    make_move_temp(board, &moves.moves[i], &backup);
 
     // Recherche avec Alpha-Beta
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-    int score = -negamax_alpha_beta(board, depth - 1, -INFINITY_SCORE,
-                                    INFINITY_SCORE, opponent);
+    int score = -negamax_alpha_beta_fixed(board, depth - 1, -INFINITY_SCORE,
+                                          INFINITY_SCORE, opponent, 1);
     result.nodes_searched++;
 
-    // Annuler le mouvement
-    undo_move(board, &backup);
+    // Restaurer le plateau depuis le backup local
+    restore_board_from_backup(board, &backup);
 
     // Mise à jour du meilleur mouvement
     if (score > result.score) {
@@ -542,15 +548,15 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
       continue;
     }
 
-    // Jouer la capture
-    apply_move(board, &ordered_captures.moves[i]);
+    // Jouer la capture (temporaire)
+    make_move_temp(board, &ordered_captures.moves[i], &backup);
 
     // Recherche récursive
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
     int score = -quiescence_search(board, -beta, -alpha, opponent);
 
-    // Annuler le mouvement
-    undo_move(board, &backup);
+    // Restaurer le plateau depuis le backup local
+    restore_board_from_backup(board, &backup);
 
     // Mise à jour alpha-beta
     if (score >= beta) {
@@ -563,4 +569,253 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
   }
 
   return alpha;
+}
+
+// À ajouter/remplacer dans search.c
+
+// Static Exchange Evaluation simplifiée
+int see_capture(const Board *board, const Move *move) {
+  if (move->type != MOVE_CAPTURE && move->type != MOVE_EN_PASSANT) {
+    return 0;
+  }
+
+  Square to = move->to;
+  int gain = piece_value(move->captured_piece);
+
+  // Approximation simple : si l'attaquant peut être recapturé
+  Couleur attacking_color = board->to_move;
+  Couleur defending_color = (attacking_color == WHITE) ? BLACK : WHITE;
+
+  // Si la case de destination est défendue par l'adversaire
+  if (is_square_attacked(board, to, defending_color)) {
+    int attacker_value = 0;
+
+    // Déterminer la valeur de l'attaquant
+    PieceType attacker = get_piece_type(board, move->from);
+    attacker_value = piece_value(attacker);
+
+    // Gain net approximatif = valeur_capturée - valeur_attaquant
+    gain = gain - attacker_value;
+  }
+
+  return gain;
+}
+
+// Move ordering amélioré avec SEE
+void order_moves_improved(const Board *board, MoveList *moves,
+                          OrderedMoveList *ordered, Move hash_move, int ply) {
+  ordered->count = moves->count;
+
+  for (int i = 0; i < moves->count; i++) {
+    ordered->moves[i] = moves->moves[i];
+    int score = 0;
+
+    // 1. Hash move - priorité absolue
+    if (hash_move.from == moves->moves[i].from &&
+        hash_move.to == moves->moves[i].to) {
+      score = 2000000;
+    }
+    // 2. Bonnes captures (SEE > 0)
+    else if (moves->moves[i].type == MOVE_CAPTURE ||
+             moves->moves[i].type == MOVE_EN_PASSANT) {
+      int see_score = see_capture(board, &moves->moves[i]);
+      if (see_score > 0) {
+        score = 1000000 + see_score;
+      } else {
+        // Mauvaises captures en dernier
+        score = -100000 + see_score;
+      }
+    }
+    // 3. Promotions
+    else if (moves->moves[i].type == MOVE_PROMOTION) {
+      score = 900000 + piece_value(moves->moves[i].promotion);
+    }
+    // 4. Killer moves
+    else if (is_killer_move(moves->moves[i], ply)) {
+      score = 800000;
+    }
+    // 5. Échecs (approximation)
+    else if (gives_check(board, &moves->moves[i])) {
+      score = 700000;
+    }
+    // 6. Coups qui développent vers le centre
+    else if (moves_toward_center(board, &moves->moves[i])) {
+      score = 50000;
+    }
+    // 7. History heuristic
+    else {
+      Couleur color = board->to_move;
+      score = history_scores[color][moves->moves[i].from][moves->moves[i].to];
+    }
+
+    ordered->scores[i] = score;
+  }
+
+  // Tri par insertion (efficace pour petites listes)
+  for (int i = 1; i < ordered->count; i++) {
+    Move temp_move = ordered->moves[i];
+    int temp_score = ordered->scores[i];
+    int j = i - 1;
+
+    while (j >= 0 && ordered->scores[j] < temp_score) {
+      ordered->moves[j + 1] = ordered->moves[j];
+      ordered->scores[j + 1] = ordered->scores[j];
+      j--;
+    }
+
+    ordered->moves[j + 1] = temp_move;
+    ordered->scores[j + 1] = temp_score;
+  }
+}
+
+// Fonction helper pour détecter les coups vers le centre
+int moves_toward_center(const Board *board, const Move *move) {
+  if (board->move_number > 10)
+    return 0; // Après l'ouverture
+
+  int to_file = move->to % 8;
+  int to_rank = move->to / 8;
+
+  // Cases centrales (d4, d5, e4, e5) et leurs alentours
+  return (to_file >= 2 && to_file <= 5 && to_rank >= 2 && to_rank <= 5);
+}
+
+// Fonction helper pour détecter les échecs (approximation)
+int gives_check(const Board *board, const Move *move) {
+  // Test rapide : simuler le coup et vérifier l'échec
+  Board temp_board, backup;
+  temp_board = *board;
+
+  make_move_temp(&temp_board, move, &backup);
+
+  Couleur opponent = (board->to_move == WHITE) ? BLACK : WHITE;
+  int check = is_in_check(&temp_board, opponent);
+
+  return check;
+}
+
+// Dans search.c - Paramètres optimisés pour éviter les bourdes
+
+// Recherche avec profondeur minimale pour éviter les bourdes
+SearchResult search_best_move_safe(Board *board, int max_depth, int min_depth) {
+  SearchResult result = {0};
+  result.best_move.from = A1;
+  result.best_move.to = A1;
+  result.score = -INFINITY_SCORE;
+
+  MoveList moves;
+  generate_legal_moves(board, &moves);
+
+  if (moves.count == 0) {
+    result.score =
+        is_in_check(board, board->to_move) ? -MATE_SCORE : STALEMATE_SCORE;
+    return result;
+  }
+
+  // SÉCURITÉ: Recherche minimum de 3 plies pour éviter les bourdes évidentes
+  int search_depth = (max_depth < min_depth) ? min_depth : max_depth;
+
+  Couleur color = board->to_move;
+
+  for (int i = 0; i < moves.count; i++) {
+    // Pré-filtrage des coups évidemment mauvais
+    if (is_obviously_bad_move(board, &moves.moves[i])) {
+      continue; // Skip les coups qui donnent des pièces gratuitement
+    }
+
+    apply_move(board, &moves.moves[i], 0);
+
+    Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+    int score = -negamax_alpha_beta_fixed(
+        board, search_depth - 1, -INFINITY_SCORE, INFINITY_SCORE, opponent, 1);
+    result.nodes_searched++;
+
+    undo_move(board, 0);
+
+    if (score > result.score) {
+      result.score = score;
+      result.best_move = moves.moves[i];
+    }
+  }
+
+  result.depth = search_depth;
+  return result;
+}
+
+// Filtre les coups évidemment mauvais
+int is_obviously_bad_move(const Board *board, const Move *move) {
+  // 1. Ne pas mettre une pièce en prise gratuite
+  if (move->type == MOVE_NORMAL || move->type == MOVE_CAPTURE) {
+    PieceType moving_piece = get_piece_type(board, move->from);
+    Couleur moving_color = board->to_move;
+    Couleur opponent = (moving_color == WHITE) ? BLACK : WHITE;
+
+    // Si la case de destination est attaquée par l'adversaire
+    if (is_square_attacked(board, move->to, opponent)) {
+      // Et pas défendue par nous
+      if (!is_square_attacked(board, move->to, moving_color)) {
+        // Et ce n'est pas une capture qui vaut le coup
+        if (move->type != MOVE_CAPTURE ||
+            piece_value(move->captured_piece) < piece_value(moving_piece)) {
+          return 1; // Coup évidemment mauvais
+        }
+      }
+    }
+  }
+
+  // 2. En ouverture, ne pas sortir la dame trop tôt
+  if (board->move_number <= 8) {
+    PieceType moving_piece = get_piece_type(board, move->from);
+    if (moving_piece == QUEEN) {
+      int from_rank = move->from / 8;
+      int home_rank = (board->to_move == WHITE) ? 0 : 7;
+
+      // Dame qui sort de sa rangée de départ très tôt
+      if (from_rank == home_rank) {
+        // Sauf si c'est pour capturer quelque chose d'important
+        if (move->type != MOVE_CAPTURE ||
+            piece_value(move->captured_piece) < 300) {
+          return 1;
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+// Interface principale SÉCURISÉE
+SearchResult search_iterative_deepening_safe(Board *board, int max_depth,
+                                             int time_limit_ms) {
+  clock_t start_time = clock();
+  SearchResult best_result = {0};
+  best_result.score = -INFINITY_SCORE;
+
+  // SÉCURITÉ: Profondeur minimale de 3 pour éviter les bourdes
+  int min_depth = 3;
+
+  tt_new_search(&tt_global);
+
+  for (int depth = min_depth; depth <= max_depth; depth++) {
+    SearchResult current_result =
+        search_best_move_safe(board, depth, min_depth);
+
+    // Vérifier le temps
+    clock_t current_time = clock();
+    int elapsed_ms =
+        (int)(((double)(current_time - start_time)) / CLOCKS_PER_SEC * 1000);
+
+    if (elapsed_ms >= time_limit_ms && depth > min_depth) {
+      break;
+    }
+
+    best_result = current_result;
+
+    // Arrêt si mat trouvé
+    if (abs(current_result.score) >= MATE_SCORE - 100) {
+      break;
+    }
+  }
+
+  return best_result;
 }
