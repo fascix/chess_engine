@@ -326,31 +326,50 @@ void init_zobrist() {
   zobrist_side_to_move = random_uint64();
 }
 
-// Calcule le hash Zobrist d'une position
+// Calcule le hash Zobrist d'une position (défensif)
 uint64_t zobrist_hash(const Board *board) {
+  if (!board) {
+    fprintf(stderr, "zobrist_hash: null board pointer\n");
+    return 0;
+  }
+
   uint64_t hash = 0;
 
-  // Hash des pièces
+  // Hash des pièces (défensif: vérification bornes)
   for (int color = WHITE; color <= BLACK; color++) {
     for (int piece = PAWN; piece <= KING; piece++) {
       Bitboard pieces = board->pieces[color][piece];
       while (pieces) {
         int square = __builtin_ctzll(pieces);
-        pieces &= pieces - 1;
+        if (square < 0 || square >= 64) {
+          fprintf(stderr, "zobrist_hash: invalid square=%d (color=%d piece=%d)\n",
+                  square, color, piece);
+          // clear lowest bit and continue defensively
+          pieces &= pieces - 1;
+          continue;
+        }
         hash ^= zobrist_pieces[color][piece][square];
+        pieces &= pieces - 1;
       }
     }
   }
 
-  // Hash des droits de roque
-  hash ^= zobrist_castling[board->castle_rights];
-
-  // Hash en passant
-  if (board->en_passant >= 0) {
-    hash ^= zobrist_en_passant[board->en_passant];
+  // Droits de roque (vérifier borne)
+  if (board->castle_rights >= 0 && board->castle_rights < 16) {
+    hash ^= zobrist_castling[board->castle_rights];
+  } else {
+    fprintf(stderr, "zobrist_hash: invalid castle_rights=%d\n", board->castle_rights);
   }
 
-  // Hash du joueur actuel
+  // En passant (vérifier borne)
+  if (board->en_passant >= 0 && board->en_passant < 64) {
+    hash ^= zobrist_en_passant[board->en_passant];
+  } else if (board->en_passant != -1) {
+    // -1 signifie pas d'en-passant; autres valeurs sont suspectes
+    fprintf(stderr, "zobrist_hash: invalid en_passant=%d\n", board->en_passant);
+  }
+
+  // Joueur actuel
   if (board->to_move == BLACK) {
     hash ^= zobrist_side_to_move;
   }
