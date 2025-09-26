@@ -192,7 +192,7 @@ int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
 }
 
 // Interface principale de recherche
-SearchResult search_best_move(Board *board, int depth) {
+/*SearchResult search_best_move(Board *board, int depth) {
   // Initialiser les tables de move ordering
   static int first_call = 1;
   if (first_call) {
@@ -242,7 +242,7 @@ SearchResult search_best_move(Board *board, int depth) {
   }
 
   return result;
-}
+}*/
 
 // ========== TRANSPOSITION TABLE ==========
 
@@ -342,7 +342,8 @@ uint64_t zobrist_hash(const Board *board) {
       while (pieces) {
         int square = __builtin_ctzll(pieces);
         if (square < 0 || square >= 64) {
-          fprintf(stderr, "zobrist_hash: invalid square=%d (color=%d piece=%d)\n",
+          fprintf(stderr,
+                  "zobrist_hash: invalid square=%d (color=%d piece=%d)\n",
                   square, color, piece);
           // clear lowest bit and continue defensively
           pieces &= pieces - 1;
@@ -358,7 +359,8 @@ uint64_t zobrist_hash(const Board *board) {
   if (board->castle_rights >= 0 && board->castle_rights < 16) {
     hash ^= zobrist_castling[board->castle_rights];
   } else {
-    fprintf(stderr, "zobrist_hash: invalid castle_rights=%d\n", board->castle_rights);
+    fprintf(stderr, "zobrist_hash: invalid castle_rights=%d\n",
+            board->castle_rights);
   }
 
   // En passant (vérifier borne)
@@ -881,4 +883,9 @@ SearchResult search_iterative_deepening_safe(Board *board, int max_depth,
   }
 
   return best_result;
+}
+
+SearchResult search_best_move(Board *board, int depth) {
+  // Utiliser la version sécurisée avec profondeur minimale
+  return search_iterative_deepening_safe(board, depth, 5000); // 5 secondes max
 }

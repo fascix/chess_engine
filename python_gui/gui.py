@@ -193,11 +193,18 @@ def render_game(screen, board, font, player_is_white=True):
     highlight_en_passant_moves(screen, legal_moves, player_is_white)
     draw_captured_pieces(screen, player_is_white)
     
-    # Afficher la pièce sélectionnée si en mode drag
-    if drag_mode and selected_piece:
+    # Afficher la pièce sélectionnée si en mode drag  
+    if drag_mode and selected_piece and dragged_pos:
         piece = board.piece_at(selected_piece)
         if piece:
+            # SÉCURITÉ : Limiter dragged_pos aux bounds de l'écran
+            x, y = dragged_pos
+            x = max(0, min(x, WINDOW_SIZE - TILE_SIZE))
+            y = max(0, min(y, WINDOW_SIZE - TILE_SIZE))
+            
             piece_color = 'w' if piece.color == chess.WHITE else 'b'
             piece_type = piece.symbol().lower()
             dragged_piece = images[piece_color + piece_type]
-            screen.blit(dragged_piece, dragged_pos)
+            screen.blit(dragged_piece, (x, y))
+
+

@@ -543,6 +543,44 @@ int evaluate_safe_development(const Board *board) {
   return bonus;
 }
 
+// Ajouter une pénalité pour mouvements de pions répétitifs
+int evaluate_pawn_advancement_penalty(const Board *board) {
+  if (board->move_number > 15)
+    return 0; // Après l'ouverture
+
+  int penalty = 0;
+  int pawn_moves_count = 0; // Compteur approximatif
+
+  // Pénaliser si trop de pions bougés sans développement
+  for (Couleur color = WHITE; color <= BLACK; color++) {
+    int color_multiplier = (color == WHITE) ? 1 : -1;
+    Bitboard pawns = board->pieces[color][PAWN];
+
+    // Approximation : pions qui ont bougé de leur position initiale
+    Bitboard initial_pawns = (color == WHITE) ? 0xFF00ULL : 0xFF000000000000ULL;
+    Bitboard moved_pawns = pawns & ~initial_pawns;
+    int moved_count = __builtin_popcountll(moved_pawns);
+
+    // Pénalité si > 3 pions bougés sans développement suffisant
+    if (moved_count > 3) {
+      int developed_pieces =
+          __builtin_popcountll(
+              board->pieces[color][KNIGHT] &
+              ~((color == WHITE) ? 0x42ULL : 0x4200000000000000ULL)) +
+          __builtin_popcountll(
+              board->pieces[color][BISHOP] &
+              ~((color == WHITE) ? 0x24ULL : 0x2400000000000000ULL));
+
+      if (developed_pieces < 2) {
+        penalty +=
+            (moved_count - 3) * 30 * color_multiplier; // Pénalité progressive
+      }
+    }
+  }
+
+  return penalty;
+}
+
 // Fonction d'évaluation MISE À JOUR pour éviter les pendus
 int evaluate_position(const Board *board) {
   GameResult result = get_game_result(board);
@@ -578,5 +616,7 @@ int evaluate_position(const Board *board) {
     score += evaluate_mobility(board);
   }
 
+  // AJOUTER dans evaluate_position() :
+  score += evaluate_pawn_advancement_penalty(board);
   return score;
 }
