@@ -754,68 +754,66 @@ void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
 int is_square_attacked(const Board *board, Square square,
                        Couleur attacking_color) {
   if (!board || square < A1 || square > H8) {
-    return 0; // Case invalide
+    return 0;
   }
 
-  // Vérifier les attaques de pions
-  int pawn_direction = (attacking_color == WHITE) ? 8 : -8;
-  int left_attack = square - pawn_direction - 1;
-  int right_attack = square - pawn_direction + 1;
+  int target_rank = square / 8;
+  int target_file = square % 8;
 
-  // Pion attaque depuis la gauche
-  if (left_attack >= A1 && left_attack <= H8 &&
-      (square % 8) != 0) { // Éviter wrap A↔H
-    if (is_square_occupied(board, left_attack) &&
-        get_piece_color(board, left_attack) == attacking_color &&
-        get_piece_type(board, left_attack) == PAWN) {
-      return 1;
+  // Vérifier attaques de pions
+  int pawn_direction = (attacking_color == WHITE) ? 1 : -1;
+  int pawn_rank = target_rank - pawn_direction;
+
+  if (pawn_rank >= 0 && pawn_rank <= 7) {
+    // Pion attaque depuis la gauche
+    if (target_file > 0) {
+      Square left_pawn = pawn_rank * 8 + (target_file - 1);
+      if (is_square_occupied(board, left_pawn) &&
+          get_piece_color(board, left_pawn) == attacking_color &&
+          get_piece_type(board, left_pawn) == PAWN) {
+        return 1;
+      }
+    }
+    // Pion attaque depuis la droite
+    if (target_file < 7) {
+      Square right_pawn = pawn_rank * 8 + (target_file + 1);
+      if (is_square_occupied(board, right_pawn) &&
+          get_piece_color(board, right_pawn) == attacking_color &&
+          get_piece_type(board, right_pawn) == PAWN) {
+        return 1;
+      }
     }
   }
 
-  // Pion attaque depuis la droite
-  if (right_attack >= A1 && right_attack <= H8 &&
-      (square % 8) != 7) { // Éviter wrap H↔A
-    if (is_square_occupied(board, right_attack) &&
-        get_piece_color(board, right_attack) == attacking_color &&
-        get_piece_type(board, right_attack) == PAWN) {
-      return 1;
-    }
-  }
-
-  // Vérifier les attaques de cavalier
-  static const int knight_offsets[8] = {+17, +15, +10, +6, -6, -10, -15, -17};
+  // Vérifier attaques de cavalier
+  static const int knight_moves[8][2] = {{-2, -1}, {-2, 1}, {-1, -2}, {-1, 2},
+                                         {1, -2},  {1, 2},  {2, -1},  {2, 1}};
 
   for (int i = 0; i < 8; i++) {
-    Square from = square + knight_offsets[i];
-    if (from >= A1 && from <= H8) {
-      int file_diff = ((from % 8) - (square % 8));
-      int rank_diff = ((from / 8) - (square / 8));
+    int rank = target_rank + knight_moves[i][0];
+    int file = target_file + knight_moves[i][1];
 
-      // Vérifier mouvement en L valide
-      if ((file_diff == 1 && rank_diff == 2) ||
-          (file_diff == 2 && rank_diff == 1)) {
-        if (is_square_occupied(board, from) &&
-            get_piece_color(board, from) == attacking_color &&
-            get_piece_type(board, from) == KNIGHT) {
-          return 1;
-        }
+    if (rank >= 0 && rank <= 7 && file >= 0 && file <= 7) {
+      Square from = rank * 8 + file;
+      if (is_square_occupied(board, from) &&
+          get_piece_color(board, from) == attacking_color &&
+          get_piece_type(board, from) == KNIGHT) {
+        return 1;
       }
     }
   }
 
-  // Vérifier les attaques de tour/dame (orthogonales)
-  static const int rook_directions[4] = {+8, -8, +1, -1};
+  // Vérifier attaques orthogonales (tour/dame)
+  static const int rook_dirs[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
   for (int dir = 0; dir < 4; dir++) {
-    for (Square from = square + rook_directions[dir]; from >= A1 && from <= H8;
-         from += rook_directions[dir]) {
-      // Vérifier débordement colonne pour Est/Ouest
-      if (rook_directions[dir] == +1 || rook_directions[dir] == -1) {
-        int prev_file = (from - rook_directions[dir]) % 8;
-        int curr_file = from % 8;
-        if (abs(curr_file - prev_file) != 1)
-          break; // Débordement détecté
-      }
+    for (int dist = 1; dist < 8; dist++) {
+      int rank = target_rank + dist * rook_dirs[dir][0];
+      int file = target_file + dist * rook_dirs[dir][1];
 
+      if (rank < 0 || rank > 7 || file < 0 || file > 7)
+        break;
+
+      Square from = rank * 8 + file;
       if (is_square_occupied(board, from)) {
         if (get_piece_color(board, from) == attacking_color) {
           PieceType piece = get_piece_type(board, from);
@@ -823,23 +821,22 @@ int is_square_attacked(const Board *board, Square square,
             return 1;
           }
         }
-        break; // Obstacle rencontré
+        break; // Pièce bloque
       }
     }
   }
 
-  // Vérifier les attaques de fou/dame (diagonales)
-  static const int bishop_directions[4] = {+9, +7, -7, -9};
+  // Vérifier attaques diagonales (fou/dame)
+  static const int bishop_dirs[4][2] = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
   for (int dir = 0; dir < 4; dir++) {
-    for (Square from = square + bishop_directions[dir];
-         from >= A1 && from <= H8; from += bishop_directions[dir]) {
-      // Vérifier débordement pour diagonales
-      int prev_file = (from - bishop_directions[dir]) % 8;
-      int curr_file = from % 8;
-      int file_diff = abs(curr_file - prev_file);
-      if (file_diff != 1)
-        break; // Débordement détecté
+    for (int dist = 1; dist < 8; dist++) {
+      int rank = target_rank + dist * bishop_dirs[dir][0];
+      int file = target_file + dist * bishop_dirs[dir][1];
 
+      if (rank < 0 || rank > 7 || file < 0 || file > 7)
+        break;
+
+      Square from = rank * 8 + file;
       if (is_square_occupied(board, from)) {
         if (get_piece_color(board, from) == attacking_color) {
           PieceType piece = get_piece_type(board, from);
@@ -847,21 +844,22 @@ int is_square_attacked(const Board *board, Square square,
             return 1;
           }
         }
-        break; // Obstacle rencontré
+        break; // Pièce bloque
       }
     }
   }
 
-  // Vérifier les attaques de roi (1 case dans toutes directions)
-  static const int king_directions[8] = {+8, -8, +1, -1, +9, +7, -7, -9};
-  for (int dir = 0; dir < 8; dir++) {
-    Square from = square + king_directions[dir];
-    if (from >= A1 && from <= H8) {
-      int file_diff = ((from % 8) - (square % 8));
-      int rank_diff = ((from / 8) - (square / 8));
+  // Vérifier attaques de roi
+  for (int rank_offset = -1; rank_offset <= 1; rank_offset++) {
+    for (int file_offset = -1; file_offset <= 1; file_offset++) {
+      if (rank_offset == 0 && file_offset == 0)
+        continue;
 
-      // Vérifier déplacement max 1 case
-      if (file_diff <= 1 && rank_diff <= 1) {
+      int rank = target_rank + rank_offset;
+      int file = target_file + file_offset;
+
+      if (rank >= 0 && rank <= 7 && file >= 0 && file <= 7) {
+        Square from = rank * 8 + file;
         if (is_square_occupied(board, from) &&
             get_piece_color(board, from) == attacking_color &&
             get_piece_type(board, from) == KING) {
@@ -871,7 +869,7 @@ int is_square_attacked(const Board *board, Square square,
     }
   }
 
-  return 0; // Aucune attaque détectée
+  return 0;
 }
 
 // Vérifie si le roi de la couleur donnée est en échec
