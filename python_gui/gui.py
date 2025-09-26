@@ -194,17 +194,14 @@ def render_game(screen, board, font, player_is_white=True):
     draw_captured_pieces(screen, player_is_white)
     
     # Afficher la pièce sélectionnée si en mode drag  
+    # problème ici en haut à droite la pièce bug
     if drag_mode and selected_piece and dragged_pos:
         piece = board.piece_at(selected_piece)
         if piece:
             # SÉCURITÉ : Limiter dragged_pos aux bounds de l'écran
             x, y = dragged_pos
-            max_x = screen.get_width() - TILE_SIZE
-            max_y = screen.get_height() - TILE_SIZE
-            
-            # Borner les coordonnées pour éviter que la pièce disparaisse
-            x = max(0, min(x, max_x))
-            y = max(0, min(y, max_y))
+            x = max(0, min(x, WINDOW_SIZE - TILE_SIZE))
+            y = max(0, min(y, WINDOW_SIZE - TILE_SIZE))
             
             piece_color = 'w' if piece.color == chess.WHITE else 'b'
             piece_type = piece.symbol().lower()
