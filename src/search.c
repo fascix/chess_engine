@@ -18,14 +18,6 @@ static uint64_t zobrist_side_to_move;
 static Move killer_moves[128][2];     // [ply][killer_slot]
 static int history_scores[2][64][64]; // [color][from][to]
 
-/*// Applique temporairement un mouvement
-void apply_move(Board *board, const Move *move) {
-  // Cette fonction devra être implémentée pour modifier réellement le board
-  // Pour l'instant, on utilise make_move_temp de movegen.c
-  Board backup; // Non utilisé ici, juste pour l'interface
-  make_move_temp(board, move, &backup);
-}*/
-
 static Board search_backup_stack[128]; // Stack pour sauvegardes (par ply)
 
 // Applique temporairement un mouvement avec sauvegarde correcte

@@ -15,7 +15,6 @@ python_gui/
 ├── gui.py              # Interface graphique et affichage
 ├── menu.py             # Tous les menus du jeu
 ├── game_modes.py       # Modes de jeu (2 joueurs, vs bot)
-├── main_old.py         # Ancien code non divisé en module qui est une sauvegarde
 ├── background.jpg      # Image du fond (pas très esthétique mais provisoire)
 └── pieces/
     ├── b/              # Images des pièces nires

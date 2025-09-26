@@ -199,8 +199,12 @@ def render_game(screen, board, font, player_is_white=True):
         if piece:
             # SÉCURITÉ : Limiter dragged_pos aux bounds de l'écran
             x, y = dragged_pos
-            x = max(0, min(x, WINDOW_SIZE - TILE_SIZE))
-            y = max(0, min(y, WINDOW_SIZE - TILE_SIZE))
+            max_x = screen.get_width() - TILE_SIZE
+            max_y = screen.get_height() - TILE_SIZE
+            
+            # Borner les coordonnées pour éviter que la pièce disparaisse
+            x = max(0, min(x, max_x))
+            y = max(0, min(y, max_y))
             
             piece_color = 'w' if piece.color == chess.WHITE else 'b'
             piece_type = piece.symbol().lower()
