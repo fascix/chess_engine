@@ -1,3 +1,18 @@
+#define ADD_PROMOTIONS(from, to, captured, moves)                              \
+  do {                                                                         \
+    Move promoQ = create_promotion_move((from), (to), QUEEN);                  \
+    promoQ.captured_piece = (captured);                                        \
+    movelist_add((moves), promoQ);                                             \
+    Move promoR = create_promotion_move((from), (to), ROOK);                   \
+    promoR.captured_piece = (captured);                                        \
+    movelist_add((moves), promoR);                                             \
+    Move promoB = create_promotion_move((from), (to), BISHOP);                 \
+    promoB.captured_piece = (captured);                                        \
+    movelist_add((moves), promoB);                                             \
+    Move promoN = create_promotion_move((from), (to), KNIGHT);                 \
+    promoN.captured_piece = (captured);                                        \
+    movelist_add((moves), promoN);                                             \
+  } while (0)
 #include "movegen.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -151,25 +166,12 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
         // Vérifier si promotion (pion atteint la dernière rangée)
         int rank = one_forward / 8;
         if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
-          // Générer les 4 promotions possibles
-          Move m;
-          m = create_promotion_move(from, one_forward, QUEEN);
-          if (is_move_legal(board, &m))
-            movelist_add(moves, m);
-          m = create_promotion_move(from, one_forward, ROOK);
-          if (is_move_legal(board, &m))
-            movelist_add(moves, m);
-          m = create_promotion_move(from, one_forward, BISHOP);
-          if (is_move_legal(board, &m))
-            movelist_add(moves, m);
-          m = create_promotion_move(from, one_forward, KNIGHT);
-          if (is_move_legal(board, &m))
-            movelist_add(moves, m);
+          // Ajoute toutes les promotions (pas de capture ici)
+          ADD_PROMOTIONS(from, one_forward, EMPTY, moves);
         } else {
           // Coup normal
           Move m = create_move(from, one_forward, MOVE_NORMAL);
-          if (is_move_legal(board, &m))
-            movelist_add(moves, m);
+          movelist_add(moves, m);
         }
 
         // 2. DOUBLE SAUT - Si première rangée et case deux cases devant libre
@@ -177,8 +179,7 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
         if ((from / 8) == start_rank && two_forward >= A1 &&
             two_forward <= H8 && !is_square_occupied(board, two_forward)) {
           Move m = create_move(from, two_forward, MOVE_NORMAL);
-          if (is_move_legal(board, &m))
-            movelist_add(moves, m);
+          movelist_add(moves, m);
         }
       }
 
@@ -197,25 +198,12 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
           // Vérifier promotion
           int rank = left_capture / 8;
           if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
-            Move capture = create_promotion_move(from, left_capture, QUEEN);
-            capture.type = MOVE_PROMOTION;
-            capture.captured_piece = captured;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
-            capture.promotion = ROOK;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
-            capture.promotion = BISHOP;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
-            capture.promotion = KNIGHT;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
+            // Promotions avec capture
+            ADD_PROMOTIONS(from, left_capture, captured, moves);
           } else {
             Move capture = create_move(from, left_capture, MOVE_CAPTURE);
             capture.captured_piece = captured;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
+            movelist_add(moves, capture);
           }
         }
       }
@@ -230,25 +218,12 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
           // Vérifier promotion
           int rank = right_capture / 8;
           if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
-            Move capture = create_promotion_move(from, right_capture, QUEEN);
-            capture.type = MOVE_PROMOTION;
-            capture.captured_piece = captured;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
-            capture.promotion = ROOK;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
-            capture.promotion = BISHOP;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
-            capture.promotion = KNIGHT;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
+            // Promotions avec capture
+            ADD_PROMOTIONS(from, right_capture, captured, moves);
           } else {
             Move capture = create_move(from, right_capture, MOVE_CAPTURE);
             capture.captured_piece = captured;
-            if (is_move_legal(board, &capture))
-              movelist_add(moves, capture);
+            movelist_add(moves, capture);
           }
         }
       }
@@ -292,8 +267,7 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
           get_piece_type(board, left_attacker) == PAWN) {
         Move ep_move = create_move(left_attacker, ep_square, MOVE_EN_PASSANT);
         ep_move.captured_piece = PAWN;
-        if (is_move_legal(board, &ep_move))
-          movelist_add(moves, ep_move);
+        movelist_add(moves, ep_move);
       }
     }
 
@@ -304,8 +278,7 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
           get_piece_type(board, right_attacker) == PAWN) {
         Move ep_move = create_move(right_attacker, ep_square, MOVE_EN_PASSANT);
         ep_move.captured_piece = PAWN;
-        if (is_move_legal(board, &ep_move))
-          movelist_add(moves, ep_move);
+        movelist_add(moves, ep_move);
       }
     }
   }
@@ -353,24 +326,20 @@ void slide_direction(const Board *board, Square from, int offset, Couleur color,
   // d'ajouter un coup
   for (int step = 1; step <= max_steps; step++) {
     Square to = from + step * offset;
-
     // Vérification de sécurité (ne devrait pas arriver avec le pré-calcul)
     if (to < A1 || to > H8)
       break;
-
     // Vérifier que toutes les cases intermédiaires sont libres
     if (is_square_occupied(board, to)) {
       if (get_piece_color(board, to) != color) {
         Move capture = create_move(from, to, MOVE_CAPTURE);
         capture.captured_piece = get_piece_type(board, to);
-        if (is_move_legal(board, &capture))
-          movelist_add(moves, capture);
+        movelist_add(moves, capture);
       }
       break; // Obstacle rencontré
     } else {
       Move m = create_move(from, to, MOVE_NORMAL);
-      if (is_move_legal(board, &m))
-        movelist_add(moves, m);
+      movelist_add(moves, m);
     }
   }
 }
@@ -482,15 +451,13 @@ void generate_knight_moves(const Board *board, Couleur color, MoveList *moves) {
       // Case vide → mouvement normal
       if (!is_square_occupied(board, to)) {
         Move m = create_move(from, to, MOVE_NORMAL);
-        if (is_move_legal(board, &m))
-          movelist_add(moves, m);
+        movelist_add(moves, m);
       }
       // Case occupée par pièce ennemie → capture
       else if (get_piece_color(board, to) != color) {
         Move capture = create_move(from, to, MOVE_CAPTURE);
         capture.captured_piece = get_piece_type(board, to);
-        if (is_move_legal(board, &capture))
-          movelist_add(moves, capture);
+        movelist_add(moves, capture);
       }
       // Case occupée par pièce amie → ignorer
     }
@@ -658,35 +625,26 @@ void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
     // Tester les 8 mouvements possibles
     for (int i = 0; i < 8; i++) {
       Square to = from + king_offsets[i];
-
       // Vérification basique : case dans les limites du plateau
       if (to < A1 || to > H8) {
         continue;
       }
-
       int to_file = to % 8;
       int to_rank = to / 8;
-
       // Vérification anti-wrap : déplacement max 1 case en colonne/rangée
       int file_diff = abs(to_file - from_file);
       int rank_diff = abs(to_rank - from_rank);
-
       if (file_diff > 1 || rank_diff > 1) {
         continue; // Mouvement invalide (wrap-around détecté)
       }
-
-      // Application du motif demandé pour filtrer tous les coups du roi avec
-      // is_move_legal() et is_castle_illegal()
-      Move m;
+      // Coups pseudo-légaux du roi
       if (!is_square_occupied(board, to)) {
-        m = create_move(from, to, MOVE_NORMAL);
-        if (is_move_legal(board, &m) && !is_castle_illegal(board, &m))
-          movelist_add(moves, m);
+        Move m = create_move(from, to, MOVE_NORMAL);
+        movelist_add(moves, m);
       } else if (get_piece_color(board, to) != color) {
-        m = create_move(from, to, MOVE_CAPTURE);
+        Move m = create_move(from, to, MOVE_CAPTURE);
         m.captured_piece = get_piece_type(board, to);
-        if (is_move_legal(board, &m) && !is_castle_illegal(board, &m))
-          movelist_add(moves, m);
+        movelist_add(moves, m);
       }
       // Case occupée par pièce amie → ignorer
     }
@@ -954,12 +912,6 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
   }
   board->occupied[piece_color] |= (1ULL << move->to);
 
-  // Si un pion avance de deux cases, définir la case en_passant
-  if (piece_type == PAWN && abs(move->to - move->from) == 16) {
-    board->en_passant =
-        (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
-  }
-
   // Gérer le roque
   if (move->type == MOVE_CASTLE) {
     Square rook_from, rook_to;
@@ -981,18 +933,15 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
   // Recalculer all_pieces
   board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
 
-  // Changer le joueur actif
-  board->to_move = (piece_color == WHITE) ? BLACK : WHITE;
-
-  // Réinitialiser en_passant
+  // Réinitialiser en_passant par défaut
   board->en_passant = -1;
-
-  // Si un pion avance de deux cases, définir la case en_passant (déjà fait
-  // ci-dessus)
-  if (piece_type == PAWN && abs(move->to - move->from) == 16) {
+  // Si un pion avance de deux cases, définir la case en_passant
+  if (piece_type == PAWN && (move->to - move->from) == 16) {
     board->en_passant =
         (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
   }
+  // Changer le joueur actif
+  board->to_move = (piece_color == WHITE) ? BLACK : WHITE;
 }
 
 // Restaure l'état du board
