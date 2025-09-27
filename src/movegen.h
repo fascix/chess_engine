@@ -75,4 +75,20 @@ void print_move(const Move *move);
 void print_movelist(const MoveList *list);
 char *move_to_string(const Move *move);
 
+#define ADD_PROMOTIONS(from, to, captured, moves)                              \
+  do {                                                                         \
+    Move promoQ = create_promotion_move((from), (to), QUEEN);                  \
+    promoQ.captured_piece = (captured);                                        \
+    movelist_add((moves), promoQ);                                             \
+    Move promoR = create_promotion_move((from), (to), ROOK);                   \
+    promoR.captured_piece = (captured);                                        \
+    movelist_add((moves), promoR);                                             \
+    Move promoB = create_promotion_move((from), (to), BISHOP);                 \
+    promoB.captured_piece = (captured);                                        \
+    movelist_add((moves), promoB);                                             \
+    Move promoN = create_promotion_move((from), (to), KNIGHT);                 \
+    promoN.captured_piece = (captured);                                        \
+    movelist_add((moves), promoN);                                             \
+  } while (0)
+
 #endif // MOVEGEN_H
