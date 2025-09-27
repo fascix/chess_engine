@@ -1,6 +1,6 @@
 #include "movegen.h"
 #include <stdio.h>
-#include <stdlib.h> // Pour abs()
+#include <stdlib.h>
 #include <string.h>
 
 // Initialise une liste de coups vide
@@ -172,7 +172,7 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
             movelist_add(moves, m);
         }
 
-        // 2. DOUBLE SAUT - Si première rangée et case libre
+        // 2. DOUBLE SAUT - Si première rangée et case deux cases devant libre
         Square two_forward = from + (2 * direction);
         if ((from / 8) == start_rank && two_forward >= A1 &&
             two_forward <= H8 && !is_square_occupied(board, two_forward)) {
@@ -257,6 +257,13 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
 
   // 4. EN PASSANT
   if (board->en_passant != -1) {
+    // Vérification : la case en_passant doit être sur le rang 5 (pour les
+    // blancs) ou 2 (pour les noirs)
+    int ep_rank_check = board->en_passant / 8;
+    if ((color == WHITE && ep_rank_check != 5) ||
+        (color == BLACK && ep_rank_check != 2)) {
+      return; // Pas de vrai en passant possible
+    }
     // Vérifier si des pions peuvent capturer en passant
     Square ep_square = board->en_passant;
     int ep_file = ep_square % 8;
@@ -947,6 +954,12 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
   }
   board->occupied[piece_color] |= (1ULL << move->to);
 
+  // Si un pion avance de deux cases, définir la case en_passant
+  if (piece_type == PAWN && abs(move->to - move->from) == 16) {
+    board->en_passant =
+        (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
+  }
+
   // Gérer le roque
   if (move->type == MOVE_CASTLE) {
     Square rook_from, rook_to;
@@ -967,6 +980,19 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
 
   // Recalculer all_pieces
   board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
+
+  // Changer le joueur actif
+  board->to_move = (piece_color == WHITE) ? BLACK : WHITE;
+
+  // Réinitialiser en_passant
+  board->en_passant = -1;
+
+  // Si un pion avance de deux cases, définir la case en_passant (déjà fait
+  // ci-dessus)
+  if (piece_type == PAWN && abs(move->to - move->from) == 16) {
+    board->en_passant =
+        (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
+  }
 }
 
 // Restaure l'état du board
