@@ -8,7 +8,7 @@ int uci_debug = 0;
 
 // Boucle principale UCI
 void uci_loop() {
-  char line[2048];
+  char line[4096];
   Board board;
 
   // Initialiser le board en position initiale
