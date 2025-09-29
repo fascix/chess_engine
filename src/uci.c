@@ -114,9 +114,14 @@ Move parse_uci_move(const char *uci_str) {
   if (strlen(uci_str) < 4)
     return move; // Coup invalide
 
-  // e2e4 -> from=E2 (12), to=E4 (28)
-  move.from = (uci_str[1] - '1') * 8 + (uci_str[0] - 'a');
-  move.to = (uci_str[3] - '1') * 8 + (uci_str[2] - 'a');
+  // Correction : UCI e2e4 -> from = rank*8 + file
+  int file_from = uci_str[0] - 'a';
+  int rank_from = uci_str[1] - '1';
+  int file_to = uci_str[2] - 'a';
+  int rank_to = uci_str[3] - '1';
+
+  move.from = rank_from * 8 + file_from;
+  move.to = rank_to * 8 + file_to;
 
   // Vérifier promotion (e7e8q)
   if (strlen(uci_str) == 5) {
@@ -142,17 +147,10 @@ Move parse_uci_move(const char *uci_str) {
   return move;
 }
 
+// Gestionnaire commande "go"
 void handle_go(Board *board, char *params) {
   MoveList legal_moves;
   generate_legal_moves(board, &legal_moves);
-
-  // Debug : afficher la liste des coups légaux
-  fprintf(stdout, "DEBUG: Liste des coups légaux (%d):\n", legal_moves.count);
-  for (int i = 0; i < legal_moves.count; i++) {
-    fprintf(stderr, "  %2d: %s\n", i + 1,
-            move_to_string(&legal_moves.moves[i]));
-  }
-  fflush(stderr);
 
   if (legal_moves.count == 0) {
     printf("bestmove (none)\n");
@@ -160,49 +158,15 @@ void handle_go(Board *board, char *params) {
     return;
   }
 
-  // Tirage aléatoire d'un coup légal
   int index = rand() % legal_moves.count;
   Move best_move = legal_moves.moves[index];
 
-  // Debug: afficher le coup choisi
-  fprintf(stdout, "DEBUG: Coup choisi (index %d) : %s\n", index,
-          move_to_string(&best_move));
+  // Envoyer une ligne info minimale pour respecter UCI
+  printf("info depth 1 score cp 0 nodes 1 nps 1 pv %s\n",
+         move_to_string(&best_move));
   fflush(stdout);
-
-  // Vérification de légalité du coup choisi
-  int legal = is_move_legal(board, &best_move);
-  fprintf(stdout, "DEBUG: Le coup choisi est-il légal ? %s\n",
-          legal ? "OUI" : "NON");
-  fflush(stdout);
-
-  // Vérifier si le coup est dans la liste des coups légaux
-  int found = 0;
-  for (int i = 0; i < legal_moves.count; i++) {
-    if (legal_moves.moves[i].from == best_move.from &&
-        legal_moves.moves[i].to == best_move.to &&
-        legal_moves.moves[i].promotion == best_move.promotion) {
-      found = 1;
-      break;
-    }
-  }
-  if (!found) {
-    fprintf(
-        stdout,
-        "DEBUG WARNING: Coup choisi NON dans la liste des coups légaux !\n");
-    fprintf(stdout, "Current FEN: ");
-    char fen[256];
-    board_from_fen(board, fen);
-    fprintf(stdout, "%s\n", fen);
-  }
-
-  // Affichage UCI complet pour fastchess
-  printf("info depth 1 seldepth 1 score cp 0 nodes %d nps 0 time 0\n",
-         legal_moves.count);
-  fflush(stdout);
-
-  // Afficher le meilleur coup
   printf("bestmove %s\n", move_to_string(&best_move));
-  fflush(stdout);
+  fflush(stdout); // 🔹 essentiel pour UCI
 }
 
 // Gestionnaire commande "stop"
@@ -221,7 +185,7 @@ void handle_quit() {
   exit(0);
 }
 
-// Version améliorée de make_move_temp qui met à jour to_move
+// Version améliorée de make_move_temp qui met à jour to_move avec logs debug
 void apply_move_properly(Board *board, const Move *move) {
   // Utiliser make_move_temp existant
   Board backup; // Non utilisé, juste pour l'interface
@@ -234,6 +198,44 @@ void apply_move_properly(Board *board, const Move *move) {
   if (board->to_move == WHITE) {
     board->move_number++;
   }
+
+  // 🔹 Correction: mettre à jour le bitboard pièce déplacée sans écraser les
+  // autres pions (Remplace la ligne: board->pieces[piece_color][piece_type] |=
+  // (1ULL << move->to);) Trouver la couleur et le type de pièce déplacée
+  PieceType piece_type = get_piece_type(board, move->to);
+  Couleur piece_color =
+      (board->to_move == WHITE) ? BLACK : WHITE; // car on a déjà changé to_move
+  board->pieces[piece_color][piece_type] &=
+      ~(1ULL << move->from); // effacer départ
+  board->pieces[piece_color][piece_type] |=
+      (1ULL << move->to); // placer arrivée
+
+  // Les autres mises à jour (board->occupied[piece_color], board->all_pieces)
+  // restent correctes
+
+  // 🔹 Logs de debug
+  fprintf(stderr, "\n[DEBUG] Après apply_move_properly:\n");
+  fprintf(stderr, "  to_move = %s\n",
+          board->to_move == WHITE ? "WHITE" : "BLACK");
+  fprintf(stderr, "  en_passant = %d\n", board->en_passant);
+  fprintf(stderr, "  castle_rights = 0x%X\n", board->castle_rights);
+
+  // Pièces autour de f3 (cases e2-h4)
+  for (int r = 1; r <= 3; r++) {
+    for (int f = 4; f <= 5; f++) {
+      Square sq = r * 8 + f; // f3=fichier 5? Hm, f=5 corresponds à f-file
+      char c = get_piece_color(board, sq);
+      fprintf(stderr, "  Square %c%d = %c\n", 'a' + f, r + 1, c);
+    }
+  }
+
+  // Vérifier pion à f3
+  Square f3 = 5 + 2 * 8; // f3 -> file 5, rank 2 (0-indexed)
+  int pawn_present = (board->pieces[WHITE][PAWN] & (1ULL << f3)) ? 1 : 0;
+  fprintf(stderr, "  WHITE PAWN at f3 exists? %d\n", pawn_present);
+  fprintf(stderr, "  WHITE PAWN bitboard = 0x%llX\n",
+          board->pieces[WHITE][PAWN]);
+  fflush(stderr);
 }
 
 // Appliquer une séquence de coups UCI
@@ -267,6 +269,37 @@ void apply_uci_moves(Board *board, char *moves_str) {
           break;
         }
       }
+    }
+
+    // Ajout des logs DEBUG juste avant de vérifier la légalité du coup
+    if (found) {
+      // Logs DEBUG détaillés pour le coup UCI en cours
+      fprintf(stderr, "\n[DEBUG UCI] Testing move: %s\n", move_str);
+      fprintf(stderr, "  Current to_move: %s\n",
+              board->to_move == WHITE ? "WHITE" : "BLACK");
+      // Bitboards autour de f3 (cases e2-h4)
+      // e2: 12, f2: 13, g2: 14, h2: 15
+      // e3: 20, f3: 21, g3: 22, h3: 23
+      // e4: 28, f4: 29, g4: 30, h4: 31
+      int squares[] = {12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31};
+      fprintf(stderr, "  Squares e2-h4:\n");
+      for (int si = 0; si < 12; ++si) {
+        int sq = squares[si];
+        char file = 'a' + (sq % 8);
+        char rank = '1' + (sq / 8);
+        char pc = get_piece_color(board, sq);
+        fprintf(stderr, "    %c%c: %c", file, rank, pc);
+        if ((si + 1) % 4 == 0)
+          fprintf(stderr, "\n");
+        else
+          fprintf(stderr, "  ");
+      }
+      // Bitboard des pions blancs et noirs
+      fprintf(stderr, "  WHITE PAWN bitboard: 0x%016llX\n",
+              board->pieces[WHITE][PAWN]);
+      fprintf(stderr, "  BLACK PAWN bitboard: 0x%016llX\n",
+              board->pieces[BLACK][PAWN]);
+      fflush(stderr);
     }
 
     if (found) {
