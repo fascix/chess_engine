@@ -8,8 +8,7 @@
 typedef uint64_t Bitboard;
 
 // Énumération des couleurs
-typedef enum { WHITE, BLACK } Couleur;
-
+typedef enum { WHITE = 0, BLACK = 1, NO_COLOR = -1 } Couleur;
 // Énumération des différentes pièces
 typedef enum { EMPTY = -1, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING } PieceType;
 
