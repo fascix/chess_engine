@@ -156,6 +156,10 @@ void handle_go(Board *board, char *params) {
   int index = rand() % legal_moves.count;
   Move best_move = legal_moves.moves[index];
 
+  // Envoyer une ligne info minimale pour respecter UCI
+  printf("info depth 1 score cp 0 nodes 1 nps 1 pv %s\n",
+         move_to_string(&best_move));
+  fflush(stdout);
   printf("bestmove %s\n", move_to_string(&best_move));
   fflush(stdout); // 🔹 essentiel pour UCI
 }
