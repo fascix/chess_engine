@@ -8,7 +8,7 @@ int uci_debug = 0;
 
 // Boucle principale UCI
 void uci_loop() {
-  char line[4096];
+  char line[2048];
   Board board;
 
   // Initialiser le board en position initiale
@@ -213,29 +213,7 @@ void apply_move_properly(Board *board, const Move *move) {
   // Les autres mises à jour (board->occupied[piece_color], board->all_pieces)
   // restent correctes
 
-  // 🔹 Logs de debug
-  fprintf(stderr, "\n[DEBUG] Après apply_move_properly:\n");
-  fprintf(stderr, "  to_move = %s\n",
-          board->to_move == WHITE ? "WHITE" : "BLACK");
-  fprintf(stderr, "  en_passant = %d\n", board->en_passant);
-  fprintf(stderr, "  castle_rights = 0x%X\n", board->castle_rights);
-
-  // Pièces autour de f3 (cases e2-h4)
-  for (int r = 1; r <= 3; r++) {
-    for (int f = 4; f <= 5; f++) {
-      Square sq = r * 8 + f; // f3=fichier 5? Hm, f=5 corresponds à f-file
-      char c = get_piece_color(board, sq);
-      fprintf(stderr, "  Square %c%d = %c\n", 'a' + f, r + 1, c);
-    }
-  }
-
-  // Vérifier pion à f3
-  Square f3 = 5 + 2 * 8; // f3 -> file 5, rank 2 (0-indexed)
-  int pawn_present = (board->pieces[WHITE][PAWN] & (1ULL << f3)) ? 1 : 0;
-  fprintf(stderr, "  WHITE PAWN at f3 exists? %d\n", pawn_present);
-  fprintf(stderr, "  WHITE PAWN bitboard = 0x%llX\n",
-          board->pieces[WHITE][PAWN]);
-  fflush(stderr);
+  // (logs DEBUG supprimés)
 }
 
 // Appliquer une séquence de coups UCI
@@ -271,36 +249,7 @@ void apply_uci_moves(Board *board, char *moves_str) {
       }
     }
 
-    // Ajout des logs DEBUG juste avant de vérifier la légalité du coup
-    if (found) {
-      // Logs DEBUG détaillés pour le coup UCI en cours
-      fprintf(stderr, "\n[DEBUG UCI] Testing move: %s\n", move_str);
-      fprintf(stderr, "  Current to_move: %s\n",
-              board->to_move == WHITE ? "WHITE" : "BLACK");
-      // Bitboards autour de f3 (cases e2-h4)
-      // e2: 12, f2: 13, g2: 14, h2: 15
-      // e3: 20, f3: 21, g3: 22, h3: 23
-      // e4: 28, f4: 29, g4: 30, h4: 31
-      int squares[] = {12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31};
-      fprintf(stderr, "  Squares e2-h4:\n");
-      for (int si = 0; si < 12; ++si) {
-        int sq = squares[si];
-        char file = 'a' + (sq % 8);
-        char rank = '1' + (sq / 8);
-        char pc = get_piece_color(board, sq);
-        fprintf(stderr, "    %c%c: %c", file, rank, pc);
-        if ((si + 1) % 4 == 0)
-          fprintf(stderr, "\n");
-        else
-          fprintf(stderr, "  ");
-      }
-      // Bitboard des pions blancs et noirs
-      fprintf(stderr, "  WHITE PAWN bitboard: 0x%016llX\n",
-              board->pieces[WHITE][PAWN]);
-      fprintf(stderr, "  BLACK PAWN bitboard: 0x%016llX\n",
-              board->pieces[BLACK][PAWN]);
-      fflush(stderr);
-    }
+    // (logs DEBUG supprimés)
 
     if (found) {
       apply_move_properly(board, &actual_move);
