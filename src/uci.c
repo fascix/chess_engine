@@ -142,7 +142,6 @@ Move parse_uci_move(const char *uci_str) {
   return move;
 }
 
-// Gestionnaire commande "go"
 void handle_go(Board *board, char *params) {
   MoveList legal_moves;
   generate_legal_moves(board, &legal_moves);
@@ -153,15 +152,19 @@ void handle_go(Board *board, char *params) {
     return;
   }
 
+  // Tirage aléatoire d'un coup légal
   int index = rand() % legal_moves.count;
   Move best_move = legal_moves.moves[index];
 
-  // Envoyer une ligne info minimale pour respecter UCI
-  printf("info depth 1 score cp 0 nodes 1 nps 1 pv %s\n",
-         move_to_string(&best_move));
+  // Affichage UCI complet pour fastchess
+  // score cp 0 → égalité (peut être remplacé par une évaluation si dispo)
+  printf("info depth 1 seldepth 1 score cp 0 nodes %d nps 0 time 0\n",
+         legal_moves.count);
   fflush(stdout);
+
+  // Afficher le meilleur coup
   printf("bestmove %s\n", move_to_string(&best_move));
-  fflush(stdout); // 🔹 essentiel pour UCI
+  fflush(stdout);
 }
 
 // Gestionnaire commande "stop"
