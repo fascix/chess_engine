@@ -8,7 +8,7 @@ int uci_debug = 0;
 
 // Boucle principale UCI
 void uci_loop() {
-  char line[2048];
+  char line[4096];
   Board board;
 
   // Initialiser le board en position initiale
@@ -146,6 +146,14 @@ void handle_go(Board *board, char *params) {
   MoveList legal_moves;
   generate_legal_moves(board, &legal_moves);
 
+  // Debug : afficher la liste des coups légaux
+  fprintf(stdout, "DEBUG: Liste des coups légaux (%d):\n", legal_moves.count);
+  for (int i = 0; i < legal_moves.count; i++) {
+    fprintf(stderr, "  %2d: %s\n", i + 1,
+            move_to_string(&legal_moves.moves[i]));
+  }
+  fflush(stderr);
+
   if (legal_moves.count == 0) {
     printf("bestmove (none)\n");
     fflush(stdout);
@@ -156,8 +164,38 @@ void handle_go(Board *board, char *params) {
   int index = rand() % legal_moves.count;
   Move best_move = legal_moves.moves[index];
 
+  // Debug: afficher le coup choisi
+  fprintf(stdout, "DEBUG: Coup choisi (index %d) : %s\n", index,
+          move_to_string(&best_move));
+  fflush(stdout);
+
+  // Vérification de légalité du coup choisi
+  int legal = is_move_legal(board, &best_move);
+  fprintf(stdout, "DEBUG: Le coup choisi est-il légal ? %s\n",
+          legal ? "OUI" : "NON");
+  fflush(stdout);
+
+  // Vérifier si le coup est dans la liste des coups légaux
+  int found = 0;
+  for (int i = 0; i < legal_moves.count; i++) {
+    if (legal_moves.moves[i].from == best_move.from &&
+        legal_moves.moves[i].to == best_move.to &&
+        legal_moves.moves[i].promotion == best_move.promotion) {
+      found = 1;
+      break;
+    }
+  }
+  if (!found) {
+    fprintf(
+        stdout,
+        "DEBUG WARNING: Coup choisi NON dans la liste des coups légaux !\n");
+    fprintf(stdout, "Current FEN: ");
+    char fen[256];
+    board_from_fen(board, fen);
+    fprintf(stdout, "%s\n", fen);
+  }
+
   // Affichage UCI complet pour fastchess
-  // score cp 0 → égalité (peut être remplacé par une évaluation si dispo)
   printf("info depth 1 seldepth 1 score cp 0 nodes %d nps 0 time 0\n",
          legal_moves.count);
   fflush(stdout);
