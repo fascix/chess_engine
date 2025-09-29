@@ -7,8 +7,6 @@
 void movelist_init(MoveList *list) { list->count = 0; }
 
 void movelist_add(MoveList *list, Move move) {
-  printf("[DEBUG] movelist_add: from=%d to=%d type=%d\n", move.from, move.to,
-         move.type);
   if (list->count < 256) {
     list->moves[list->count] = move;
     list->count++;
@@ -18,7 +16,6 @@ void movelist_add(MoveList *list, Move move) {
 }
 
 Move create_move(Square from, Square to, MoveType type) {
-  printf("[DEBUG] create_move: from=%d to=%d type=%d\n", from, to, type);
   Move move;
   move.from = from;
   move.to = to;
@@ -29,8 +26,7 @@ Move create_move(Square from, Square to, MoveType type) {
 }
 
 Move create_promotion_move(Square from, Square to, PieceType promotion) {
-  printf("[DEBUG] create_promotion_move: from=%d to=%d promotion=%d\n", from,
-         to, promotion);
+
   Move move;
   move.from = from;
   move.to = to;
@@ -121,7 +117,6 @@ void generate_moves(const Board *board, MoveList *moves) {
 
 void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
   // Initialiser la liste des mouvements (éviter les coups corrompus)
-  printf("[DEBUG] generate_pawn_moves: color=%d\n", color);
   if (!moves)
     return;
 
@@ -337,7 +332,6 @@ void slide_direction(const Board *board, Square from, int offset, Couleur color,
 // Génération des mouvements de tour
 void generate_rook_moves(const Board *board, Couleur color, MoveList *moves) {
   // Vérifications de sécurité
-  printf("[DEBUG] generate_rook_moves: color=%d\n", color);
 
   if (!moves || !board)
     return;
@@ -365,7 +359,6 @@ void generate_rook_moves(const Board *board, Couleur color, MoveList *moves) {
 
 // Génération des mouvements de fou
 void generate_bishop_moves(const Board *board, Couleur color, MoveList *moves) {
-  printf("[DEBUG] generate_bishop_moves: color=%d\n", color);
 
   // Vérifications de sécurité
   if (!moves || !board)
@@ -395,7 +388,6 @@ void generate_bishop_moves(const Board *board, Couleur color, MoveList *moves) {
 // Génération des mouvements de cavalier
 void generate_knight_moves(const Board *board, Couleur color, MoveList *moves) {
 
-  printf("[DEBUG] generate_knight_moves: color=%d\n", color);
   // Vérifications de sécurité
   if (!moves || !board)
     return;
@@ -462,7 +454,6 @@ void generate_knight_moves(const Board *board, Couleur color, MoveList *moves) {
 
 // Génération des mouvements de dame (combinaison tour + fou)
 void generate_queen_moves(const Board *board, Couleur color, MoveList *moves) {
-  printf("[DEBUG] generate_queen_moves: color=%d\n", color);
 
   // Vérifications de sécurité
   if (!moves || !board)
@@ -588,7 +579,6 @@ int is_castle_illegal(const Board *board, const Move *m) {
 
 // Génération des mouvements de roi (mouvements de base uniquement)
 void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
-  printf("[DEBUG] generate_king_moves: color=%d\n", color);
 
   // Vérifications de sécurité
   if (!moves || !board)
@@ -856,8 +846,6 @@ int is_in_check(const Board *board, Couleur color) {
 
 // Effectue temporairement un mouvement pour tester sa légalité
 void make_move_temp(Board *board, const Move *move, Board *backup) {
-  printf("[DEBUG] make_move_temp: move from=%d to=%d type=%d\n", move->from,
-         move->to, move->type);
 
   // Sauvegarder l'état actuel
   *backup = *board;
@@ -946,14 +934,10 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
 }
 
 // Restaure l'état du board
-void unmake_move_temp(Board *board, const Board *backup) {
-  printf("[DEBUG] unmake_move_temp called\n");
-  *board = *backup;
-}
+void unmake_move_temp(Board *board, const Board *backup) { *board = *backup; }
 
 // Vérifie si un mouvement est légal (ne met pas le roi en échec)
 int is_move_legal(const Board *board, const Move *move) {
-  printf("[DEBUG] is_move_legal: from=%d to=%d\n", move->from, move->to);
 
   // 1. Vérifier que la case de départ contient bien une pièce du joueur actif
   if (move->from < A1 || move->from > H8)
@@ -991,7 +975,6 @@ int is_move_legal(const Board *board, const Move *move) {
 
 // Filtre les mouvements illégaux d'une liste
 void filter_legal_moves(const Board *board, MoveList *moves) {
-  printf("[DEBUG] filter_legal_moves called, initial_count=%d\n", moves->count);
 
   MoveList legal_moves;
   movelist_init(&legal_moves);

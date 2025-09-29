@@ -6,7 +6,6 @@
 #include <string.h>
 
 void board_init(Board *board) {
-  printf("[DEBUG] board_init called\n");
   // Initialise position de départ
   memset(board, 0, sizeof(Board));
   // Met tous les champs de Board à zéro avant initialisation
@@ -54,7 +53,6 @@ bool is_square_occupied(const Board *board, Square square) {
 }
 
 Couleur get_piece_color(const Board *board, Square square) {
-  printf("[DEBUG] get_piece_color: square=%d\n", square);
 
   if (!is_square_occupied(board, square)) {
     return NO_COLOR; // Retourne NO_COLOR pour case vide
@@ -66,7 +64,6 @@ Couleur get_piece_color(const Board *board, Square square) {
   }
 }
 PieceType get_piece_type(const Board *board, Square square) {
-  printf("[DEBUG] get_piece_type: square=%d\n", square);
 
   // 1. Vérification de sécurité
   if (!is_square_occupied(board, square))
@@ -97,7 +94,6 @@ char get_piece_char(const Board *board, Square square) {
 }
 
 void print_board(const Board *board) {
-  printf("[DEBUG] print_board called\n");
 
   for (int ligne = 0; ligne < 8; ligne++) {
     printf("%d  ", 8 - ligne);
@@ -139,7 +135,6 @@ void fen_char_to_piece_info(char c, PieceType *type, Couleur *couleur) {
 }
 
 void board_from_fen(Board *board, const char *fen) {
-  printf("[DEBUG] board_from_fen: fen=%s\n", fen);
 
   memset(board, 0, sizeof(Board));
 

@@ -28,7 +28,6 @@ void uci_loop() {
 
 // Parser de commandes
 void parse_uci_command(char *line, Board *board) {
-  printf("[DEBUG] parse_uci_command: line='%s'\n", line);
 
   char *command = strtok(line, " ");
 
@@ -95,7 +94,6 @@ void setup_from_fen(Board *board, char *params) {
 
 // Gestionnaire commande "position"
 void handle_position(Board *board, char *params) {
-  printf("[DEBUG] handle_position: params='%s'\n", params);
 
   if (strstr(params, "startpos")) {
     setup_startpos(board);
@@ -153,7 +151,6 @@ Move parse_uci_move(const char *uci_str) {
 
 // Gestionnaire commande "go"
 void handle_go(Board *board, char *params) {
-  printf("[DEBUG] handle_go: params='%s'\n", params);
 
   MoveList legal_moves;
   generate_legal_moves(board, &legal_moves);
@@ -193,7 +190,6 @@ void handle_quit() {
 
 // Version améliorée de make_move_temp qui met à jour to_move avec logs debug
 void apply_move_properly(Board *board, const Move *move) {
-  printf("[DEBUG] apply_move_properly: from=%d to=%d type=%d\n", move->from, move->to, move->type);
 
   Board backup;
   make_move_temp(board, move, &backup);
@@ -211,7 +207,6 @@ void apply_move_properly(Board *board, const Move *move) {
 
   // Gestion du roque
   if (move->type == MOVE_CASTLE) {
-    printf("[DEBUG] apply_move_properly: CASTLE detected\n");
     Square king_from = move->from;
     Square king_to = move->to;
     Square rook_from, rook_to;
@@ -241,10 +236,11 @@ void apply_move_properly(Board *board, const Move *move) {
 
   // Gestion des captures en passant
   if (move->type == MOVE_EN_PASSANT) {
-    printf("[DEBUG] apply_move_properly: EN PASSANT detected\n");
     int captured_square = (moving_color == WHITE) ? move->to - 8 : move->to + 8;
-    board->pieces[(moving_color == WHITE) ? BLACK : WHITE][PAWN] &= ~(1ULL << captured_square);
-    board->occupied[(moving_color == WHITE) ? BLACK : WHITE] &= ~(1ULL << captured_square);
+    board->pieces[(moving_color == WHITE) ? BLACK : WHITE][PAWN] &=
+        ~(1ULL << captured_square);
+    board->occupied[(moving_color == WHITE) ? BLACK : WHITE] &=
+        ~(1ULL << captured_square);
   }
 
   // Déplacer la pièce normale
@@ -256,7 +252,6 @@ void apply_move_properly(Board *board, const Move *move) {
   for (PieceType pt = PAWN; pt <= KING; pt++) {
     if (board->pieces[opponent][pt] & (1ULL << move->to)) {
       board->pieces[opponent][pt] &= ~(1ULL << move->to);
-      printf("[DEBUG] apply_move_properly: captured piece_type=%d at square=%d\n", pt, move->to);
       break;
     }
   }
@@ -276,7 +271,6 @@ void apply_move_properly(Board *board, const Move *move) {
 // Appliquer une séquence de coups UCI
 
 void apply_uci_moves(Board *board, char *moves_str) {
-  printf("[DEBUG] apply_uci_moves: moves='%s'\n", moves_str);
 
   char moves_copy[512];
   strncpy(moves_copy, moves_str, sizeof(moves_copy) - 1);
@@ -307,8 +301,6 @@ void apply_uci_moves(Board *board, char *moves_str) {
         }
       }
     }
-
-    // (logs DEBUG supprimés)
 
     if (found) {
       apply_move_properly(board, &actual_move);
