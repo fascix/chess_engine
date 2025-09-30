@@ -931,6 +931,8 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     board->en_passant =
         (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
   }
+  // Basculer le joueur actif
+  board->to_move = (board->to_move == WHITE) ? BLACK : WHITE;
 }
 
 // Restaure l'état du board

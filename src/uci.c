@@ -15,7 +15,14 @@ void uci_loop() {
   board_from_fen(&board,
                  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-  while (fgets(line, sizeof(line), stdin)) {
+  while (1) {
+    memset(line, 0, sizeof(line));
+    if (!fgets(line, sizeof(line), stdin))
+      break;
+    if (uci_debug) {
+      printf("UCI DEBUG: received line = %s\n", line);
+      fflush(stdout);
+    }
     // Supprimer le \n
     line[strcspn(line, "\n")] = 0;
 
@@ -68,6 +75,11 @@ void handle_isready() {
 void setup_startpos(Board *board) {
   board_from_fen(board,
                  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  /* S'assurer que l'état éphémère est propre */
+  board->to_move = WHITE;
+  board->en_passant = -1;
+  board->halfmove_clock = 0;
+  board->move_number = 1;
 }
 
 void setup_from_fen(Board *board, char *params) {
@@ -111,12 +123,15 @@ void handle_position(Board *board, char *params) {
 
 // Parser un coup UCI (ex: "e2e4" -> Move)
 Move parse_uci_move(const char *uci_str) {
-  Move move = {0};
+  Move move;
+  memset(&move, 0, sizeof(move));
 
-  if (strlen(uci_str) < 4)
-    return move; // Coup invalide
+  if (!uci_str)
+    return move;
+  size_t len = strlen(uci_str);
+  if (len < 4)
+    return move;
 
-  // Correction : UCI e2e4 -> from = rank*8 + file
   int file_from = uci_str[0] - 'a';
   int rank_from = uci_str[1] - '1';
   int file_to = uci_str[2] - 'a';
@@ -124,26 +139,34 @@ Move parse_uci_move(const char *uci_str) {
 
   move.from = rank_from * 8 + file_from;
   move.to = rank_to * 8 + file_to;
+  move.type = MOVE_NORMAL;
+  move.promotion = EMPTY;
 
-  // Vérifier promotion (e7e8q)
-  if (strlen(uci_str) == 5) {
+  /* Promotion possible si un 5ème caractère est fourni */
+  if (len >= 5) {
     move.type = MOVE_PROMOTION;
-    switch (uci_str[4]) {
+    char p = uci_str[4];
+    switch (p) {
     case 'q':
+    case 'Q':
       move.promotion = QUEEN;
       break;
     case 'r':
+    case 'R':
       move.promotion = ROOK;
       break;
     case 'b':
+    case 'B':
       move.promotion = BISHOP;
       break;
     case 'n':
+    case 'N':
       move.promotion = KNIGHT;
       break;
+    default:
+      move.promotion = QUEEN; /* fallback raisonnable */
+      break;
     }
-  } else {
-    move.type = MOVE_NORMAL; // On déterminera le type exact plus tard
   }
 
   return move;
@@ -190,42 +213,44 @@ void handle_quit() {
 
 // Version améliorée de make_move_temp qui met à jour to_move avec logs debug
 void apply_move_properly(Board *board, const Move *move) {
-
+  /* IMPORTANT: save the color that is moving BEFORE applying the temporary
+     move. make_move_temp flips board->to_move, so reading board->to_move AFTER
+     would be wrong. */
   Board backup;
+  Couleur moving_color = board->to_move;
+
+  /* Apply the move physically (make_move_temp will flip board->to_move) */
   make_move_temp(board, move, &backup);
 
-  // Basculer le joueur actif
-  Couleur moving_color = board->to_move;
-  board->to_move = (board->to_move == WHITE) ? BLACK : WHITE;
-
-  // Incrémenter le numéro de coup après le coup des noirs
-  if (board->to_move == WHITE) {
+  /* We increment the full-move number after Black has moved (i.e. when
+   * moving_color == BLACK) */
+  if (moving_color == BLACK) {
     board->move_number++;
   }
 
   PieceType piece_type = get_piece_type(&backup, move->from);
 
-  // Gestion du roque
+  /* Handle castling explicitly using the known moving_color */
   if (move->type == MOVE_CASTLE) {
     Square king_from = move->from;
     Square king_to = move->to;
     Square rook_from, rook_to;
 
-    if (king_to > king_from) { // Petit roque
+    if (king_to > king_from) { /* kingside */
       rook_from = (moving_color == WHITE) ? H1 : H8;
       rook_to = (moving_color == WHITE) ? F1 : F8;
-    } else { // Grand roque
+    } else { /* queenside */
       rook_from = (moving_color == WHITE) ? A1 : A8;
       rook_to = (moving_color == WHITE) ? D1 : D8;
     }
 
-    // Déplacer le roi et la tour sur le board
     board->pieces[moving_color][KING] &= ~(1ULL << king_from);
     board->pieces[moving_color][KING] |= (1ULL << king_to);
 
     board->pieces[moving_color][ROOK] &= ~(1ULL << rook_from);
     board->pieces[moving_color][ROOK] |= (1ULL << rook_to);
 
+    /* Rebuild occupied and all_pieces for moving_color */
     board->occupied[moving_color] = 0;
     for (PieceType pt = PAWN; pt <= KING; pt++)
       board->occupied[moving_color] |= board->pieces[moving_color][pt];
@@ -234,7 +259,7 @@ void apply_move_properly(Board *board, const Move *move) {
     return;
   }
 
-  // Gestion des captures en passant
+  /* En-passant capture: remove captured pawn using moving_color */
   if (move->type == MOVE_EN_PASSANT) {
     int captured_square = (moving_color == WHITE) ? move->to - 8 : move->to + 8;
     board->pieces[(moving_color == WHITE) ? BLACK : WHITE][PAWN] &=
@@ -243,11 +268,8 @@ void apply_move_properly(Board *board, const Move *move) {
         ~(1ULL << captured_square);
   }
 
-  // Déplacer la pièce normale
-  board->pieces[moving_color][piece_type] &= ~(1ULL << move->from);
-  board->pieces[moving_color][piece_type] |= (1ULL << move->to);
-
-  // Supprimer capture si applicable
+  /* Normal move: the piece was already moved by make_move_temp, but we must
+   * ensure captures are removed */
   Couleur opponent = (moving_color == WHITE) ? BLACK : WHITE;
   for (PieceType pt = PAWN; pt <= KING; pt++) {
     if (board->pieces[opponent][pt] & (1ULL << move->to)) {
@@ -256,7 +278,7 @@ void apply_move_properly(Board *board, const Move *move) {
     }
   }
 
-  // Recalculer bitboards occupied et all_pieces
+  /* Recompute occupied bitboards and all_pieces for both colors */
   board->occupied[moving_color] = 0;
   for (PieceType pt = PAWN; pt <= KING; pt++)
     board->occupied[moving_color] |= board->pieces[moving_color][pt];
@@ -271,8 +293,12 @@ void apply_move_properly(Board *board, const Move *move) {
 // Appliquer une séquence de coups UCI
 
 void apply_uci_moves(Board *board, char *moves_str) {
+  if (uci_debug) {
+    printf("UCI DEBUG: received moves string = %s\n", moves_str);
+    fflush(stdout);
+  }
 
-  char moves_copy[512];
+  char moves_copy[2048];
   strncpy(moves_copy, moves_str, sizeof(moves_copy) - 1);
   moves_copy[sizeof(moves_copy) - 1] = '\0';
 
@@ -302,8 +328,25 @@ void apply_uci_moves(Board *board, char *moves_str) {
       }
     }
 
+    if (uci_debug) {
+      printf("UCI DEBUG: applying move %s, side_to_move=%d\n", move_str,
+             board->to_move);
+      fflush(stdout);
+    }
+
     if (found) {
       apply_move_properly(board, &actual_move);
+    } else {
+      /* Debug: UCI move not found among legal moves -> likely parsing issue or
+       * movegen mismatch */
+      if (uci_debug) {
+        printf(
+            "UCI DEBUG: move '%s' not found among %d legal moves for side %d\n",
+            move_str, legal_moves.count, board->to_move);
+        fflush(stdout);
+      }
+      /* We intentionally continue rather than aborting; higher-level code /
+       * Fastchess will detect illegal move */
     }
 
     move_str = strtok(NULL, " ");
