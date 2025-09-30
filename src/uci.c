@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Variable globale pour mode debug
-int uci_debug = 0;
 
 // Boucle principale UCI
 void uci_loop() {
@@ -19,10 +17,6 @@ void uci_loop() {
     memset(line, 0, sizeof(line));
     if (!fgets(line, sizeof(line), stdin))
       break;
-    if (uci_debug) {
-      printf("UCI DEBUG: received line = %s\n", line);
-      fflush(stdout);
-    }
     // Supprimer le \n
     line[strcspn(line, "\n")] = 0;
 
@@ -205,9 +199,6 @@ void handle_stop() {
 
 // Gestionnaire commande "quit"
 void handle_quit() {
-  if (uci_debug) {
-    printf("# Goodbye!\n");
-  }
   exit(0);
 }
 
@@ -293,10 +284,6 @@ void apply_move_properly(Board *board, const Move *move) {
 // Appliquer une séquence de coups UCI
 
 void apply_uci_moves(Board *board, char *moves_str) {
-  if (uci_debug) {
-    printf("UCI DEBUG: received moves string = %s\n", moves_str);
-    fflush(stdout);
-  }
 
   char moves_copy[2048];
   strncpy(moves_copy, moves_str, sizeof(moves_copy) - 1);
@@ -328,25 +315,12 @@ void apply_uci_moves(Board *board, char *moves_str) {
       }
     }
 
-    if (uci_debug) {
-      printf("UCI DEBUG: applying move %s, side_to_move=%d\n", move_str,
-             board->to_move);
-      fflush(stdout);
-    }
-
     if (found) {
       apply_move_properly(board, &actual_move);
     } else {
-      /* Debug: UCI move not found among legal moves -> likely parsing issue or
-       * movegen mismatch */
-      if (uci_debug) {
-        printf(
-            "UCI DEBUG: move '%s' not found among %d legal moves for side %d\n",
-            move_str, legal_moves.count, board->to_move);
-        fflush(stdout);
-      }
-      /* We intentionally continue rather than aborting; higher-level code /
-       * Fastchess will detect illegal move */
+      /* Signaler explicitement que le coup est illégal */
+      printf("info string illegal move '%s' for side %d\n", move_str, board->to_move);
+      fflush(stdout);
     }
 
     move_str = strtok(NULL, " ");
