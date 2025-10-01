@@ -1,8 +1,11 @@
 #include "uci.h"
+#include "search.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+volatile bool stop_search_flag = false; // Variable pour arrêter la recherche
 
 // Boucle principale UCI
 void uci_loop() {
@@ -53,7 +56,7 @@ void parse_uci_command(char *line, Board *board) {
 void handle_uci() {
   printf("id name ChessEngine v1.0\n");
   fflush(stdout);
-  printf("id author Lucas Pavone\n");
+  printf("id author Fascix\n");
   fflush(stdout);
   printf("uciok\n");
   fflush(stdout); // 🔹 essentiel pour UCI
@@ -168,39 +171,40 @@ Move parse_uci_move(const char *uci_str) {
 
 // Gestionnaire commande "go"
 void handle_go(Board *board, char *params) {
+  stop_search_flag = false; // Réinitialiser le drapeau d'arrêt
 
-  MoveList legal_moves;
-  generate_legal_moves(board, &legal_moves);
+  // Extraire les paramètres (ex. profondeur, temps)
+  int max_depth = 6;        // Valeur par défaut
+  int time_limit_ms = 5000; // 5 secondes par défaut
 
-  if (legal_moves.count == 0) {
-    printf("bestmove (none)\n");
-    fflush(stdout);
-    return;
+  // Exemple d'extraction de la profondeur (simplifié)
+  if (strstr(params, "depth")) {
+    sscanf(params, "depth %d", &max_depth);
   }
 
-  int index = rand() % legal_moves.count;
-  Move best_move = legal_moves.moves[index];
+  // Lancer la recherche
+  SearchResult result =
+      search_iterative_deepening_safe(board, max_depth, time_limit_ms);
 
-  // Envoyer une ligne info minimale pour respecter UCI
-  printf("info depth 1 score cp 0 nodes 1 nps 1 pv %s\n",
-         move_to_string(&best_move));
+  // Envoyer le résultat au format UCI
+  printf("info depth %d score cp %d nodes %d nps %d pv %s\n", result.depth,
+         result.score, result.nodes, result.nps,
+         move_to_string(&result.best_move));
   fflush(stdout);
-  printf("bestmove %s\n", move_to_string(&best_move));
-  fflush(stdout); // 🔹 essentiel pour UCI
+
+  printf("bestmove %s\n", move_to_string(&result.best_move));
+  fflush(stdout);
 }
 
 // Gestionnaire commande "stop"
 void handle_stop() {
-  // TODO: Implémenter arrêt de recherche propre
-  // Variable globale ou signal pour arrêter search_iterative_deepening
+  stop_search_flag = true; // Lever le drapeau pour arrêter la recherche
   printf("# Search stopped\n");
   fflush(stdout);
 }
 
 // Gestionnaire commande "quit"
-void handle_quit() {
-  exit(0);
-}
+void handle_quit() { exit(0); }
 
 // Version améliorée de make_move_temp qui met à jour to_move avec logs debug
 void apply_move_properly(Board *board, const Move *move) {
@@ -319,7 +323,8 @@ void apply_uci_moves(Board *board, char *moves_str) {
       apply_move_properly(board, &actual_move);
     } else {
       /* Signaler explicitement que le coup est illégal */
-      printf("info string illegal move '%s' for side %d\n", move_str, board->to_move);
+      printf("info string illegal move '%s' for side %d\n", move_str,
+             board->to_move);
       fflush(stdout);
     }
 
