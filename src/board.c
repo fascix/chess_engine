@@ -108,50 +108,31 @@ void print_board(const Board *board) {
 
 void fen_char_to_piece_info(char c, PieceType *type, Couleur *couleur) {
   *couleur = isupper(c) ? WHITE : BLACK;
+  c = tolower(c);
 
-  switch (tolower(c)) {
-  case 'p':
-    *type = PAWN;
-    break;
-  case 'n':
-    *type = KNIGHT;
-    break;
-  case 'b':
-    *type = BISHOP;
-    break;
-  case 'r':
-    *type = ROOK;
-    break;
-  case 'q':
-    *type = QUEEN;
-    break;
-  case 'k':
-    *type = KING;
-    break;
-  default:
-    *type = EMPTY;
-    break; // Sécurité
+  static const char symbols[] = "pnbrqk"; // mêmes lettres que ton FEN
+  static const PieceType types[] = {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
+
+  *type = EMPTY; // valeur par défaut
+  for (int i = 0; i < 6; i++) {
+    if (c == symbols[i]) {
+      *type = types[i];
+      break;
+    }
   }
 }
 
-void board_from_fen(Board *board, const char *fen) {
+const char *parse_fen_pieces(Board *board, const char *fen) {
+  int square = 56; // A8
 
-  memset(board, 0, sizeof(Board));
-
-  int square = 56; // Commence par A8
-
-  // Parser la partie pièces jusqu'au premier espace
   for (const char *p = fen; *p && *p != ' '; p++) {
     char c = *p;
 
     if (c == '/') {
-      // Aller au début de la rangée précédente
       square = ((square - 1) / 8 - 1) * 8;
     } else if (isdigit(c)) {
-      // Sauter des cases vides
       square += (c - '0');
     } else {
-      // Placer une pièce
       PieceType type;
       Couleur couleur;
       fen_char_to_piece_info(c, &type, &couleur);
@@ -169,34 +150,35 @@ void board_from_fen(Board *board, const char *fen) {
   }
   board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
 
-  // Parser le reste du FEN : joueur actuel, droits de roque, en passant, etc.
-  const char *current = fen;
+  // Avancer jusqu’au premier espace
+  while (*fen && *fen != ' ')
+    fen++;
+  if (!*fen)
+    return NULL;
 
-  // Aller au premier espace (fin des pièces)
-  while (*current && *current != ' ')
-    current++;
-  if (!*current)
-    return; // FEN incomplet, arrêter ici
+  return fen + 1; // Position après l’espace
+}
 
-  current++; // Passer l'espace
-
-  // Parser le joueur actuel
-  if (*current == 'w') {
+const char *parse_fen_side_to_move(Board *board, const char *fen) {
+  if (*fen == 'w') {
     board->to_move = WHITE;
-  } else if (*current == 'b') {
+  } else if (*fen == 'b') {
     board->to_move = BLACK;
+  } else {
+    return NULL;
   }
-  current++;
 
-  if (!*current || *current != ' ')
-    return;  // FEN incomplet
-  current++; // Passer l'espace
+  fen++;
+  if (!*fen || *fen != ' ')
+    return NULL;
+  return fen + 1;
+}
 
-  // Parser les droits de roque
+const char *parse_fen_castling(Board *board, const char *fen) {
   board->castle_rights = 0;
-  if (*current != '-') {
-    while (*current && *current != ' ') {
-      switch (*current) {
+  if (*fen != '-') {
+    while (*fen && *fen != ' ') {
+      switch (*fen) {
       case 'K':
         board->castle_rights |= WHITE_KINGSIDE;
         break;
@@ -210,32 +192,55 @@ void board_from_fen(Board *board, const char *fen) {
         board->castle_rights |= BLACK_QUEENSIDE;
         break;
       }
-      current++;
+      fen++;
     }
   } else {
-    current++; // Passer le '-'
+    fen++;
   }
 
-  if (!*current || *current != ' ')
-    return;  // FEN incomplet
-  current++; // Passer l'espace
+  if (!*fen || *fen != ' ')
+    return NULL;
+  return fen + 1;
+}
 
-  // Parser en passant (simple pour l'instant)
-  if (*current == '-') {
+const char *parse_fen_en_passant(Board *board, const char *fen) {
+  if (*fen == '-') {
     board->en_passant = -1;
+  } else if (*fen >= 'a' && *fen <= 'h' && *(fen + 1) >= '1' &&
+             *(fen + 1) <= '8') {
+    int file = *fen - 'a';
+    int rank = *(fen + 1) - '1';
+    board->en_passant = rank * 8 + file;
+    fen++;
   } else {
-    // Conversion notation algebrique -> Square (ex: "e3" -> E3)
-    if (*current >= 'a' && *current <= 'h' && *(current + 1) >= '1' &&
-        *(current + 1) <= '8') {
-      int file = *current - 'a';
-      int rank = *(current + 1) - '1';
-      board->en_passant = rank * 8 + file;
-    } else {
-      board->en_passant = -1;
-    }
+    board->en_passant = -1;
   }
+  return fen + 1; // Passer espace ou caractère suivant
+}
 
-  // Valeurs par défaut pour les compteurs
+void init_halfmove_and_fullmove(Board *board) {
   board->halfmove_clock = 0;
   board->move_number = 1;
+}
+
+void board_from_fen(Board *board, const char *fen) {
+  memset(board, 0, sizeof(Board));
+
+  const char *current = parse_fen_pieces(board, fen);
+  if (!current)
+    return;
+
+  current = parse_fen_side_to_move(board, current);
+  if (!current)
+    return;
+
+  current = parse_fen_castling(board, current);
+  if (!current)
+    return;
+
+  current = parse_fen_en_passant(board, current);
+  if (!current)
+    return;
+
+  init_halfmove_and_fullmove(board);
 }

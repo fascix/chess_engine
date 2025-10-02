@@ -115,158 +115,129 @@ void generate_moves(const Board *board, MoveList *moves) {
   generate_king_moves(board, color, moves);
 }
 
+static void generate_single_and_double_pushes(const Board *board, Couleur color,
+                                              Square from, int direction,
+                                              int start_rank, MoveList *moves) {
+  Square one_forward = from + direction;
+
+  if (one_forward >= A1 && one_forward <= H8 &&
+      !is_square_occupied(board, one_forward)) {
+    int rank = one_forward / 8;
+    if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
+      ADD_PROMOTIONS(from, one_forward, EMPTY, moves);
+    } else {
+      Move m = create_move(from, one_forward, MOVE_NORMAL);
+      movelist_add(moves, m);
+    }
+
+    Square two_forward = from + (2 * direction);
+    if ((from / 8) == start_rank && two_forward >= A1 && two_forward <= H8 &&
+        !is_square_occupied(board, two_forward)) {
+      Move m = create_move(from, two_forward, MOVE_NORMAL);
+      movelist_add(moves, m);
+    }
+  }
+}
+
+static void generate_pawn_captures(const Board *board, Couleur color,
+                                   Square from, int direction,
+                                   MoveList *moves) {
+  int left_capture = (color == WHITE) ? from + 7 : from - 9;
+  int right_capture = (color == WHITE) ? from + 9 : from - 7;
+
+  // Capture gauche
+  if (left_capture >= A1 && left_capture <= H8 && (from % 8) != 0) {
+    if (is_square_occupied(board, left_capture) &&
+        get_piece_color(board, left_capture) != color) {
+      PieceType captured = get_piece_type(board, left_capture);
+      int rank = left_capture / 8;
+      if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
+        ADD_PROMOTIONS(from, left_capture, captured, moves);
+      } else {
+        Move capture = create_move(from, left_capture, MOVE_CAPTURE);
+        capture.captured_piece = captured;
+        movelist_add(moves, capture);
+      }
+    }
+  }
+
+  // Capture droite
+  if (right_capture >= A1 && right_capture <= H8 && (from % 8) != 7) {
+    if (is_square_occupied(board, right_capture) &&
+        get_piece_color(board, right_capture) != color) {
+      PieceType captured = get_piece_type(board, right_capture);
+      int rank = right_capture / 8;
+      if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
+        ADD_PROMOTIONS(from, right_capture, captured, moves);
+      } else {
+        Move capture = create_move(from, right_capture, MOVE_CAPTURE);
+        capture.captured_piece = captured;
+        movelist_add(moves, capture);
+      }
+    }
+  }
+}
+
+static void generate_en_passant(const Board *board, Couleur color,
+                                MoveList *moves) {
+  if (board->en_passant == -1)
+    return;
+
+  int ep_rank_check = board->en_passant / 8;
+  if ((color == WHITE && ep_rank_check != 5) ||
+      (color == BLACK && ep_rank_check != 2)) {
+    return;
+  }
+
+  Square ep_square = board->en_passant;
+  int ep_file = ep_square % 8;
+
+  Square target_pawn_square = (color == WHITE) ? ep_square - 8 : ep_square + 8;
+  Square left_attacker = target_pawn_square - 1;
+  Square right_attacker = target_pawn_square + 1;
+
+  if (ep_file > 0 && left_attacker >= A1 && left_attacker <= H8) {
+    if (is_square_occupied(board, left_attacker) &&
+        get_piece_color(board, left_attacker) == color &&
+        get_piece_type(board, left_attacker) == PAWN) {
+      Move ep_move = create_move(left_attacker, ep_square, MOVE_EN_PASSANT);
+      ep_move.captured_piece = PAWN;
+      movelist_add(moves, ep_move);
+    }
+  }
+
+  if (ep_file < 7 && right_attacker >= A1 && right_attacker <= H8) {
+    if (is_square_occupied(board, right_attacker) &&
+        get_piece_color(board, right_attacker) == color &&
+        get_piece_type(board, right_attacker) == PAWN) {
+      Move ep_move = create_move(right_attacker, ep_square, MOVE_EN_PASSANT);
+      ep_move.captured_piece = PAWN;
+      movelist_add(moves, ep_move);
+    }
+  }
+}
+
 void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
-  // Initialiser la liste des mouvements (éviter les coups corrompus)
   if (!moves)
     return;
 
-  // Récupérer le bitboard des pions de cette couleur
   Bitboard pawns = board->pieces[color][PAWN];
-
-  // Direction des pions : blancs +8 (vers le haut), noirs -8 (vers le bas)
   int direction = (color == WHITE) ? 8 : -8;
+  int start_rank = (color == WHITE) ? 1 : 6;
 
-  // Rangée de départ pour le double saut
-  int start_rank =
-      (color == WHITE) ? 1 : 6; // Rangée 2 pour blancs, 7 pour noirs
+  while (pawns) {
+    Square from = __builtin_ctzll(pawns);
+    pawns &= pawns - 1;
 
-  // Parcourir tous les pions avec la méthode bitboard
-  while (pawns != 0) {
-    Square from = __builtin_ctzll(pawns); // Trouve le premier pion
-    pawns &= (pawns - 1);                 // Efface ce bit
-
-    // Vérifier la validité de la case
-    if (from < A1 || from > H8) {
+    if (from < A1 || from > H8)
       continue;
-    }
 
-    // Case de destination pour avancer d'une case
-    Square one_forward = from + direction;
-
-    // Vérification que la case est sur le plateau
-    if (one_forward >= A1 && one_forward <= H8) {
-
-      // 1. MOUVEMENT SIMPLE - Avancer d'une case
-      if (!is_square_occupied(board, one_forward)) {
-        // Vérifier si promotion (pion atteint la dernière rangée)
-        int rank = one_forward / 8;
-        if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
-          // Ajoute toutes les promotions (pas de capture ici)
-          ADD_PROMOTIONS(from, one_forward, EMPTY, moves);
-        } else {
-          // Coup normal
-          Move m = create_move(from, one_forward, MOVE_NORMAL);
-          movelist_add(moves, m);
-        }
-
-        // 2. DOUBLE SAUT - Si première rangée et case deux cases devant libre
-        Square two_forward = from + (2 * direction);
-        if ((from / 8) == start_rank && two_forward >= A1 &&
-            two_forward <= H8 && !is_square_occupied(board, two_forward)) {
-          Move m = create_move(from, two_forward, MOVE_NORMAL);
-          movelist_add(moves, m);
-        }
-      }
-
-      // 3. CAPTURES EN DIAGONALE
-      // Diagonale gauche et droite selon la couleur
-      int left_capture = (color == WHITE) ? from + 7 : from - 9;
-      int right_capture = (color == WHITE) ? from + 9 : from - 7;
-
-      // Capture diagonale gauche
-      if (left_capture >= A1 && left_capture <= H8 &&
-          (from % 8) != 0) { // Vérifier qu'on ne déborde pas sur la colonne A
-        if (is_square_occupied(board, left_capture) &&
-            get_piece_color(board, left_capture) != color) {
-          PieceType captured = get_piece_type(board, left_capture);
-
-          // Vérifier promotion
-          int rank = left_capture / 8;
-          if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
-            // Promotions avec capture
-            ADD_PROMOTIONS(from, left_capture, captured, moves);
-          } else {
-            Move capture = create_move(from, left_capture, MOVE_CAPTURE);
-            capture.captured_piece = captured;
-            movelist_add(moves, capture);
-          }
-        }
-      }
-
-      // Capture diagonale droite
-      if (right_capture >= A1 && right_capture <= H8 &&
-          (from % 8) != 7) { // Vérifier qu'on ne déborde pas sur la colonne H
-        if (is_square_occupied(board, right_capture) &&
-            get_piece_color(board, right_capture) != color) {
-          PieceType captured = get_piece_type(board, right_capture);
-
-          // Vérifier promotion
-          int rank = right_capture / 8;
-          if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
-            // Promotions avec capture
-            ADD_PROMOTIONS(from, right_capture, captured, moves);
-          } else {
-            Move capture = create_move(from, right_capture, MOVE_CAPTURE);
-            capture.captured_piece = captured;
-            movelist_add(moves, capture);
-          }
-        }
-      }
-    }
+    generate_single_and_double_pushes(board, color, from, direction, start_rank,
+                                      moves);
+    generate_pawn_captures(board, color, from, direction, moves);
   }
 
-  // 4. EN PASSANT
-  if (board->en_passant != -1) {
-    // Vérification : la case en_passant doit être sur le rang 5 (pour les
-    // blancs) ou 2 (pour les noirs)
-    int ep_rank_check = board->en_passant / 8;
-    if ((color == WHITE && ep_rank_check != 5) ||
-        (color == BLACK && ep_rank_check != 2)) {
-      return; // Pas de vrai en passant possible
-    }
-    // Vérifier si des pions peuvent capturer en passant
-    Square ep_square = board->en_passant;
-    int ep_file = ep_square % 8;
-    int ep_rank = ep_square / 8;
-
-    // La prise se fait sur la case en_passant, le pion adverse est sur la
-    // rangée du pion qui bouge
-    Square target_pawn_square;
-    if (color == WHITE) {
-      target_pawn_square =
-          ep_square - 8; // Pion noir sur rangée 5, capture sur rangée 6
-    } else {
-      target_pawn_square =
-          ep_square + 8; // Pion blanc sur rangée 4, capture sur rangée 3
-    }
-
-    // Chercher les pions qui peuvent capturer (à gauche et à droite du pion
-    // cible)
-    Square left_attacker = target_pawn_square - 1;
-    Square right_attacker = target_pawn_square + 1;
-
-    // Attaquant depuis la gauche
-    if (ep_file > 0 && left_attacker >= A1 && left_attacker <= H8) {
-      if (is_square_occupied(board, left_attacker) &&
-          get_piece_color(board, left_attacker) == color &&
-          get_piece_type(board, left_attacker) == PAWN) {
-        Move ep_move = create_move(left_attacker, ep_square, MOVE_EN_PASSANT);
-        ep_move.captured_piece = PAWN;
-        movelist_add(moves, ep_move);
-      }
-    }
-
-    // Attaquant depuis la droite
-    if (ep_file < 7 && right_attacker >= A1 && right_attacker <= H8) {
-      if (is_square_occupied(board, right_attacker) &&
-          get_piece_color(board, right_attacker) == color &&
-          get_piece_type(board, right_attacker) == PAWN) {
-        Move ep_move = create_move(right_attacker, ep_square, MOVE_EN_PASSANT);
-        ep_move.captured_piece = PAWN;
-        movelist_add(moves, ep_move);
-      }
-    }
-  }
+  generate_en_passant(board, color, moves);
 }
 
 // Fonction générique pour les mouvements de sliding pieces (tours, fous, dame)

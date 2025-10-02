@@ -45,22 +45,13 @@ static const int king_position_table[64] = {
 
 // Retourne la valeur d'une pièce
 int piece_value(PieceType piece) {
-  switch (piece) {
-  case PAWN:
-    return PAWN_VALUE;
-  case KNIGHT:
-    return KNIGHT_VALUE;
-  case BISHOP:
-    return BISHOP_VALUE;
-  case ROOK:
-    return ROOK_VALUE;
-  case QUEEN:
-    return QUEEN_VALUE;
-  case KING:
-    return KING_VALUE;
-  default:
-    return 0;
+  static const int values[] = {PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE,
+                               ROOK_VALUE, QUEEN_VALUE,  KING_VALUE};
+
+  if (piece >= PAWN && piece <= KING) {
+    return values[piece];
   }
+  return 0;
 }
 
 // Évalue le matériel (différence de valeur des pièces)
