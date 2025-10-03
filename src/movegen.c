@@ -240,63 +240,75 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
   generate_en_passant(board, color, moves);
 }
 
-// Fonction générique pour les mouvements de sliding pieces (tours, fous, dame)
-void slide_direction(const Board *board, Square from, int offset, Couleur color,
-                     MoveList *moves) {
-  // Pré-calculer le nombre maximum de pas dans cette direction
-  int max_steps;
-  int rank = from / 8;
-  int file = from % 8;
+// Calcule la distance minimale entre deux limites
+static inline int min(int a, int b) { return (a < b) ? a : b; }
 
+// Calcule le nombre maximum de pas pour une direction donnée
+static int calculate_max_steps(int rank, int file, int offset) {
   switch (offset) {
   case +8:
-    max_steps = (7 - rank);
-    break; // Nord: cases jusqu'au bord
+    return 7 - rank; // Nord
   case -8:
-    max_steps = rank;
-    break; // Sud: cases jusqu'au bord
+    return rank; // Sud
   case +1:
-    max_steps = (7 - file);
-    break; // Est: cases jusqu'au bord
+    return 7 - file; // Est
   case -1:
-    max_steps = file;
-    break; // Ouest: cases jusqu'au bord
-  // Directions diagonales
+    return file; // Ouest
   case +9:
-    max_steps = (7 - rank < 7 - file) ? (7 - rank) : (7 - file);
-    break; // Nord-Est: limité par bord haut OU droit
+    return min(7 - rank, 7 - file); // Nord-Est
   case +7:
-    max_steps = (7 - rank < file) ? (7 - rank) : file;
-    break; // Nord-Ouest: limité par bord haut OU gauche
+    return min(7 - rank, file); // Nord-Ouest
   case -7:
-    max_steps = (rank < 7 - file) ? rank : (7 - file);
-    break; // Sud-Est: limité par bord bas OU droit
+    return min(rank, 7 - file); // Sud-Est
   case -9:
-    max_steps = (rank < file) ? rank : file;
-    break; // Sud-Ouest: limité par bord bas OU gauche
+    return min(rank, file); // Sud-Ouest
   default:
-    return; // Direction invalide
+    return 0; // Direction invalide
   }
+}
 
-  // Nouvelle boucle : vérifier toutes les cases intermédiaires libres avant
-  // d'ajouter un coup
+// Tente d'ajouter un mouvement de capture
+static bool try_add_capture(const Board *board, Square from, Square to,
+                            Couleur color, MoveList *moves) {
+  if (get_piece_color(board, to) != color) {
+    Move capture = create_move(from, to, MOVE_CAPTURE);
+    capture.captured_piece = get_piece_type(board, to);
+    movelist_add(moves, capture);
+    return true;
+  }
+  return false;
+}
+
+// Ajoute un mouvement normal (case vide)
+static void add_normal_move(Square from, Square to, MoveList *moves) {
+  Move m = create_move(from, to, MOVE_NORMAL);
+  movelist_add(moves, m);
+}
+
+// Fonction principale simplifiée
+void slide_direction(const Board *board, Square from, int offset, Couleur color,
+                     MoveList *moves) {
+  int rank = from / 8;
+  int file = from % 8;
+  int max_steps = calculate_max_steps(rank, file, offset);
+
+  if (max_steps == 0)
+    return; // Direction invalide
+
   for (int step = 1; step <= max_steps; step++) {
     Square to = from + step * offset;
-    // Vérification de sécurité (ne devrait pas arriver avec le pré-calcul)
+
+    // Vérification de sécurité (redondante avec calculate_max_steps mais
+    // garde-fou)
     if (to < A1 || to > H8)
       break;
-    // Vérifier que toutes les cases intermédiaires sont libres
+
     if (is_square_occupied(board, to)) {
-      if (get_piece_color(board, to) != color) {
-        Move capture = create_move(from, to, MOVE_CAPTURE);
-        capture.captured_piece = get_piece_type(board, to);
-        movelist_add(moves, capture);
-      }
+      try_add_capture(board, from, to, color, moves);
       break; // Obstacle rencontré
-    } else {
-      Move m = create_move(from, to, MOVE_NORMAL);
-      movelist_add(moves, m);
     }
+
+    add_normal_move(from, to, moves);
   }
 }
 
