@@ -46,9 +46,6 @@ typedef struct {
 } SearchResult;
 
 // Algorithmes de recherche
-int negamax(Board *board, int depth, Couleur color);
-int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
-                       Couleur color);
 
 // Interface principale de recherche
 SearchResult search_best_move(Board *board, int depth);
@@ -73,8 +70,8 @@ typedef struct {
   int count;
 } OrderedMoveList;
 
-void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
-                 Move hash_move, int ply);
+void order_moves_improved(const Board *board, MoveList *moves,
+                          OrderedMoveList *ordered, Move hash_move, int ply);
 int mvv_lva_score(const Move *move);
 void init_killer_moves();
 void store_killer_move(Move move, int ply);

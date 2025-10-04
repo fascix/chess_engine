@@ -5,6 +5,10 @@
 #include <string.h>
 #include <time.h>
 
+// Forward declaration for improved move ordering
+void order_moves_improved(const Board *board, MoveList *moves,
+                          OrderedMoveList *ordered, Move hash_move, int ply);
+
 // Table de transposition globale
 static TranspositionTable tt_global;
 
@@ -37,52 +41,6 @@ void undo_move(Board *board, int ply) { *board = search_backup_stack[ply]; }
 // localement via `Board backup = *board;`)
 void restore_board_from_backup(Board *board, const Board *backup) {
   *board = *backup;
-}
-
-// Implémentation Negamax de base
-int negamax(Board *board, int depth, Couleur color) {
-  // Cas de base : profondeur 0 ou fin de partie
-  if (depth == 0) {
-    int score = evaluate_position(board);
-    return (color == WHITE) ? score : -score;
-  }
-
-  // Générer tous les mouvements légaux
-  MoveList moves;
-  generate_legal_moves(board, &moves);
-
-  // Aucun mouvement = mat ou pat
-  if (moves.count == 0) {
-    if (is_in_check(board, color)) {
-      return -MATE_SCORE + (10 - depth); // Mat en moins de coups = mieux
-    } else {
-      return STALEMATE_SCORE; // Pat
-    }
-  }
-
-  int max_score = -INFINITY_SCORE;
-
-  // Parcourir tous les mouvements
-  for (int i = 0; i < moves.count; i++) {
-    Board backup = *board;
-
-    // Jouer le mouvement (temporaire)
-    make_move_temp(board, &moves.moves[i], &backup);
-
-    // Recherche récursive avec couleur opposée
-    Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-    int score = -negamax(board, depth - 1, opponent);
-
-    // Restaurer le plateau depuis le backup local
-    restore_board_from_backup(board, &backup);
-
-    // Mise à jour du meilleur score
-    if (score > max_score) {
-      max_score = score;
-    }
-  }
-
-  return max_score;
 }
 
 // Mise à jour de negamax_alpha_beta
@@ -128,7 +86,7 @@ int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
   if (entry != NULL) {
     hash_move = entry->best_move;
   }
-  order_moves(board, &moves, &ordered_moves, hash_move, ply);
+  order_moves_improved(board, &moves, &ordered_moves, hash_move, ply);
   // Sécurité OrderedMoveList: limiter à 256
   if (ordered_moves.count > 256) {
     fprintf(stderr,
@@ -151,13 +109,7 @@ int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
     int score = -negamax_alpha_beta_fixed(board, depth - 1, -beta, -alpha,
                                           opponent, ply + 1);
 
-    // Sécurité avant undo_move
-    if (ply >= 128) {
-      fprintf(stderr, "ERROR: ply=%d trop grand avant undo_move, skip undo\n",
-              ply);
-    } else {
-      undo_move(board, ply);
-    }
+    undo_move(board, ply);
 
     if (score > max_score) {
       max_score = score;
@@ -182,59 +134,6 @@ int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
   tt_store(&tt_global, zobrist_hash(board), depth, max_score, ttype, best_move);
   return max_score;
 }
-
-// Interface principale de recherche
-/*SearchResult search_best_move(Board *board, int depth) {
-  // Initialiser les tables de move ordering
-  static int first_call = 1;
-  if (first_call) {
-    init_killer_moves();
-    first_call = 0;
-  }
-
-  SearchResult result = {0};
-  result.best_move.from = A1;
-  result.best_move.to = A1;
-  result.score = -INFINITY_SCORE;
-  result.depth = depth;
-  result.nodes_searched = 0;
-
-  MoveList moves;
-  generate_legal_moves(board, &moves);
-
-  if (moves.count == 0) {
-    // Aucun mouvement légal
-    result.score =
-        is_in_check(board, board->to_move) ? -MATE_SCORE : STALEMATE_SCORE;
-    return result;
-  }
-
-  Couleur color = board->to_move;
-
-  for (int i = 0; i < moves.count; i++) {
-    Board backup = *board;
-
-    // Jouer le mouvement (temporaire)
-    make_move_temp(board, &moves.moves[i], &backup);
-
-    // Recherche avec Alpha-Beta
-    Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-    int score = -negamax_alpha_beta_fixed(board, depth - 1, -INFINITY_SCORE,
-                                          INFINITY_SCORE, opponent, 1);
-    result.nodes_searched++;
-
-    // Restaurer le plateau depuis le backup local
-    restore_board_from_backup(board, &backup);
-
-    // Mise à jour du meilleur mouvement
-    if (score > result.score) {
-      result.score = score;
-      result.best_move = moves.moves[i];
-    }
-  }
-
-  return result;
-}*/
 
 // ========== TRANSPOSITION TABLE ==========
 
@@ -371,40 +270,6 @@ uint64_t zobrist_hash(const Board *board) {
   return hash;
 }
 
-// ========== ITERATIVE DEEPENING ==========
-
-// Recherche avec approfondissement itératif
-SearchResult search_iterative_deepening(Board *board, int max_depth,
-                                        int time_limit_ms) {
-  clock_t start_time = clock();
-  SearchResult best_result = {0};
-  best_result.score = -INFINITY_SCORE;
-
-  tt_new_search(&tt_global);
-
-  for (int depth = 1; depth <= max_depth; depth++) {
-    SearchResult current_result = search_best_move(board, depth);
-
-    // Vérifier le temps
-    clock_t current_time = clock();
-    int elapsed_ms =
-        (int)(((double)(current_time - start_time)) / CLOCKS_PER_SEC * 1000);
-
-    if (elapsed_ms >= time_limit_ms && depth > 1) {
-      break; // Temps écoulé, garder le meilleur résultat précédent
-    }
-
-    best_result = current_result;
-
-    // Arrêt si mat trouvé
-    if (abs(current_result.score) >= MATE_SCORE - 100) {
-      break;
-    }
-  }
-
-  return best_result;
-}
-
 // ========== MOVE ORDERING ==========
 
 // Initialise les tables de killer moves
@@ -461,59 +326,6 @@ int is_killer_move(Move move, int ply) {
            killer_moves[ply][0].to == move.to) ||
           (killer_moves[ply][1].from == move.from &&
            killer_moves[ply][1].to == move.to));
-}
-
-// Trie les coups par ordre de priorité
-void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
-                 Move hash_move, int ply) {
-  ordered->count = moves->count;
-
-  for (int i = 0; i < moves->count; i++) {
-    ordered->moves[i] = moves->moves[i];
-    int score = 0;
-
-    // 1. Hash move (coup de la TT) - priorité maximale
-    if (hash_move.from == moves->moves[i].from &&
-        hash_move.to == moves->moves[i].to) {
-      score = 1000000;
-    }
-    // 2. Captures - score MVV-LVA
-    else if (moves->moves[i].type == MOVE_CAPTURE ||
-             moves->moves[i].type == MOVE_EN_PASSANT) {
-      score = 100000 + mvv_lva_score(&moves->moves[i]);
-    }
-    // 3. Promotions
-    else if (moves->moves[i].type == MOVE_PROMOTION) {
-      score = 90000 + piece_value(moves->moves[i].promotion);
-    }
-    // 4. Killer moves
-    else if (is_killer_move(moves->moves[i], ply)) {
-      score = 80000;
-    }
-    // 5. History heuristic
-    else {
-      Couleur color = board->to_move;
-      score = history_scores[color][moves->moves[i].from][moves->moves[i].to];
-    }
-
-    ordered->scores[i] = score;
-  }
-
-  // Tri par insertion (efficace pour petites listes)
-  for (int i = 1; i < ordered->count; i++) {
-    Move temp_move = ordered->moves[i];
-    int temp_score = ordered->scores[i];
-    int j = i - 1;
-
-    while (j >= 0 && ordered->scores[j] < temp_score) {
-      ordered->moves[j + 1] = ordered->moves[j];
-      ordered->scores[j + 1] = ordered->scores[j];
-      j--;
-    }
-
-    ordered->moves[j + 1] = temp_move;
-    ordered->scores[j + 1] = temp_score;
-  }
 }
 
 // Met à jour l'historique pour un coup qui a causé une coupure
@@ -593,7 +405,7 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
   // Trier les captures par MVV-LVA
   OrderedMoveList ordered_captures;
   Move null_move = {0};
-  order_moves(board, &capture_moves, &ordered_captures, null_move, 0);
+  order_moves_improved(board, &capture_moves, &ordered_captures, null_move, 0);
 
   // Chercher dans les captures
   for (int i = 0; i < ordered_captures.count; i++) {
