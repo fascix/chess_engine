@@ -10,9 +10,9 @@ void movelist_add(MoveList *list, Move move) {
   if (list->count < 256) {
     list->moves[list->count] = move;
     list->count++;
-  } else {
-    printf("[DEBUG] movelist_add: list full!\n");
   }
+  // Si la liste est pleine (>= 256), le coup est silencieusement ignoré
+  // car cela indique une position hautement anormale
 }
 
 Move create_move(Square from, Square to, MoveType type) {
@@ -67,14 +67,13 @@ void print_move(const Move *move) {
 
 // Affiche toute la liste de coups
 void print_movelist(const MoveList *list) {
-  printf("Coups générés (%d) :\\n", list->count);
+  printf("Coups générés (%d) :\n", list->count);
   for (int i = 0; i < list->count; i++) {
     printf("%2d. ", i + 1);
     print_move(&list->moves[i]);
-    printf("\\n");
+    printf("\n");
   }
 }
-
 // Convertit un coup en string (thread-safe avec buffer static)
 char *move_to_string(const Move *move) {
   static char buffer[16];
@@ -115,9 +114,9 @@ void generate_moves(const Board *board, MoveList *moves) {
   generate_king_moves(board, color, moves);
 }
 
-static void generate_single_and_double_pushes(const Board *board, Couleur color,
-                                              Square from, int direction,
-                                              int start_rank, MoveList *moves) {
+static void generate_pawn_pushes(const Board *board, Couleur color, Square from,
+                                 int direction, int start_rank,
+                                 MoveList *moves) {
   Square one_forward = from + direction;
 
   if (one_forward >= A1 && one_forward <= H8 &&
@@ -139,42 +138,41 @@ static void generate_single_and_double_pushes(const Board *board, Couleur color,
   }
 }
 
+// Helper: ajoute une capture de pion (avec promotion si sur dernière rangée)
+static void add_pawn_capture(const Board *board, Square from, Square to,
+                             Couleur color, MoveList *moves) {
+  if (to < A1 || to > H8)
+    return;
+  if (!is_square_occupied(board, to))
+    return;
+  if (get_piece_color(board, to) == color)
+    return;
+
+  PieceType captured = get_piece_type(board, to);
+  int rank = to / 8;
+
+  // Promotion si dernière rangée
+  if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
+    ADD_PROMOTIONS(from, to, captured, moves);
+  } else {
+    Move capture = create_move(from, to, MOVE_CAPTURE);
+    capture.captured_piece = captured;
+    movelist_add(moves, capture);
+  }
+}
+
 static void generate_pawn_captures(const Board *board, Couleur color,
                                    Square from, int direction,
                                    MoveList *moves) {
   int left_capture = (color == WHITE) ? from + 7 : from - 9;
   int right_capture = (color == WHITE) ? from + 9 : from - 7;
 
-  // Capture gauche
-  if (left_capture >= A1 && left_capture <= H8 && (from % 8) != 0) {
-    if (is_square_occupied(board, left_capture) &&
-        get_piece_color(board, left_capture) != color) {
-      PieceType captured = get_piece_type(board, left_capture);
-      int rank = left_capture / 8;
-      if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
-        ADD_PROMOTIONS(from, left_capture, captured, moves);
-      } else {
-        Move capture = create_move(from, left_capture, MOVE_CAPTURE);
-        capture.captured_piece = captured;
-        movelist_add(moves, capture);
-      }
-    }
+  // Vérifications de wrap-around avant d'ajouter les captures
+  if ((from % 8) != 0) {
+    add_pawn_capture(board, from, left_capture, color, moves);
   }
-
-  // Capture droite
-  if (right_capture >= A1 && right_capture <= H8 && (from % 8) != 7) {
-    if (is_square_occupied(board, right_capture) &&
-        get_piece_color(board, right_capture) != color) {
-      PieceType captured = get_piece_type(board, right_capture);
-      int rank = right_capture / 8;
-      if ((color == WHITE && rank == 7) || (color == BLACK && rank == 0)) {
-        ADD_PROMOTIONS(from, right_capture, captured, moves);
-      } else {
-        Move capture = create_move(from, right_capture, MOVE_CAPTURE);
-        capture.captured_piece = captured;
-        movelist_add(moves, capture);
-      }
-    }
+  if ((from % 8) != 7) {
+    add_pawn_capture(board, from, right_capture, color, moves);
   }
 }
 
@@ -232,8 +230,7 @@ void generate_pawn_moves(const Board *board, Couleur color, MoveList *moves) {
     if (from < A1 || from > H8)
       continue;
 
-    generate_single_and_double_pushes(board, color, from, direction, start_rank,
-                                      moves);
+    generate_pawn_pushes(board, color, from, direction, start_rank, moves);
     generate_pawn_captures(board, color, from, direction, moves);
   }
 
@@ -560,6 +557,53 @@ int is_castle_illegal(const Board *board, const Move *m) {
   return 0;
 }
 
+// Helper: tente d'ajouter un roque (kingside si is_kingside=1, queenside sinon)
+static void try_add_castle(const Board *board, Couleur color, int is_kingside,
+                           MoveList *moves) {
+  // Vérifier les droits de roque
+  int has_rights =
+      is_kingside ? (color == WHITE ? (board->castle_rights & WHITE_KINGSIDE)
+                                    : (board->castle_rights & BLACK_KINGSIDE))
+                  : (color == WHITE ? (board->castle_rights & WHITE_QUEENSIDE)
+                                    : (board->castle_rights & BLACK_QUEENSIDE));
+
+  if (!has_rights)
+    return;
+
+  Square king_pos = __builtin_ctzll(board->pieces[color][KING]);
+  Square rook_pos, king_dest, passage_square;
+
+  if (is_kingside) {
+    rook_pos = (color == WHITE) ? H1 : H8;
+    king_dest = (color == WHITE) ? G1 : G8;
+    passage_square = king_pos + 1; // f1/f8
+  } else {
+    rook_pos = (color == WHITE) ? A1 : A8;
+    king_dest = (color == WHITE) ? C1 : C8;
+    passage_square = king_pos - 1; // d1/d8
+  }
+
+  // Vérifier que les cases entre roi et tour sont vides
+  Square start = (is_kingside) ? king_pos + 1 : rook_pos + 1;
+  Square end = (is_kingside) ? rook_pos : king_pos;
+
+  for (Square sq = start; sq < end; sq++) {
+    if (is_square_occupied(board, sq)) {
+      return; // Chemin bloqué
+    }
+  }
+
+  // Vérifier que les cases de passage du roi ne sont pas attaquées
+  Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+  if (!is_square_attacked(board, passage_square, opponent) &&
+      !is_square_attacked(board, king_dest, opponent)) {
+    Move castle_move = create_move(king_pos, king_dest, MOVE_CASTLE);
+    if (is_move_legal(board, &castle_move)) {
+      movelist_add(moves, castle_move);
+    }
+  }
+}
+
 // Génération des mouvements de roi (mouvements de base uniquement)
 void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
 
@@ -625,66 +669,10 @@ void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
 
   // Ajouter les roques si conditions remplies
   if (!is_in_check(board, color)) { // Le roi ne doit pas être en échec
-
-    // PETIT ROQUE (roi vers g1/g8, tour vers f1/f8)
-    if ((color == WHITE && (board->castle_rights & WHITE_KINGSIDE)) ||
-        (color == BLACK && (board->castle_rights & BLACK_KINGSIDE))) {
-
-      Square king_pos = __builtin_ctzll(board->pieces[color][KING]);
-      Square rook_pos = (color == WHITE) ? H1 : H8;
-      Square king_dest = (color == WHITE) ? G1 : G8;
-      Square rook_dest = (color == WHITE) ? F1 : F8;
-
-      // Vérifier que les cases entre roi et tour sont vides
-      int squares_clear = 1;
-      for (Square sq = king_pos + 1; sq < rook_pos; sq++) {
-        if (is_square_occupied(board, sq)) {
-          squares_clear = 0;
-          break;
-        }
-      }
-
-      // Vérifier que les cases de passage du roi ne sont pas attaquées
-      Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-      if (squares_clear &&
-          !is_square_attacked(board, king_pos + 1, opponent) && // case f1/f8
-          !is_square_attacked(board, king_dest, opponent)) {    // case g1/g8
-        Move castle_move = create_move(king_pos, king_dest, MOVE_CASTLE);
-        if (is_move_legal(board, &castle_move)) {
-          movelist_add(moves, castle_move);
-        }
-      }
-    }
-
-    // GRAND ROQUE (roi vers c1/c8, tour vers d1/d8)
-    if ((color == WHITE && (board->castle_rights & WHITE_QUEENSIDE)) ||
-        (color == BLACK && (board->castle_rights & BLACK_QUEENSIDE))) {
-
-      Square king_pos = __builtin_ctzll(board->pieces[color][KING]);
-      Square rook_pos = (color == WHITE) ? A1 : A8;
-      Square king_dest = (color == WHITE) ? C1 : C8;
-      Square rook_dest = (color == WHITE) ? D1 : D8;
-
-      // Vérifier que les cases entre roi et tour sont vides
-      int squares_clear = 1;
-      for (Square sq = rook_pos + 1; sq < king_pos; sq++) {
-        if (is_square_occupied(board, sq)) {
-          squares_clear = 0;
-          break;
-        }
-      }
-
-      // Vérifier que les cases de passage du roi ne sont pas attaquées
-      Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-      if (squares_clear &&
-          !is_square_attacked(board, king_pos - 1, opponent) && // case d1/d8
-          !is_square_attacked(board, king_dest, opponent)) {    // case c1/c8
-        Move castle_move = create_move(king_pos, king_dest, MOVE_CASTLE);
-        if (is_move_legal(board, &castle_move)) {
-          movelist_add(moves, castle_move);
-        }
-      }
-    }
+    // Petit roque (kingside)
+    try_add_castle(board, color, 1, moves);
+    // Grand roque (queenside)
+    try_add_castle(board, color, 0, moves);
   }
 }
 

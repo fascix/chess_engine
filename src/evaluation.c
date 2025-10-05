@@ -71,8 +71,8 @@ int evaluate_material(const Board *board) {
   return material;
 }
 
-// Évalue les bonus de position
-int evaluate_position_bonus(const Board *board) {
+// Évalue les bonus de position (piece-square tables)
+int evaluate_piece_square_tables(const Board *board) {
   int bonus = 0;
 
   // Pour chaque type de pièce, ajouter bonus de position
@@ -107,8 +107,10 @@ int evaluate_position_bonus(const Board *board) {
   return bonus;
 }
 
-// Vérifie si on est en fin de partie (peu de matériel)
-int is_endgame(const Board *board) {
+// ========== ÉVALUATION AVANCÉE ==========
+
+// Calcule le matériel total (hors pions et rois)
+static int calculate_total_material(const Board *board) {
   int total_material = 0;
 
   for (PieceType piece = KNIGHT; piece <= QUEEN; piece++) {
@@ -118,21 +120,18 @@ int is_endgame(const Board *board) {
         __builtin_popcountll(board->pieces[BLACK][piece]) * piece_value(piece);
   }
 
+  return total_material;
+}
+
+// Vérifie si on est en fin de partie (peu de matériel)
+int is_endgame(const Board *board) {
+  int total_material = calculate_total_material(board);
   return total_material < 2000; // Moins de 20 pions de matériel = endgame
 }
 
-// ========== ÉVALUATION AVANCÉE ==========
-
 // Détermine la phase de jeu basée sur le matériel restant
 GamePhase get_game_phase(const Board *board) {
-  int total_material = 0;
-
-  for (PieceType piece = KNIGHT; piece <= QUEEN; piece++) {
-    total_material +=
-        __builtin_popcountll(board->pieces[WHITE][piece]) * piece_value(piece);
-    total_material +=
-        __builtin_popcountll(board->pieces[BLACK][piece]) * piece_value(piece);
-  }
+  int total_material = calculate_total_material(board);
 
   if (total_material > 3000)
     return OPENING_PHASE;
@@ -143,14 +142,7 @@ GamePhase get_game_phase(const Board *board) {
 
 // Facteur de phase pour interpolation (0.0 = endgame, 1.0 = opening)
 float get_phase_factor(const Board *board) {
-  int total_material = 0;
-
-  for (PieceType piece = KNIGHT; piece <= QUEEN; piece++) {
-    total_material +=
-        __builtin_popcountll(board->pieces[WHITE][piece]) * piece_value(piece);
-    total_material +=
-        __builtin_popcountll(board->pieces[BLACK][piece]) * piece_value(piece);
-  }
+  int total_material = calculate_total_material(board);
 
   const int MAX_MATERIAL =
       6200; // Matériel total en début de partie (hors pions/rois)
@@ -192,24 +184,34 @@ int is_pawn_passed(const Board *board, Square pawn_square, Couleur color) {
   return 1; // Aucun pion adverse ne peut l'arrêter
 }
 
+// Helper: vérifie si un pion de la couleur donnée existe sur une colonne
+static int has_pawn_on_file(const Board *board, int file, Couleur color,
+                            int exclude_rank) {
+  if (file < 0 || file > 7)
+    return 0;
+
+  for (int rank = 0; rank <= 7; rank++) {
+    if (rank == exclude_rank)
+      continue;
+
+    Square square = rank * 8 + file;
+    if (is_square_occupied(board, square) &&
+        get_piece_color(board, square) == color &&
+        get_piece_type(board, square) == PAWN) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 // Vérifie si un pion est isolé (pas de pions alliés sur colonnes adjacentes)
 int is_pawn_isolated(const Board *board, Square pawn_square, Couleur color) {
   int file = pawn_square % 8;
 
-  // Vérifier colonnes adjacentes
-  for (int check_file = file - 1; check_file <= file + 1; check_file += 2) {
-    if (check_file < 0 || check_file > 7)
-      continue;
-
-    // Vérifier toute la colonne
-    for (int check_rank = 0; check_rank <= 7; check_rank++) {
-      Square check_square = check_rank * 8 + check_file;
-      if (is_square_occupied(board, check_square) &&
-          get_piece_color(board, check_square) == color &&
-          get_piece_type(board, check_square) == PAWN) {
-        return 0; // Pion allié trouvé sur colonne adjacente
-      }
-    }
+  // Vérifier colonnes adjacentes (gauche et droite)
+  if (has_pawn_on_file(board, file - 1, color, -1) ||
+      has_pawn_on_file(board, file + 1, color, -1)) {
+    return 0; // Pion allié trouvé sur colonne adjacente
   }
 
   return 1; // Aucun pion allié sur colonnes adjacentes
@@ -220,20 +222,8 @@ int is_pawn_doubled(const Board *board, Square pawn_square, Couleur color) {
   int file = pawn_square % 8;
   int rank = pawn_square / 8;
 
-  // Vérifier toute la colonne sauf la case du pion lui-même
-  for (int check_rank = 0; check_rank <= 7; check_rank++) {
-    if (check_rank == rank)
-      continue;
-
-    Square check_square = check_rank * 8 + file;
-    if (is_square_occupied(board, check_square) &&
-        get_piece_color(board, check_square) == color &&
-        get_piece_type(board, check_square) == PAWN) {
-      return 1; // Autre pion trouvé sur même colonne
-    }
-  }
-
-  return 0;
+  // Utiliser has_pawn_on_file en excluant le rang du pion actuel
+  return has_pawn_on_file(board, file, color, rank);
 }
 
 // Évalue la structure de pions
@@ -386,7 +376,7 @@ int evaluate_mobility(const Board *board) {
 // Évaluation spécialisée pour l'ouverture
 int evaluate_opening(const Board *board) {
   int score = evaluate_material(board);
-  score += evaluate_position_bonus(board);
+  score += evaluate_piece_square_tables(board);
   score +=
       evaluate_piece_development(board) * 2;   // Développement plus important
   score += evaluate_center_control(board) * 2; // Centre plus important
@@ -403,8 +393,9 @@ int evaluate_endgame(const Board *board) {
   return score;
 }
 
-// Évaluation avec interpolation selon la phase (Tapered Eval)
-int evaluate_tapered(const Board *board, GamePhase phase, float phase_factor) {
+// Évaluation avec interpolation selon la phase de jeu
+int evaluate_position_interpolated(const Board *board, GamePhase phase,
+                                   float phase_factor) {
   int opening_score = evaluate_opening(board);
   int endgame_score = evaluate_endgame(board);
 
@@ -568,7 +559,7 @@ int evaluate_position(const Board *board) {
 
   // Évaluation de base
   score += evaluate_material(board);
-  score += evaluate_position_bonus(board);
+  score += evaluate_piece_square_tables(board);
 
   // NOUVELLES ÉVALUATIONS TACTIQUES
   score += evaluate_hanging_pieces(board) * 2; // Très important !

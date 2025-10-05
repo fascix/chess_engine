@@ -184,7 +184,7 @@ void handle_go(Board *board, char *params) {
 
   // Lancer la recherche
   SearchResult result =
-      search_iterative_deepening_safe(board, max_depth, time_limit_ms);
+      search_iterative_deepening(board, max_depth, time_limit_ms);
 
   // Envoyer le résultat au format UCI
   printf("info depth %d score cp %d nodes %d nps %d pv %s\n", result.depth,
@@ -206,8 +206,8 @@ void handle_stop() {
 // Gestionnaire commande "quit"
 void handle_quit() { exit(0); }
 
-// Version améliorée de make_move_temp qui met à jour to_move avec logs debug
-void apply_move_properly(Board *board, const Move *move) {
+// Applique un coup UCI en mettant à jour correctement l'état du board
+void apply_uci_move(Board *board, const Move *move) {
   /* IMPORTANT: save the color that is moving BEFORE applying the temporary
      move. make_move_temp flips board->to_move, so reading board->to_move AFTER
      would be wrong. */
@@ -229,19 +229,17 @@ void apply_move_properly(Board *board, const Move *move) {
   if (move->type == MOVE_CASTLE) {
     Square king_from = move->from;
     Square king_to = move->to;
-    Square rook_from, rook_to;
+    int is_kingside = (king_to > king_from);
 
-    if (king_to > king_from) { /* kingside */
-      rook_from = (moving_color == WHITE) ? H1 : H8;
-      rook_to = (moving_color == WHITE) ? F1 : F8;
-    } else { /* queenside */
-      rook_from = (moving_color == WHITE) ? A1 : A8;
-      rook_to = (moving_color == WHITE) ? D1 : D8;
-    }
+    // Déterminer les positions de la tour
+    Square rook_from = is_kingside ? ((moving_color == WHITE) ? H1 : H8)
+                                   : ((moving_color == WHITE) ? A1 : A8);
+    Square rook_to = is_kingside ? ((moving_color == WHITE) ? F1 : F8)
+                                 : ((moving_color == WHITE) ? D1 : D8);
 
+    // Déplacer roi et tour
     board->pieces[moving_color][KING] &= ~(1ULL << king_from);
     board->pieces[moving_color][KING] |= (1ULL << king_to);
-
     board->pieces[moving_color][ROOK] &= ~(1ULL << rook_from);
     board->pieces[moving_color][ROOK] |= (1ULL << rook_to);
 
@@ -320,7 +318,7 @@ void apply_uci_moves(Board *board, char *moves_str) {
     }
 
     if (found) {
-      apply_move_properly(board, &actual_move);
+      apply_uci_move(board, &actual_move);
     } else {
       /* Signaler explicitement que le coup est illégal */
       printf("info string illegal move '%s' for side %d\n", move_str,

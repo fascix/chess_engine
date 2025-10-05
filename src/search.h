@@ -49,8 +49,8 @@ typedef struct {
 
 // Interface principale de recherche
 SearchResult search_best_move(Board *board, int depth);
-SearchResult search_iterative_deepening_safe(Board *board, int max_depth,
-                                             int time_limit_ms);
+SearchResult search_iterative_deepening(Board *board, int max_depth,
+                                        int time_limit_ms);
 
 // Transposition Table
 void tt_init(TranspositionTable *tt);
@@ -70,8 +70,8 @@ typedef struct {
   int count;
 } OrderedMoveList;
 
-void order_moves_improved(const Board *board, MoveList *moves,
-                          OrderedMoveList *ordered, Move hash_move, int ply);
+void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
+                 Move hash_move, int ply);
 int mvv_lva_score(const Move *move);
 void init_killer_moves();
 void store_killer_move(Move move, int ply);

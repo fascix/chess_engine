@@ -5,9 +5,16 @@
 #include <string.h>
 #include <time.h>
 
-// Forward declaration for improved move ordering
-void order_moves_improved(const Board *board, MoveList *moves,
-                          OrderedMoveList *ordered, Move hash_move, int ply);
+// Macro pour logs de debug conditionnels
+#ifdef DEBUG
+#define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DEBUG_LOG(...)
+#endif
+
+// Forward declaration for move ordering
+void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
+                 Move hash_move, int ply);
 
 // Table de transposition globale
 static TranspositionTable tt_global;
@@ -37,18 +44,12 @@ void apply_move(Board *board, const Move *move, int ply) {
 // Annule un mouvement (restaure depuis backup)
 void undo_move(Board *board, int ply) { *board = search_backup_stack[ply]; }
 
-// Restaurer le plateau depuis un backup local (utilisé quand on sauvegarde
-// localement via `Board backup = *board;`)
-void restore_board_from_backup(Board *board, const Board *backup) {
-  *board = *backup;
-}
-
 // Mise à jour de negamax_alpha_beta
-int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
-                             Couleur color, int ply) {
+int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
+                       Couleur color, int ply) {
   // Sécurité: ply trop grand
   if (ply >= 128) {
-    fprintf(stderr, "ERROR: ply=%d trop grand, retour score neutre\n", ply);
+    DEBUG_LOG("ERROR: ply=%d trop grand, retour score neutre\n", ply);
     return 0; // score neutre
   }
   // Table de transposition : probe au début
@@ -66,8 +67,8 @@ int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
 
   // Limiter la taille de moves pour OrderedMoveList à 256 coups max
   if (moves.count > 256) {
-    fprintf(stderr, "WARNING: moves.count=%d > 256, tronqué à 256 coups\n",
-            moves.count);
+    DEBUG_LOG("WARNING: moves.count=%d > 256, tronqué à 256 coups\n",
+              moves.count);
     moves.count = 256;
   }
 
@@ -86,28 +87,26 @@ int negamax_alpha_beta_fixed(Board *board, int depth, int alpha, int beta,
   if (entry != NULL) {
     hash_move = entry->best_move;
   }
-  order_moves_improved(board, &moves, &ordered_moves, hash_move, ply);
+  order_moves(board, &moves, &ordered_moves, hash_move, ply);
   // Sécurité OrderedMoveList: limiter à 256
   if (ordered_moves.count > 256) {
-    fprintf(stderr,
-            "WARNING: ordered_moves.count=%d > 256, tronqué à 256 coups\n",
-            ordered_moves.count);
+    DEBUG_LOG("WARNING: ordered_moves.count=%d > 256, tronqué à 256 coups\n",
+              ordered_moves.count);
     ordered_moves.count = 256;
   }
 
   for (int i = 0; i < ordered_moves.count; i++) {
     // Sécurité avant apply_move
     if (ply >= 128) {
-      fprintf(stderr, "ERROR: ply=%d trop grand avant apply_move, skip coup\n",
-              ply);
+      DEBUG_LOG("ERROR: ply=%d trop grand avant apply_move, skip coup\n", ply);
       continue;
     }
     apply_move(board, &ordered_moves.moves[i], ply);
 
     // Recherche récursive
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-    int score = -negamax_alpha_beta_fixed(board, depth - 1, -beta, -alpha,
-                                          opponent, ply + 1);
+    int score =
+        -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent, ply + 1);
 
     undo_move(board, ply);
 
@@ -220,7 +219,7 @@ void init_zobrist() {
 // Calcule le hash Zobrist d'une position (défensif)
 uint64_t zobrist_hash(const Board *board) {
   if (!board) {
-    fprintf(stderr, "zobrist_hash: null board pointer\n");
+    DEBUG_LOG("zobrist_hash: null board pointer\n");
     return 0;
   }
 
@@ -233,9 +232,8 @@ uint64_t zobrist_hash(const Board *board) {
       while (pieces) {
         int square = __builtin_ctzll(pieces);
         if (square < 0 || square >= 64) {
-          fprintf(stderr,
-                  "zobrist_hash: invalid square=%d (color=%d piece=%d)\n",
-                  square, color, piece);
+          DEBUG_LOG("zobrist_hash: invalid square=%d (color=%d piece=%d)\n",
+                    square, color, piece);
           // clear lowest bit and continue defensively
           pieces &= pieces - 1;
           continue;
@@ -250,8 +248,7 @@ uint64_t zobrist_hash(const Board *board) {
   if (board->castle_rights >= 0 && board->castle_rights < 16) {
     hash ^= zobrist_castling[board->castle_rights];
   } else {
-    fprintf(stderr, "zobrist_hash: invalid castle_rights=%d\n",
-            board->castle_rights);
+    DEBUG_LOG("zobrist_hash: invalid castle_rights=%d\n", board->castle_rights);
   }
 
   // En passant (vérifier borne)
@@ -259,7 +256,7 @@ uint64_t zobrist_hash(const Board *board) {
     hash ^= zobrist_en_passant[board->en_passant];
   } else if (board->en_passant != -1) {
     // -1 signifie pas d'en-passant; autres valeurs sont suspectes
-    fprintf(stderr, "zobrist_hash: invalid en_passant=%d\n", board->en_passant);
+    DEBUG_LOG("zobrist_hash: invalid en_passant=%d\n", board->en_passant);
   }
 
   // Joueur actuel
@@ -405,7 +402,7 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
   // Trier les captures par MVV-LVA
   OrderedMoveList ordered_captures;
   Move null_move = {0};
-  order_moves_improved(board, &capture_moves, &ordered_captures, null_move, 0);
+  order_moves(board, &capture_moves, &ordered_captures, null_move, 0);
 
   // Chercher dans les captures
   for (int i = 0; i < ordered_captures.count; i++) {
@@ -424,8 +421,8 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
     int score = -quiescence_search(board, -beta, -alpha, opponent);
 
-    // Restaurer le plateau depuis le backup local
-    restore_board_from_backup(board, &backup);
+    // Restaurer le plateau
+    *board = backup;
 
     // Mise à jour alpha-beta
     if (score >= beta) {
@@ -471,8 +468,8 @@ int see_capture(const Board *board, const Move *move) {
 }
 
 // Move ordering amélioré avec SEE
-void order_moves_improved(const Board *board, MoveList *moves,
-                          OrderedMoveList *ordered, Move hash_move, int ply) {
+void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
+                 Move hash_move, int ply) {
   ordered->count = moves->count;
 
   for (int i = 0; i < moves->count; i++) {
@@ -566,7 +563,8 @@ int gives_check(const Board *board, const Move *move) {
 // Dans search.c - Paramètres optimisés pour éviter les bourdes
 
 // Recherche avec profondeur minimale pour éviter les bourdes
-SearchResult search_best_move_safe(Board *board, int max_depth, int min_depth) {
+SearchResult search_best_move_with_min_depth(Board *board, int max_depth,
+                                             int min_depth) {
   SearchResult result = {0};
   result.best_move.from = A1;
   result.best_move.to = A1;
@@ -595,8 +593,8 @@ SearchResult search_best_move_safe(Board *board, int max_depth, int min_depth) {
     apply_move(board, &moves.moves[i], 0);
 
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-    int score = -negamax_alpha_beta_fixed(
-        board, search_depth - 1, -INFINITY_SCORE, INFINITY_SCORE, opponent, 1);
+    int score = -negamax_alpha_beta(board, search_depth - 1, -INFINITY_SCORE,
+                                    INFINITY_SCORE, opponent, 1);
     result.nodes_searched++;
 
     undo_move(board, 0);
@@ -654,8 +652,8 @@ int is_obviously_bad_move(const Board *board, const Move *move) {
 }
 
 // Interface principale SÉCURISÉE
-SearchResult search_iterative_deepening_safe(Board *board, int max_depth,
-                                             int time_limit_ms) {
+SearchResult search_iterative_deepening(Board *board, int max_depth,
+                                        int time_limit_ms) {
   clock_t start_time = clock();
   SearchResult best_result = {0};
   best_result.score = -INFINITY_SCORE;
@@ -667,7 +665,7 @@ SearchResult search_iterative_deepening_safe(Board *board, int max_depth,
 
   for (int depth = min_depth; depth <= max_depth; depth++) {
     SearchResult current_result =
-        search_best_move_safe(board, depth, min_depth);
+        search_best_move_with_min_depth(board, depth, min_depth);
 
     // Vérifier le temps
     clock_t current_time = clock();
@@ -691,5 +689,5 @@ SearchResult search_iterative_deepening_safe(Board *board, int max_depth,
 
 SearchResult search_best_move(Board *board, int depth) {
   // Utiliser la version sécurisée avec profondeur minimale
-  return search_iterative_deepening_safe(board, depth, 5000); // 5 secondes max
+  return search_iterative_deepening(board, depth, 5000); // 5 secondes max
 }

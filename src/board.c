@@ -218,7 +218,7 @@ const char *parse_fen_en_passant(Board *board, const char *fen) {
   return fen + 1; // Passer espace ou caractère suivant
 }
 
-void init_halfmove_and_fullmove(Board *board) {
+void reset_move_counters(Board *board) {
   board->halfmove_clock = 0;
   board->move_number = 1;
 }
@@ -242,5 +242,5 @@ void board_from_fen(Board *board, const char *fen) {
   if (!current)
     return;
 
-  init_halfmove_and_fullmove(board);
+  reset_move_counters(board);
 }

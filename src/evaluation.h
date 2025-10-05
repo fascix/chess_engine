@@ -31,7 +31,7 @@ typedef enum { OPENING_PHASE, MIDDLEGAME_PHASE, ENDGAME_PHASE } GamePhase;
 // Fonctions d'évaluation principales
 int evaluate_position(const Board *board);
 int evaluate_material(const Board *board);
-int evaluate_position_bonus(const Board *board);
+int evaluate_piece_square_tables(const Board *board);
 
 // Évaluation avancée par catégorie
 int evaluate_pawn_structure(const Board *board);
@@ -40,10 +40,11 @@ int evaluate_piece_development(const Board *board);
 int evaluate_center_control(const Board *board);
 int evaluate_mobility(const Board *board);
 
-// Évaluation avec phases de jeu (Tapered Eval)
+// Évaluation avec phases de jeu (interpolation)
 int evaluate_opening(const Board *board);
 int evaluate_endgame(const Board *board);
-int evaluate_tapered(const Board *board, GamePhase phase, float phase_factor);
+int evaluate_position_interpolated(const Board *board, GamePhase phase,
+                                   float phase_factor);
 
 // Fonctions utilitaires
 int is_endgame(const Board *board);
