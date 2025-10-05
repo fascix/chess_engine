@@ -45,6 +45,11 @@ void apply_move(Board *board, const Move *move, int ply) {
 void undo_move(Board *board, int ply) { *board = search_backup_stack[ply]; }
 
 // Mise à jour de negamax_alpha_beta
+// Negamax avec Alpha-Beta et PVS (Principal Variation Search)
+// PVS: recherche le 1er coup avec fenêtre complète [-beta, -alpha],
+//      puis les suivants avec null window [-alpha-1, -alpha] pour détecter
+//      rapidement les coups qui n'améliorent pas alpha (avec re-recherche si
+//      nécessaire)
 int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
                        Couleur color, int ply) {
   // Sécurité: ply trop grand
@@ -103,10 +108,26 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     }
     apply_move(board, &ordered_moves.moves[i], ply);
 
-    // Recherche récursive
+    // Recherche récursive avec PVS (Principal Variation Search)
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-    int score =
-        -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent, ply + 1);
+    int score;
+
+    if (i == 0) {
+      // Premier coup : recherche avec fenêtre complète (PV node)
+      score = -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent,
+                                  ply + 1);
+    } else {
+      // Coups suivants : recherche avec fenêtre nulle (null window search)
+      score = -negamax_alpha_beta(board, depth - 1, -alpha - 1, -alpha,
+                                  opponent, ply + 1);
+
+      // Si le coup améliore alpha et qu'on a une vraie fenêtre, re-rechercher
+      if (score > alpha && score < beta) {
+        // Re-search avec fenêtre complète
+        score = -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent,
+                                    ply + 1);
+      }
+    }
 
     undo_move(board, ply);
 
