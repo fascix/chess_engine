@@ -58,13 +58,38 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     return 0; // score neutre
   }
   // Table de transposition : probe au début
+  // TEMPORAIREMENT DÉSACTIVÉ POUR DEBUG
+  /*
   TTEntry *entry = tt_probe(&tt_global, zobrist_hash(board));
   if (entry != NULL && entry->depth >= depth) {
+#ifdef DEBUG
+    if (ply <= 3) {
+      static int tt_hit_count = 0;
+      if (tt_hit_count++ < 10) {
+        DEBUG_LOG("          [TT_HIT] ply=%d depth=%d score=%d (from TT)\n",
+                  ply, depth, entry->score);
+      }
+    }
+#endif
     return entry->score;
   }
+  */
 
   if (depth == 0) {
-    return quiescence_search(board, alpha, beta, color);
+    int eval = quiescence_search(board, alpha, beta, color);
+    int static_eval = evaluate_position(board);
+    static_eval = (color == WHITE) ? static_eval : -static_eval;
+#ifdef DEBUG
+    if (ply == 3) { // Log au ply 3 (profondeur 0)
+      static int qs_count = 0;
+      if (qs_count++ < 5) { // Log les 5 premières fois
+        DEBUG_LOG(
+            "          [QS] ply=%d eval=%d static_eval=%d alpha=%d beta=%d\n",
+            ply, eval, static_eval, alpha, beta);
+      }
+    }
+#endif
+    return eval;
   }
 
   MoveList moves;
@@ -89,9 +114,10 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   Move best_move = {0};
   OrderedMoveList ordered_moves;
   Move hash_move = {0};
-  if (entry != NULL) {
-    hash_move = entry->best_move;
-  }
+  // TT désactivée: entry est NULL
+  // if (entry != NULL) {
+  //   hash_move = entry->best_move;
+  // }
   order_moves(board, &moves, &ordered_moves, hash_move, ply);
   // Sécurité OrderedMoveList: limiter à 256
   if (ordered_moves.count > 256) {
@@ -131,6 +157,23 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
     undo_move(board, ply);
 
+#ifdef DEBUG
+    if (ply == 1 && i < 5) { // Log les 5 premiers coups au ply 1
+      DEBUG_LOG("      [ply=%d i=%d] coup %c%d%c%d -> score=%d (max_score=%d, "
+                "alpha=%d, beta=%d)\n",
+                ply, i, 'a' + (ordered_moves.moves[i].from % 8),
+                1 + (ordered_moves.moves[i].from / 8),
+                'a' + (ordered_moves.moves[i].to % 8),
+                1 + (ordered_moves.moves[i].to / 8), score, max_score, alpha,
+                beta);
+    }
+    if (ply == 2 && i < 3) { // Log les 3 premiers coups au ply 2
+      DEBUG_LOG(
+          "        [ply=%d i=%d] score=%d (max_score=%d, alpha=%d, beta=%d)\n",
+          ply, i, score, max_score, alpha, beta);
+    }
+#endif
+
     if (score > max_score) {
       max_score = score;
       best_move = ordered_moves.moves[i];
@@ -140,6 +183,16 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
       store_killer_move(ordered_moves.moves[i], ply);
       update_history(ordered_moves.moves[i], depth, color);
       // Stocker dans la TT (fail-high)
+#ifdef DEBUG
+      if (ply == 2) {
+        static int tt_store_count = 0;
+        if (tt_store_count++ < 3) {
+          DEBUG_LOG(
+              "          [TT_STORE] ply=%d depth=%d score=%d (beta cutoff)\n",
+              ply, depth, beta);
+        }
+      }
+#endif
       tt_store(&tt_global, zobrist_hash(board), depth, beta, TT_LOWERBOUND,
                ordered_moves.moves[i]);
       return beta;
@@ -151,7 +204,26 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   }
   // Stocker dans la TT (exact si max_score > alpha initial, sinon upperbound)
   TTEntryType ttype = (max_score <= alpha) ? TT_UPPERBOUND : TT_EXACT;
+#ifdef DEBUG
+  if (ply == 2) {
+    static int tt_store_final_count = 0;
+    if (tt_store_final_count++ < 5) {
+      DEBUG_LOG("          [TT_STORE] ply=%d depth=%d max_score=%d type=%s\n",
+                ply, depth, max_score,
+                ttype == TT_EXACT ? "EXACT" : "UPPERBOUND");
+    }
+  }
+#endif
   tt_store(&tt_global, zobrist_hash(board), depth, max_score, ttype, best_move);
+
+#ifdef DEBUG
+  if (ply == 1) {
+    DEBUG_LOG(
+        "    [NEGAMAX] ply=%d depth=%d returns max_score=%d (moves_count=%d)\n",
+        ply, depth, max_score, ordered_moves.count);
+  }
+#endif
+
   return max_score;
 }
 
@@ -493,14 +565,26 @@ void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
                  Move hash_move, int ply) {
   ordered->count = moves->count;
 
+#ifdef DEBUG
+  int debug_scores[256] = {0};
+  char debug_reasons[256][32];
+#endif
+
   for (int i = 0; i < moves->count; i++) {
     ordered->moves[i] = moves->moves[i];
     int score = 0;
+
+#ifdef DEBUG
+    strcpy(debug_reasons[i], "history");
+#endif
 
     // 1. Hash move - priorité absolue
     if (hash_move.from == moves->moves[i].from &&
         hash_move.to == moves->moves[i].to) {
       score = 2000000;
+#ifdef DEBUG
+      strcpy(debug_reasons[i], "hash_move");
+#endif
     }
     // 2. Bonnes captures (SEE > 0)
     else if (moves->moves[i].type == MOVE_CAPTURE ||
@@ -508,31 +592,76 @@ void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
       int see_score = see_capture(board, &moves->moves[i]);
       if (see_score > 0) {
         score = 1000000 + see_score;
+#ifdef DEBUG
+        strcpy(debug_reasons[i], "good_capture");
+        debug_scores[i] = see_score;
+#endif
       } else {
         // Mauvaises captures en dernier
         score = -100000 + see_score;
+#ifdef DEBUG
+        strcpy(debug_reasons[i], "bad_capture");
+        debug_scores[i] = see_score;
+#endif
       }
     }
     // 3. Promotions
     else if (moves->moves[i].type == MOVE_PROMOTION) {
       score = 900000 + piece_value(moves->moves[i].promotion);
+#ifdef DEBUG
+      strcpy(debug_reasons[i], "promotion");
+#endif
     }
     // 4. Killer moves
     else if (is_killer_move(moves->moves[i], ply)) {
       score = 800000;
+#ifdef DEBUG
+      strcpy(debug_reasons[i], "killer");
+#endif
     }
     // 5. Échecs (approximation)
     else if (gives_check(board, &moves->moves[i])) {
       score = 700000;
+#ifdef DEBUG
+      strcpy(debug_reasons[i], "check");
+#endif
     }
     // 6. Coups qui développent vers le centre
     else if (moves_toward_center(board, &moves->moves[i])) {
       score = 50000;
+
+      // BONUS: En ouverture, préférer développer les pièces plutôt que les
+      // pions
+      if (board->move_number <= 10) {
+        PieceType piece = get_piece_type(board, moves->moves[i].from);
+        if (piece == KNIGHT) {
+          score += 15000; // Les cavaliers en premier
+        } else if (piece == BISHOP) {
+          score += 10000; // Puis les fous
+        } else if (piece == PAWN) {
+          // Bonus pour pions centraux (d4, e4, d5, e5)
+          int to_file = moves->moves[i].to % 8;
+          int to_rank = moves->moves[i].to / 8;
+          if ((to_file == 3 || to_file == 4) &&
+              (to_rank == 3 || to_rank == 4)) {
+            score += 5000; // e4, d4, e5, d5
+          } else {
+            score -= 2000; // Pénalité pour autres pions
+          }
+        }
+      }
+
+#ifdef DEBUG
+      strcpy(debug_reasons[i], "center");
+#endif
     }
     // 7. History heuristic
     else {
       Couleur color = board->to_move;
       score = history_scores[color][moves->moves[i].from][moves->moves[i].to];
+#ifdef DEBUG
+      debug_scores[i] = score;
+#endif
     }
 
     ordered->scores[i] = score;
@@ -542,17 +671,45 @@ void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
   for (int i = 1; i < ordered->count; i++) {
     Move temp_move = ordered->moves[i];
     int temp_score = ordered->scores[i];
+#ifdef DEBUG
+    char temp_reason[32];
+    strcpy(temp_reason, debug_reasons[i]);
+    int temp_debug_score = debug_scores[i];
+#endif
     int j = i - 1;
 
     while (j >= 0 && ordered->scores[j] < temp_score) {
       ordered->moves[j + 1] = ordered->moves[j];
       ordered->scores[j + 1] = ordered->scores[j];
+#ifdef DEBUG
+      strcpy(debug_reasons[j + 1], debug_reasons[j]);
+      debug_scores[j + 1] = debug_scores[j];
+#endif
       j--;
     }
 
     ordered->moves[j + 1] = temp_move;
     ordered->scores[j + 1] = temp_score;
+#ifdef DEBUG
+    strcpy(debug_reasons[j + 1], temp_reason);
+    debug_scores[j + 1] = temp_debug_score;
+#endif
   }
+
+#ifdef DEBUG
+  if (ply == 0 &&
+      ordered->count <= 30) { // Log seulement au ply 0 et si pas trop de coups
+    DEBUG_LOG("\n[ORDER_MOVES] Tri de %d coups (ply=%d):\n", ordered->count,
+              ply);
+    for (int i = 0; i < ordered->count && i < 10; i++) { // Top 10 coups
+      DEBUG_LOG(
+          "  %2d. %c%d%c%d score=%7d reason=%s\n", i + 1,
+          'a' + (ordered->moves[i].from % 8), 1 + (ordered->moves[i].from / 8),
+          'a' + (ordered->moves[i].to % 8), 1 + (ordered->moves[i].to / 8),
+          ordered->scores[i], debug_reasons[i]);
+    }
+  }
+#endif
 }
 
 // Fonction helper pour détecter les coups vers le centre
@@ -605,13 +762,40 @@ SearchResult search_best_move_with_min_depth(Board *board, int max_depth,
 
   Couleur color = board->to_move;
 
-  for (int i = 0; i < moves.count; i++) {
+  DEBUG_LOG("\n=== RECHERCHE DU MEILLEUR COUP (profondeur=%d) ===\n",
+            search_depth);
+  DEBUG_LOG("Position: coup #%d, trait aux %s\n", board->move_number,
+            color == WHITE ? "BLANCS" : "NOIRS");
+
+  // Ordonner les coups avant de les évaluer
+  OrderedMoveList ordered_moves;
+  Move hash_move = {0};
+  order_moves(board, &moves, &ordered_moves, hash_move, 0);
+
+  DEBUG_LOG("\nÉvaluation de %d coups:\n", ordered_moves.count);
+
+  for (int i = 0; i < ordered_moves.count; i++) {
     // Pré-filtrage des coups évidemment mauvais
-    if (is_obviously_bad_move(board, &moves.moves[i])) {
-      continue; // Skip les coups qui donnent des pièces gratuitement
+    if (is_obviously_bad_move(board, &ordered_moves.moves[i])) {
+      DEBUG_LOG("  %2d. %c%d%c%d [SKIP - coup évidemment mauvais]\n", i + 1,
+                'a' + (ordered_moves.moves[i].from % 8),
+                1 + (ordered_moves.moves[i].from / 8),
+                'a' + (ordered_moves.moves[i].to % 8),
+                1 + (ordered_moves.moves[i].to / 8));
+      continue;
     }
 
-    apply_move(board, &moves.moves[i], 0);
+    // Eval avant le coup
+#ifdef DEBUG
+    int eval_before = evaluate_position(board);
+#endif
+
+    apply_move(board, &ordered_moves.moves[i], 0);
+
+#ifdef DEBUG
+    int eval_after = evaluate_position(board);
+    // Note: eval_after est du point de vue de l'opponent après le coup
+#endif
 
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
     int score = -negamax_alpha_beta(board, search_depth - 1, -INFINITY_SCORE,
@@ -620,11 +804,46 @@ SearchResult search_best_move_with_min_depth(Board *board, int max_depth,
 
     undo_move(board, 0);
 
+    // LOG DÉTAILLÉ pour chaque coup
+    DEBUG_LOG("  %2d. %c%d%c%d [ordre=%5d] eval_avant=%4d eval_après=%4d -> "
+              "score=%6d",
+              i + 1, 'a' + (ordered_moves.moves[i].from % 8),
+              1 + (ordered_moves.moves[i].from / 8),
+              'a' + (ordered_moves.moves[i].to % 8),
+              1 + (ordered_moves.moves[i].to / 8), ordered_moves.scores[i],
+              eval_before, eval_after, score);
+
+    // Afficher le type de coup
+    switch (ordered_moves.moves[i].type) {
+    case MOVE_CAPTURE:
+      DEBUG_LOG(" [CAPTURE]");
+      break;
+    case MOVE_PROMOTION:
+      DEBUG_LOG(" [PROMOTION]");
+      break;
+    case MOVE_CASTLE:
+      DEBUG_LOG(" [ROQUE]");
+      break;
+    case MOVE_EN_PASSANT:
+      DEBUG_LOG(" [EN_PASSANT]");
+      break;
+    default:
+      DEBUG_LOG(" [NORMAL]");
+      break;
+    }
+
     if (score > result.score) {
       result.score = score;
-      result.best_move = moves.moves[i];
+      result.best_move = ordered_moves.moves[i];
+      DEBUG_LOG(" *** NOUVEAU MEILLEUR COUP ***");
     }
+    DEBUG_LOG("\n");
   }
+
+  DEBUG_LOG("\n>>> MEILLEUR COUP: %c%d%c%d (score=%d) <<<\n\n",
+            'a' + (result.best_move.from % 8), 1 + (result.best_move.from / 8),
+            'a' + (result.best_move.to % 8), 1 + (result.best_move.to / 8),
+            result.score);
 
   result.depth = search_depth;
   return result;

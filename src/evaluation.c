@@ -1,5 +1,6 @@
 #include "evaluation.h"
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 // Tables de position pour encourager le développement et la centralisation
@@ -542,6 +543,11 @@ int evaluate_pawn_advancement_penalty(const Board *board) {
 
 // Fonction d'évaluation MISE À JOUR pour éviter les pendus
 int evaluate_position(const Board *board) {
+#ifdef DEBUG
+  static int eval_call_count = 0;
+  int should_log = (eval_call_count++ % 1000 == 0); // Log 1 éval sur 1000
+#endif
+
   GameResult result = get_game_result(board);
   switch (result) {
   case GAME_CHECKMATE_WHITE:
@@ -556,26 +562,48 @@ int evaluate_position(const Board *board) {
   }
 
   int score = 0;
+  int material = evaluate_material(board);
+  int pst = evaluate_piece_square_tables(board);
+  int hanging = evaluate_hanging_pieces(board) * 2;
+  int safe_dev = evaluate_safe_development(board);
+  int pawn_adv_penalty = evaluate_pawn_advancement_penalty(board);
 
   // Évaluation de base
-  score += evaluate_material(board);
-  score += evaluate_piece_square_tables(board);
+  score += material;
+  score += pst;
 
   // NOUVELLES ÉVALUATIONS TACTIQUES
-  score += evaluate_hanging_pieces(board) * 2; // Très important !
-  score += evaluate_safe_development(board);   // Pour l'ouverture
+  score += hanging;  // Très important !
+  score += safe_dev; // Pour l'ouverture
 
   // Autres évaluations selon la phase
   GamePhase phase = get_game_phase(board);
+  int phase_bonus = 0;
   if (phase == OPENING_PHASE) {
-    score += evaluate_center_control(board) * 2;
-    score += evaluate_king_safety(board);
+    int center = evaluate_center_control(board) * 2;
+    int king_safety = evaluate_king_safety(board);
+    score += center;
+    score += king_safety;
+    phase_bonus = center + king_safety;
   } else {
-    score += evaluate_pawn_structure(board);
-    score += evaluate_mobility(board);
+    int pawn_struct = evaluate_pawn_structure(board);
+    int mobility = evaluate_mobility(board);
+    score += pawn_struct;
+    score += mobility;
+    phase_bonus = pawn_struct + mobility;
   }
 
-  // AJOUTER dans evaluate_position() :
-  score += evaluate_pawn_advancement_penalty(board);
+  score += pawn_adv_penalty;
+
+#ifdef DEBUG
+  if (should_log) {
+    fprintf(stderr,
+            "[EVAL] mat=%d pst=%d hanging=%d safe_dev=%d pawn_pen=%d "
+            "phase_bonus=%d -> TOTAL=%d\n",
+            material, pst, hanging, safe_dev, pawn_adv_penalty, phase_bonus,
+            score);
+  }
+#endif
+
   return score;
 }

@@ -54,5 +54,8 @@ float get_phase_factor(const Board *board);
 int is_pawn_passed(const Board *board, Square pawn_square, Couleur color);
 int is_pawn_isolated(const Board *board, Square pawn_square, Couleur color);
 int is_pawn_doubled(const Board *board, Square pawn_square, Couleur color);
+int evaluate_safe_development(const Board *board);
+int evaluate_hanging_pieces(const Board *board);
+int evaluate_pawn_advancement_penalty(const Board *board);
 
 #endif // EVALUATION_H
