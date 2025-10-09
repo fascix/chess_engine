@@ -63,6 +63,10 @@ void tt_new_search(TranspositionTable *tt);
 uint64_t zobrist_hash(const Board *board);
 void init_zobrist();
 
+// Initialisation du moteur
+void initialize_engine();
+void test_zobrist_uniqueness();
+
 // Move Ordering
 typedef struct {
   Move moves[256];

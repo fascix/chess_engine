@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 // Macro pour logs de debug conditionnels
 #ifdef DEBUG
@@ -58,8 +59,6 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     return 0; // score neutre
   }
   // Table de transposition : probe au début
-  // TEMPORAIREMENT DÉSACTIVÉ POUR DEBUG
-  /*
   TTEntry *entry = tt_probe(&tt_global, zobrist_hash(board));
   if (entry != NULL && entry->depth >= depth) {
 #ifdef DEBUG
@@ -73,8 +72,6 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 #endif
     return entry->score;
   }
-  */
-
   if (depth == 0) {
     int eval = quiescence_search(board, alpha, beta, color);
     int static_eval = evaluate_position(board);
@@ -114,10 +111,10 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   Move best_move = {0};
   OrderedMoveList ordered_moves;
   Move hash_move = {0};
-  // TT désactivée: entry est NULL
-  // if (entry != NULL) {
-  //   hash_move = entry->best_move;
-  // }
+  // Récupérer le hash_move de la TT si disponible
+  if (entry != NULL) {
+    hash_move = entry->best_move;
+  }
   order_moves(board, &moves, &ordered_moves, hash_move, ply);
   // Sécurité OrderedMoveList: limiter à 256
   if (ordered_moves.count > 256) {
@@ -233,6 +230,11 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 void tt_init(TranspositionTable *tt) {
   memset(tt, 0, sizeof(TranspositionTable));
   tt->current_age = 1;
+
+#ifdef DEBUG
+  DEBUG_LOG("TT initialisée : %zu entrées (%zu bytes)\n", (size_t)TT_SIZE,
+            sizeof(TranspositionTable));
+#endif
 }
 
 // Stocke une entrée dans la table de transposition
@@ -241,25 +243,78 @@ void tt_store(TranspositionTable *tt, uint64_t key, int depth, int score,
   uint32_t index = key & TT_MASK;
   TTEntry *entry = &tt->entries[index];
 
-  // Remplacer si: case vide, même position, ou profondeur plus grande, ou age
-  // plus ancienne
-  if (entry->key == 0 || entry->key == key || entry->depth <= depth ||
-      entry->age < tt->current_age) {
+  // VALIDATION : key ne doit JAMAIS être 0
+  if (key == 0) {
+#ifdef DEBUG
+    static int zero_key_warnings = 0;
+    if (zero_key_warnings++ < 3) {
+      DEBUG_LOG("WARNING: tt_store() appelé avec key=0 !\n");
+    }
+#endif
+    return; // NE PAS STOCKER
+  }
+
+  // Stratégie de remplacement améliorée :
+  // 1. Case vide (key == 0)
+  // 2. Même position (key == entry->key)
+  // 3. Profondeur supérieure (depth > entry->depth)
+  // 4. Entrée obsolète (age < current_age - 2)
+
+  int should_replace = 0;
+
+  if (entry->key == 0) {
+    should_replace = 1; // Case vide
+  } else if (entry->key == key) {
+    should_replace = 1; // Même position (mise à jour)
+  } else if (depth > entry->depth) {
+    should_replace = 1; // Profondeur supérieure (info plus précise)
+  } else if (entry->age < tt->current_age - 2) {
+    should_replace = 1; // Entrée trop ancienne (2 recherches en arrière)
+  }
+
+  if (should_replace) {
     entry->key = key;
     entry->depth = depth;
     entry->score = score;
     entry->type = type;
     entry->best_move = best_move;
     entry->age = tt->current_age;
+
+#ifdef DEBUG
+    static int store_count = 0;
+    if (store_count++ < 10) {
+      DEBUG_LOG("TT_STORE: index=%u key=%016llx depth=%d score=%d\n", index,
+                (unsigned long long)key, depth, score);
+    }
+#endif
   }
 }
 
 // Sonde la table de transposition
 TTEntry *tt_probe(TranspositionTable *tt, uint64_t key) {
+  // VALIDATION : key ne doit JAMAIS être 0
+  if (key == 0) {
+#ifdef DEBUG
+    static int zero_key_probes = 0;
+    if (zero_key_probes++ < 3) {
+      DEBUG_LOG("WARNING: tt_probe() appelé avec key=0 !\n");
+    }
+#endif
+    return NULL;
+  }
+
   uint32_t index = key & TT_MASK;
   TTEntry *entry = &tt->entries[index];
 
-  if (entry->key == key) {
+  // Vérifier que la clé match ET que l'entrée n'est pas vide
+  if (entry->key == key && entry->depth > 0) {
+#ifdef DEBUG
+    static int hit_count = 0;
+    if (hit_count++ < 10) {
+      DEBUG_LOG("TT_HIT: index=%u key=%016llx depth=%d score=%d\n", index,
+                (unsigned long long)key, entry->depth, entry->score);
+    }
+#endif
     return entry;
   }
 
@@ -275,16 +330,86 @@ void tt_new_search(TranspositionTable *tt) {
 
 // ========== ZOBRIST HASHING ==========
 
-// Générateur de nombres pseudo-aléatoires simple
+// Générateur de nombres pseudo-aléatoires amélioré (Xorshift*)
 static uint64_t random_uint64() {
-  static uint64_t seed = 1234567890ULL;
+  static uint64_t seed = 0;
+
+  // Initialiser le seed UNE SEULE FOIS avec timestamp + PID
+  if (seed == 0) {
+    seed = (uint64_t)time(NULL) ^ ((uint64_t)getpid() << 16);
+
+    // Warm-up du générateur (important !)
+    for (int i = 0; i < 64; i++) {
+      seed ^= seed >> 12;
+      seed ^= seed << 25;
+      seed ^= seed >> 27;
+      seed *= 0x2545F4914F6CDD1DULL;
+    }
+  }
+
+  // Xorshift* (excellent générateur rapide)
   seed ^= seed >> 12;
   seed ^= seed << 25;
   seed ^= seed >> 27;
   return seed * 0x2545F4914F6CDD1DULL;
 }
 
-// Initialise les tables Zobrist
+// Initialise tout le moteur (Zobrist + TT + move ordering)
+void initialize_engine() {
+  DEBUG_LOG("=== INITIALISATION DU MOTEUR ===\n");
+
+  // 1. Initialiser Zobrist EN PREMIER
+  init_zobrist();
+  DEBUG_LOG("✓ Tables Zobrist initialisées\n");
+
+  // 2. Initialiser la TT
+  tt_init(&tt_global);
+  DEBUG_LOG("✓ Table de transposition initialisée\n");
+
+  // 3. Initialiser killer moves et history
+  init_killer_moves();
+  DEBUG_LOG("✓ Tables de move ordering initialisées\n");
+
+  DEBUG_LOG("=== MOTEUR PRÊT ===\n\n");
+}
+
+// Test de validation de l'unicité des hash Zobrist
+void test_zobrist_uniqueness() {
+  DEBUG_LOG("\n=== TEST UNICITÉ ZOBRIST ===\n");
+
+  // Test 1 : Positions différentes = hash différents
+  Board b1, b2;
+  board_init(&b1);
+  board_init(&b2);
+
+  uint64_t h1 = zobrist_hash(&b1);
+  DEBUG_LOG("Position initiale : hash = %016llx\n", (unsigned long long)h1);
+
+  // Bouger un pion
+  Move m = {.from = E2, .to = E4, .type = MOVE_NORMAL};
+  make_move_temp(&b2, &m, &b1);
+
+  uint64_t h2 = zobrist_hash(&b2);
+  DEBUG_LOG("Après e2e4      : hash = %016llx\n", (unsigned long long)h2);
+
+  if (h1 == h2) {
+    DEBUG_LOG("❌ ERREUR : Hash identiques pour positions différentes !\n");
+  } else {
+    DEBUG_LOG("✓ Hash différents (écart = %lld)\n",
+              (long long)(h2 > h1 ? h2 - h1 : h1 - h2));
+  }
+
+  // Test 2 : Vérifier qu'aucun hash n'est 0
+  if (h1 == 0 || h2 == 0) {
+    DEBUG_LOG("❌ ERREUR : Hash égal à 0 détecté !\n");
+  } else {
+    DEBUG_LOG("✓ Aucun hash nul\n");
+  }
+
+  DEBUG_LOG("=== FIN TEST ===\n\n");
+}
+
+// Initialise les tables Zobrist avec validation
 void init_zobrist() {
   // Initialiser les clés pour chaque pièce sur chaque case
   for (int color = 0; color < 2; color++) {
@@ -307,6 +432,24 @@ void init_zobrist() {
 
   // Joueur actuel
   zobrist_side_to_move = random_uint64();
+
+// VALIDATION : vérifier qu'aucune clé n'est à 0
+#ifdef DEBUG
+  int zero_count = 0;
+  for (int c = 0; c < 2; c++) {
+    for (int p = 0; p < 6; p++) {
+      for (int s = 0; s < 64; s++) {
+        if (zobrist_pieces[c][p][s] == 0)
+          zero_count++;
+      }
+    }
+  }
+  if (zero_count > 0) {
+    DEBUG_LOG("WARNING: %d clés Zobrist sont à 0 !\n", zero_count);
+  }
+  DEBUG_LOG("Zobrist initialisé : %d clés non-nulles\n",
+            2 * 6 * 64 + 16 + 64 + 1 - zero_count);
+#endif
 }
 
 // Calcule le hash Zobrist d'une position (défensif)
