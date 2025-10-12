@@ -1,0 +1,23 @@
+{
+	"engines": [
+		{
+			"name": "ChessEngine",
+			"cmd": "./chess_engine",
+			"protocol": "uci"
+		}
+	],
+	"games": 5,
+	"concurrency": 1,
+	"opening": {
+		"type": "epd",
+		"file": "openings.epd"
+	},
+	"tc": {
+		"time": 10000,
+		"increment": 100
+	},
+	"rounds": 1,
+	"output": {
+		"format": "cutechess"
+	}
+}
