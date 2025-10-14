@@ -30,23 +30,25 @@ def draw_timer(screen, white_timer, black_timer, font, player_is_white=True):
 
 def draw_engine_status(screen, font):
     """Affiche le statut du moteur quand il réfléchit."""
-    from game_logic import engine_thinking, game_paused
+    # Import local pour éviter les imports circulaires
+    import game_logic
     
     # Effacer d'abord la zone du statut (plus grande pour couvrir les 2 lignes)
     pygame.draw.rect(screen, (0, 0, 0), (WINDOW_SIZE + 60, WINDOW_SIZE//2 - 30, 200, 80))
     
-    if engine_thinking:
+    if game_logic.engine_thinking:
         status_text = font.render("L'ordinateur", True, (255, 255, 0))
         status_text2 = font.render("réfléchit...", True, (255, 255, 0))
         screen.blit(status_text, (WINDOW_SIZE + 60, WINDOW_SIZE//2 - 15))
         screen.blit(status_text2, (WINDOW_SIZE + 60, WINDOW_SIZE//2 + 15))
-    elif game_paused:
+    elif game_logic.game_paused:
         status_text = font.render("PAUSE", True, (255, 0, 0))
         screen.blit(status_text, (WINDOW_SIZE + 60, WINDOW_SIZE//2))
 
 def draw_captured_pieces(screen, player_is_white=True):
     """Affiche les pièces capturées avec un système de grille selon l'orientation."""
-    from game_logic import captured_pieces
+    # Import local pour éviter les imports circulaires
+    import game_logic
     
     piece_size = 25  # Taille réduite des pièces
     pieces_per_row = 6  # Nombre de pièces par ligne
@@ -56,7 +58,7 @@ def draw_captured_pieces(screen, player_is_white=True):
     if player_is_white:
         # Pièces capturées par les blancs (noires) = en bas
         start_y = WINDOW_SIZE - 100
-        for i, piece in enumerate(captured_pieces['black']):
+        for i, piece in enumerate(game_logic.captured_pieces['black']):
             row = i // pieces_per_row
             col = i % pieces_per_row
             x_pos = start_x + col * (piece_size + spacing)
@@ -68,7 +70,7 @@ def draw_captured_pieces(screen, player_is_white=True):
 
         # Pièces capturées par les noirs (blanches) = en haut
         start_y = 110
-        for i, piece in enumerate(captured_pieces['white']):
+        for i, piece in enumerate(game_logic.captured_pieces['white']):
             row = i // pieces_per_row
             col = i % pieces_per_row
             x_pos = start_x + col * (piece_size + spacing)
@@ -81,7 +83,7 @@ def draw_captured_pieces(screen, player_is_white=True):
         # Inversion pour quand le joueur joue les noirs
         # Pièces capturées par les noirs (blanches) = en bas
         start_y = WINDOW_SIZE - 100
-        for i, piece in enumerate(captured_pieces['white']):
+        for i, piece in enumerate(game_logic.captured_pieces['white']):
             row = i // pieces_per_row
             col = i % pieces_per_row
             x_pos = start_x + col * (piece_size + spacing)
@@ -93,7 +95,7 @@ def draw_captured_pieces(screen, player_is_white=True):
 
         # Pièces capturées par les blancs (noires) = en haut
         start_y = 110
-        for i, piece in enumerate(captured_pieces['black']):
+        for i, piece in enumerate(game_logic.captured_pieces['black']):
             row = i // pieces_per_row
             col = i % pieces_per_row
             x_pos = start_x + col * (piece_size + spacing)
@@ -105,7 +107,6 @@ def draw_captured_pieces(screen, player_is_white=True):
 
 def highlight_en_passant_moves(screen, legal_moves, player_is_white=True):
     """Met en surbrillance les coups en passant."""
-    from support import get_display_coords
     for move in legal_moves:
         # Vérification manuelle de l'en passant
         if move.promotion == chess.PAWN and abs(move.from_square - move.to_square) == 16:
@@ -135,47 +136,9 @@ def display_checkmate(screen, loser_color):
     from menu import main_menu
     main_menu()
 
-def promote_pawn(screen, board, move, images):
-    """Affiche un menu graphique pour choisir une promotion."""
-    options = [chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT]
-    option_names = ["q", "r", "b", "n"]
-    color = 'w' if board.turn == chess.WHITE else 'b'
-
-    size = 70
-    padding = 15
-    menu_width = len(options) * (size + padding) + padding
-    menu_height = size + 2 * padding
-    menu_x = (screen.get_width() - menu_width) // 2
-    menu_y = (screen.get_height() - menu_height) // 2
-    menu_rect = pygame.Rect(menu_x, menu_y, menu_width, menu_height)
-
-    selecting = True
-    while selecting:
-        pygame.draw.rect(screen, (50, 50, 50), menu_rect, border_radius=10)
-
-        piece_positions = []
-        for i, piece in enumerate(options):
-            img_x = menu_x + padding + i * (size + padding)
-            img_y = menu_y + padding
-            piece_positions.append((img_x, img_y, size, size))
-            screen.blit(pygame.transform.scale(images[color + option_names[i]], (size, size)), (img_x, img_y))
-
-        pygame.display.flip()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                mouse_x, mouse_y = event.pos
-                for i, (img_x, img_y, img_w, img_h) in enumerate(piece_positions):
-                    if img_x <= mouse_x <= img_x + img_w and img_y <= mouse_y <= img_y + img_h:
-                        move.promotion = options[i]
-                        board.push(move)
-                        selecting = False
-
 def render_game(screen, board, font, player_is_white=True):
     """Rend l'interface complète du jeu."""
+    # Import local pour éviter les imports circulaires au niveau du module
     import game_logic
     
     # Dessiner l'échiquier
@@ -193,7 +156,7 @@ def render_game(screen, board, font, player_is_white=True):
     draw_captured_pieces(screen, player_is_white)
     
     # Afficher la pièce sélectionnée si en mode drag
-    if game_logic.drag_mode and game_logic.selected_piece:
+    if game_logic.drag_mode and game_logic.selected_piece is not None:
         piece = board.piece_at(game_logic.selected_piece)
         if piece:
             piece_color = 'w' if piece.color == chess.WHITE else 'b'

@@ -65,6 +65,7 @@ def engine_worker(board_copy, result_queue):
                 engine.quit()
             except:
                 pass
+
 def start_engine_calculation(board):
     """Démarre le calcul du moteur dans un thread séparé."""
     global engine_thinking, engine_move_ready, pending_engine_move
@@ -103,7 +104,7 @@ def handle_click(event, board):
     
     square = get_square_from_pos(mouse_x, mouse_y, player_is_white)
 
-    if not selected_piece:
+    if selected_piece is None:
         piece = board.piece_at(square)
         if piece and piece.color == board.turn and current_turn_start_time is not None:
             selected_piece = square
@@ -127,7 +128,7 @@ def handle_drag(event, board):
     """Gère le drag des pièces."""
     global dragged_pos, dragging
 
-    if drag_mode and selected_piece and dragging:
+    if drag_mode and selected_piece is not None and dragging:
         mouse_x, mouse_y = event.pos
         # Calculer la position de la pièce draggée (centrée sur la souris)
         drag_x = mouse_x - TILE_SIZE // 2
@@ -152,7 +153,7 @@ def handle_drop(event, board):
     if not dragging:
         return
         
-    if not selected_piece:
+    if selected_piece is None:  # Utiliser is None au lieu de not
         # Réinitialiser dragging au cas où
         dragging = False
         return
@@ -177,8 +178,9 @@ def handle_drop(event, board):
         if board.piece_at(move.from_square) and board.piece_at(move.from_square).piece_type == chess.PAWN:
             if ((chess.square_rank(move.to_square) == 7 and board.turn == chess.WHITE) or
                     (chess.square_rank(move.to_square) == 0 and board.turn == chess.BLACK)):
-                from gui import promote_pawn, images
-                promote_pawn(pygame.display.get_surface(), board, move, images)
+                # Import local pour éviter l'import circulaire
+                from support import promote_pawn, load_images
+                promote_pawn(pygame.display.get_surface(), board, move, load_images())
                 
         if move in board.legal_moves:
             execute_move(board, move)
@@ -210,6 +212,7 @@ def execute_move(board, move):
         captured_pieces[captured_color].append(captured_piece)
         
     if board.is_checkmate():
+        # Import local pour éviter l'import circulaire
         from gui import display_checkmate
         display_checkmate(pygame.display.get_surface(), board.turn)
 
