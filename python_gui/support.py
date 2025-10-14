@@ -12,11 +12,16 @@ def get_display_coords(square, player_is_white=True):
 
 def get_square_from_pos(mouse_x, mouse_y, player_is_white=True):
     """Convertit les coordonnées de souris en case d'échiquier selon l'orientation."""
+    # Calculer col et row avec division entière
+    col, row = mouse_x // TILE_SIZE, mouse_y // TILE_SIZE
+    
+    # Limiter col et row entre 0 et 7 pour éviter les débordements
+    col = max(0, min(col, 7))
+    row = max(0, min(row, 7))
+    
     if player_is_white:
-        col, row = mouse_x // TILE_SIZE, mouse_y // TILE_SIZE
         return chess.square(col, 7 - row)
     else:
-        col, row = mouse_x // TILE_SIZE, mouse_y // TILE_SIZE
         return chess.square(7 - col, row)
 
 

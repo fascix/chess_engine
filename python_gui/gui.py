@@ -176,27 +176,27 @@ def promote_pawn(screen, board, move, images):
 
 def render_game(screen, board, font, player_is_white=True):
     """Rend l'interface complète du jeu."""
-    from game_logic import selected_piece, legal_moves, dragged_pos, drag_mode, white_timer, black_timer
+    import game_logic
     
     # Dessiner l'échiquier
     draw_board(screen)
-    highlight_selected_piece(screen, selected_piece, player_is_white)
-    draw_pieces(screen, board, images, selected_piece if drag_mode else None, player_is_white)
-    highlight_legal_moves(screen, legal_moves, player_is_white)
+    highlight_selected_piece(screen, game_logic.selected_piece, player_is_white)
+    draw_pieces(screen, board, images, game_logic.selected_piece if game_logic.drag_mode else None, player_is_white)
+    highlight_legal_moves(screen, game_logic.legal_moves, player_is_white)
     
     # Afficher les timers et statuts
-    draw_timer(screen, white_timer, black_timer, font, player_is_white)
+    draw_timer(screen, game_logic.white_timer, game_logic.black_timer, font, player_is_white)
     draw_engine_status(screen, pygame.font.Font(None, 36))
     
     # Afficher les éléments de jeu
-    highlight_en_passant_moves(screen, legal_moves, player_is_white)
+    highlight_en_passant_moves(screen, game_logic.legal_moves, player_is_white)
     draw_captured_pieces(screen, player_is_white)
     
     # Afficher la pièce sélectionnée si en mode drag
-    if drag_mode and selected_piece:
-        piece = board.piece_at(selected_piece)
+    if game_logic.drag_mode and game_logic.selected_piece:
+        piece = board.piece_at(game_logic.selected_piece)
         if piece:
             piece_color = 'w' if piece.color == chess.WHITE else 'b'
             piece_type = piece.symbol().lower()
             dragged_piece = images[piece_color + piece_type]
-            screen.blit(dragged_piece, dragged_pos)
+            screen.blit(dragged_piece, game_logic.dragged_pos)

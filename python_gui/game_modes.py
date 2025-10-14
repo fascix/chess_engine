@@ -38,12 +38,14 @@ def solo_game(timer, player_is_white=True):
                         return
 
             elif event.type == pygame.MOUSEBUTTONDOWN and not game_logic.game_paused:
+                print(f"\n===== EVENT: MOUSEBUTTONDOWN at {event.pos} =====")
                 game_logic.handle_click(event, game_logic.board)
 
             elif event.type == pygame.MOUSEMOTION and not game_logic.game_paused:
                 game_logic.handle_drag(event, game_logic.board)
 
             elif event.type == pygame.MOUSEBUTTONUP and not game_logic.game_paused:
+                print(f"\n===== EVENT: MOUSEBUTTONUP at {event.pos} =====")
                 game_logic.handle_drop(event, game_logic.board)
 
         # Mise à jour du timer
