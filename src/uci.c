@@ -5,7 +5,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Macro pour logs de debug conditionnels
+#ifdef DEBUG
+#define DEBUG_LOG_UCI(...) fprintf(stderr, "[UCI] " __VA_ARGS__)
+#else
+#define DEBUG_LOG_UCI(...)
+#endif
+
 volatile bool stop_search_flag = false; // Variable pour arrêter la recherche
+
+// Structure pour les paramètres de la commande "go"
+typedef struct {
+  int wtime;     // Temps restant pour les blancs (ms)
+  int btime;     // Temps restant pour les noirs (ms)
+  int winc;      // Incrément pour les blancs (ms)
+  int binc;      // Incrément pour les noirs (ms)
+  int movestogo; // Nombre de coups avant le prochain contrôle de temps
+  int depth;     // Profondeur maximale
+  int movetime;  // Temps fixe pour ce coup (ms)
+  int infinite;  // Recherche infinie
+} GoParams;
 
 // Boucle principale UCI
 void uci_loop() {
@@ -169,22 +188,166 @@ Move parse_uci_move(const char *uci_str) {
   return move;
 }
 
+// Parse les paramètres de la commande "go"
+void parse_go_params(char *params, GoParams *go_params) {
+  // Initialiser avec des valeurs par défaut
+  go_params->wtime = -1;
+  go_params->btime = -1;
+  go_params->winc = 0;
+  go_params->binc = 0;
+  go_params->movestogo = -1;
+  go_params->depth = -1;
+  go_params->movetime = -1;
+  go_params->infinite = 0;
+
+  DEBUG_LOG_UCI("Parsing go params: '%s'\n", params ? params : "(null)");
+
+  if (!params)
+    return;
+
+  char *token = strtok(params, " ");
+  while (token != NULL) {
+    if (strcmp(token, "wtime") == 0) {
+      token = strtok(NULL, " ");
+      if (token)
+        go_params->wtime = atoi(token);
+    } else if (strcmp(token, "btime") == 0) {
+      token = strtok(NULL, " ");
+      if (token)
+        go_params->btime = atoi(token);
+    } else if (strcmp(token, "winc") == 0) {
+      token = strtok(NULL, " ");
+      if (token)
+        go_params->winc = atoi(token);
+    } else if (strcmp(token, "binc") == 0) {
+      token = strtok(NULL, " ");
+      if (token)
+        go_params->binc = atoi(token);
+    } else if (strcmp(token, "movestogo") == 0) {
+      token = strtok(NULL, " ");
+      if (token)
+        go_params->movestogo = atoi(token);
+    } else if (strcmp(token, "depth") == 0) {
+      token = strtok(NULL, " ");
+      if (token)
+        go_params->depth = atoi(token);
+    } else if (strcmp(token, "movetime") == 0) {
+      token = strtok(NULL, " ");
+      if (token)
+        go_params->movetime = atoi(token);
+    } else if (strcmp(token, "infinite") == 0) {
+      go_params->infinite = 1;
+    } else {
+      token = strtok(NULL, " ");
+    }
+  }
+
+  DEBUG_LOG_UCI(
+      "Parsed: wtime=%d btime=%d winc=%d binc=%d depth=%d movetime=%d\n",
+      go_params->wtime, go_params->btime, go_params->winc, go_params->binc,
+      go_params->depth, go_params->movetime);
+}
+
+// Calcule le temps alloué pour ce coup
+int calculate_time_for_move(Board *board, GoParams *params) {
+  DEBUG_LOG_UCI("Calculating time for move (to_move=%s)\n",
+                board->to_move == WHITE ? "WHITE" : "BLACK");
+
+  // Si movetime est spécifié, l'utiliser directement
+  if (params->movetime > 0) {
+    DEBUG_LOG_UCI("Using fixed movetime: %dms\n", params->movetime);
+    return params->movetime;
+  }
+
+  // Si infinite, retourner un temps très long
+  if (params->infinite) {
+    DEBUG_LOG_UCI("Infinite search mode\n");
+    return 3600000; // 1 heure
+  }
+
+  // Récupérer le temps et l'incrément selon la couleur
+  int my_time = (board->to_move == WHITE) ? params->wtime : params->btime;
+  int my_inc = (board->to_move == WHITE) ? params->winc : params->binc;
+
+  DEBUG_LOG_UCI("Time available: my_time=%dms, my_inc=%dms\n", my_time, my_inc);
+
+  // Si pas de temps spécifié, utiliser une valeur par défaut
+  if (my_time < 0) {
+    DEBUG_LOG_UCI("No time specified, using default: 1000ms\n");
+    return 1000; // 1 seconde par défaut
+  }
+
+  // Calcul du temps alloué avec stratégie AGRESSIVE pour des coups rapides
+  int moves_to_go = params->movestogo;
+  if (moves_to_go <= 0) {
+    // Estimer le nombre de coups restants (plus agressif)
+    moves_to_go = 50; // Hypothèse : 50 coups jusqu'à la fin (plus conservateur
+                      // sur le temps)
+  }
+
+  // Formule plus agressive : utiliser moins de temps par coup
+  // (temps_restant / (coups_restants * 2)) + (incrément * 0.75)
+  int allocated_time = (my_time / (moves_to_go * 2)) + (my_inc * 3 / 4);
+
+  // Sécurités :
+  // 1. Ne jamais utiliser plus de 1/10 du temps restant (sauf si très peu de
+  // temps)
+  int max_time = my_time / 10;
+  if (allocated_time > max_time && my_time > 5000) {
+    allocated_time = max_time;
+  }
+
+  // 2. Minimum de 10ms pour éviter des moves trop rapides
+  if (allocated_time < 10) {
+    allocated_time = 10;
+  }
+
+  // 3. Laisser un buffer de 50ms pour la communication
+  if (allocated_time > 50) {
+    allocated_time -= 50;
+  }
+
+  DEBUG_LOG_UCI("Allocated time for this move: %dms (moves_to_go=%d)\n",
+                allocated_time, moves_to_go);
+
+  return allocated_time;
+}
+
 // Gestionnaire commande "go"
 void handle_go(Board *board, char *params) {
+  DEBUG_LOG_UCI("=== HANDLE_GO START ===\n");
   stop_search_flag = false; // Réinitialiser le drapeau d'arrêt
 
-  // Extraire les paramètres (ex. profondeur, temps)
-  int max_depth = 6;        // Valeur par défaut
-  int time_limit_ms = 5000; // 5 secondes par défaut
-
-  // Exemple d'extraction de la profondeur (simplifié)
-  if (strstr(params, "depth")) {
-    sscanf(params, "depth %d", &max_depth);
+  // Parser les paramètres
+  // IMPORTANT: dupliquer params car parse_go_params utilise strtok qui modifie
+  // la chaîne
+  char params_copy[4096];
+  if (params) {
+    strncpy(params_copy, params, sizeof(params_copy) - 1);
+    params_copy[sizeof(params_copy) - 1] = '\0';
+  } else {
+    params_copy[0] = '\0';
   }
+
+  GoParams go_params;
+  parse_go_params(params_copy, &go_params);
+
+  // Calculer le temps alloué
+  int time_limit_ms = calculate_time_for_move(board, &go_params);
+
+  // Déterminer la profondeur maximale
+  int max_depth =
+      (go_params.depth > 0) ? go_params.depth : 64; // 64 = pratiquement infini
+
+  DEBUG_LOG_UCI("Starting search: max_depth=%d, time_limit=%dms\n", max_depth,
+                time_limit_ms);
 
   // Lancer la recherche
   SearchResult result =
       search_iterative_deepening(board, max_depth, time_limit_ms);
+
+  DEBUG_LOG_UCI("Search complete: depth=%d, score=%d, nodes=%d, nps=%d\n",
+                result.depth, result.score, result.nodes, result.nps);
 
   // Envoyer le résultat au format UCI
   printf("info depth %d score cp %d nodes %d nps %d pv %s\n", result.depth,
@@ -194,6 +357,8 @@ void handle_go(Board *board, char *params) {
 
   printf("bestmove %s\n", move_to_string(&result.best_move));
   fflush(stdout);
+
+  DEBUG_LOG_UCI("=== HANDLE_GO END ===\n\n");
 }
 
 // Gestionnaire commande "stop"

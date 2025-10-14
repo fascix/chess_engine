@@ -1040,32 +1040,98 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
   clock_t start_time = clock();
   SearchResult best_result = {0};
   best_result.score = -INFINITY_SCORE;
+  best_result.nodes_searched = 0;
 
-  // SÉCURITÉ: Profondeur minimale de 3 pour éviter les bourdes
-  int min_depth = 3;
+  // Adapter la profondeur minimale en fonction du temps disponible
+  // Pour des temps très courts (< 100ms), commencer à profondeur 1
+  // Sinon commencer à profondeur 2 pour éviter les bourdes évidentes
+  int min_depth;
+  if (time_limit_ms < 100) {
+    min_depth = 1;
+  } else if (time_limit_ms < 500) {
+    min_depth = 2;
+  } else {
+    min_depth = 3;
+  }
+
+  DEBUG_LOG("\n=== ITERATIVE DEEPENING START ===\n");
+  DEBUG_LOG("Max depth: %d, Time limit: %dms, Min depth: %d\n", max_depth,
+            time_limit_ms, min_depth);
 
   tt_new_search(&tt_global);
 
   for (int depth = min_depth; depth <= max_depth; depth++) {
-    SearchResult current_result =
-        search_best_move_with_min_depth(board, depth, min_depth);
-
-    // Vérifier le temps
+    // Vérifier le temps AVANT de commencer une nouvelle profondeur
     clock_t current_time = clock();
     int elapsed_ms =
         (int)(((double)(current_time - start_time)) / CLOCKS_PER_SEC * 1000);
 
-    if (elapsed_ms >= time_limit_ms && depth > min_depth) {
+    DEBUG_LOG("\n--- Depth %d (elapsed: %dms / %dms) ---\n", depth, elapsed_ms,
+              time_limit_ms);
+
+    // Si on a déjà utilisé plus de 80% du temps, arrêter
+    if (elapsed_ms >= time_limit_ms * 8 / 10 && depth > min_depth) {
+      DEBUG_LOG("Time limit reached (80%%), stopping at depth %d\n", depth - 1);
       break;
     }
 
-    best_result = current_result;
+    SearchResult current_result =
+        search_best_move_with_min_depth(board, depth, min_depth);
+
+    // Accumuler les noeuds
+    best_result.nodes_searched += current_result.nodes_searched;
+
+    // Vérifier le temps APRÈS la recherche
+    current_time = clock();
+    elapsed_ms =
+        (int)(((double)(current_time - start_time)) / CLOCKS_PER_SEC * 1000);
+
+    // Calculer NPS (nodes per second)
+    if (elapsed_ms > 0) {
+      best_result.nps = (best_result.nodes_searched * 1000) / elapsed_ms;
+    }
+
+    best_result.best_move = current_result.best_move;
+    best_result.score = current_result.score;
+    best_result.depth = current_result.depth;
+
+    DEBUG_LOG("Depth %d complete: score=%d, nodes=%d, elapsed=%dms, nps=%d\n",
+              depth, current_result.score, best_result.nodes_searched,
+              elapsed_ms, best_result.nps);
+
+    // Arrêter si le temps est écoulé
+    if (elapsed_ms >= time_limit_ms) {
+      DEBUG_LOG("Time limit reached, stopping\n");
+      break;
+    }
 
     // Arrêt si mat trouvé
     if (abs(current_result.score) >= MATE_SCORE - 100) {
+      DEBUG_LOG("Mate found, stopping\n");
       break;
     }
   }
+
+  // Assurer que nodes et nps sont définis
+  best_result.nodes = best_result.nodes_searched;
+  if (best_result.nps == 0) {
+    clock_t end_time = clock();
+    int total_ms =
+        (int)(((double)(end_time - start_time)) / CLOCKS_PER_SEC * 1000);
+    if (total_ms > 0) {
+      best_result.nps = (best_result.nodes_searched * 1000) / total_ms;
+    }
+  }
+
+  clock_t end_time = clock();
+  int total_ms =
+      (int)(((double)(end_time - start_time)) / CLOCKS_PER_SEC * 1000);
+
+  DEBUG_LOG("\n=== ITERATIVE DEEPENING COMPLETE ===\n");
+  DEBUG_LOG("Final depth: %d, Score: %d, Nodes: %d, NPS: %d, Time: %dms\n",
+            best_result.depth, best_result.score, best_result.nodes,
+            best_result.nps, total_ms);
+  DEBUG_LOG("Best move: %s\n\n", move_to_string(&best_result.best_move));
 
   return best_result;
 }
