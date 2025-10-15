@@ -65,6 +65,7 @@ def engine_worker(board_copy, result_queue):
                 engine.quit()
             except:
                 pass
+
 def start_engine_calculation(board):
     """Démarre le calcul du moteur dans un thread séparé."""
     global engine_thinking, engine_move_ready, pending_engine_move
@@ -96,17 +97,25 @@ def handle_click(event, board):
     from support import get_square_from_pos
 
     mouse_x, mouse_y = event.pos
-    if 0 <= mouse_x < WINDOW_SIZE and 0 <= mouse_y < WINDOW_SIZE:
-        square = get_square_from_pos(mouse_x, mouse_y, player_is_white)
+    
+    # Vérifier que le clic est bien dans les limites de l'échiquier
+    if not (0 <= mouse_x < WINDOW_SIZE and 0 <= mouse_y < WINDOW_SIZE):
+        return
+    
+    square = get_square_from_pos(mouse_x, mouse_y, player_is_white)
 
-        if not selected_piece:
-            piece = board.piece_at(square)
-            if piece and piece.color == board.turn and current_turn_start_time is not None:
-                selected_piece = square
-                legal_moves = [move for move in board.legal_moves if move.from_square == square]
-                dragging = True
-                dragged_pos = (mouse_x - TILE_SIZE // 2, mouse_y - TILE_SIZE // 2)
-        else:
+    if selected_piece is None:
+        piece = board.piece_at(square)
+        if piece and piece.color == board.turn and current_turn_start_time is not None:
+            selected_piece = square
+            legal_moves = [move for move in board.legal_moves if move.from_square == square]
+            # En mode drag, on active le dragging. En mode click, non.
+            dragging = drag_mode
+            dragged_pos = (mouse_x - TILE_SIZE // 2, mouse_y - TILE_SIZE // 2)
+    else:
+        # En mode drag, on ne gère PAS la désélection ici (c'est handle_drop qui s'en charge)
+        # En mode click, on gère le deuxième clic pour déplacer la pièce
+        if not drag_mode:
             if square in [move.to_square for move in legal_moves]:
                 move = chess.Move(selected_piece, square)
                 if move in board.legal_moves:
@@ -119,35 +128,66 @@ def handle_drag(event, board):
     """Gère le drag des pièces."""
     global dragged_pos, dragging
 
-    if drag_mode and selected_piece and dragging:
+    if drag_mode and selected_piece is not None and dragging:
         mouse_x, mouse_y = event.pos
-        dragged_pos = (mouse_x - TILE_SIZE // 2, mouse_y - TILE_SIZE // 2)
+        # Calculer la position de la pièce draggée (centrée sur la souris)
+        drag_x = mouse_x - TILE_SIZE // 2
+        drag_y = mouse_y - TILE_SIZE // 2
+        
+        # Limiter la position pour que la pièce reste visible à l'écran
+        # (éviter qu'elle ne sorte complètement de l'échiquier)
+        drag_x = max(-TILE_SIZE // 2, min(drag_x, WINDOW_SIZE - TILE_SIZE // 2))
+        drag_y = max(-TILE_SIZE // 2, min(drag_y, WINDOW_SIZE - TILE_SIZE // 2))
+        
+        dragged_pos = (drag_x, drag_y)
 
 def handle_drop(event, board):
     """Gère le drop des pièces."""
     global selected_piece, legal_moves, dragging
     from support import get_square_from_pos
     
-    if drag_mode and selected_piece and dragging:
-        mouse_x, mouse_y = event.pos
-        square = get_square_from_pos(mouse_x, mouse_y, player_is_white)
-
-        if square in [move.to_square for move in legal_moves]:
-            move = chess.Move(selected_piece, square)
-            
-            # Vérification de la promotion
-            if board.piece_at(move.from_square) and board.piece_at(move.from_square).piece_type == chess.PAWN:
-                if ((chess.square_rank(move.to_square) == 7 and board.turn == chess.WHITE) or
-                        (chess.square_rank(move.to_square) == 0 and board.turn == chess.BLACK)):
-                    from gui import promote_pawn, images
-                    promote_pawn(pygame.display.get_surface(), board, move, images)
-                    
-            if move in board.legal_moves:
-                execute_move(board, move)
-
+    # Si on n'est pas en mode drag OU si aucune pièce n'est sélectionnée OU si dragging est False, on ignore
+    if not drag_mode:
+        return
+    
+    if not dragging:
+        return
+        
+    if selected_piece is None:  # Utiliser is None au lieu de not
+        # Réinitialiser dragging au cas où
+        dragging = False
+        return
+    
+    # À ce stade, on a drag_mode=True, dragging=True et selected_piece est défini
+    mouse_x, mouse_y = event.pos
+    
+    # Vérifier que le drop est dans les limites de l'échiquier
+    # Si on drop en dehors, on annule simplement la sélection
+    if not (0 <= mouse_x < WINDOW_SIZE and 0 <= mouse_y < WINDOW_SIZE):
         selected_piece = None
         legal_moves = []
         dragging = False
+        return
+    
+    square = get_square_from_pos(mouse_x, mouse_y, player_is_white)
+
+    if square in [move.to_square for move in legal_moves]:
+        move = chess.Move(selected_piece, square)
+        
+        # Vérification de la promotion
+        if board.piece_at(move.from_square) and board.piece_at(move.from_square).piece_type == chess.PAWN:
+            if ((chess.square_rank(move.to_square) == 7 and board.turn == chess.WHITE) or
+                    (chess.square_rank(move.to_square) == 0 and board.turn == chess.BLACK)):
+                # Import local pour éviter l'import circulaire
+                from support import promote_pawn, load_images
+                promote_pawn(pygame.display.get_surface(), board, move, load_images())
+                
+        if move in board.legal_moves:
+            execute_move(board, move)
+
+    selected_piece = None
+    legal_moves = []
+    dragging = False
 
 def execute_move(board, move):
     """Exécute un mouvement et gère les captures."""
@@ -172,6 +212,7 @@ def execute_move(board, move):
         captured_pieces[captured_color].append(captured_piece)
         
     if board.is_checkmate():
+        # Import local pour éviter l'import circulaire
         from gui import display_checkmate
         display_checkmate(pygame.display.get_surface(), board.turn)
 
