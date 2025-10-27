@@ -277,23 +277,22 @@ int calculate_time_for_move(Board *board, GoParams *params) {
     return 1000; // 1 seconde par défaut
   }
 
-  // Calcul du temps alloué avec stratégie AGRESSIVE pour des coups rapides
+  // Calcul du temps alloué avec stratégie CONSERVATIVE pour éviter les pertes
+  // au temps
   int moves_to_go = params->movestogo;
   if (moves_to_go <= 0) {
-    // Estimer le nombre de coups restants (plus agressif)
-    moves_to_go = 50; // Hypothèse : 50 coups jusqu'à la fin (plus conservateur
-                      // sur le temps)
+    // Estimer le nombre de coups restants de manière conservatrice
+    moves_to_go = 40; // Hypothèse : 40 coups jusqu'à la fin
   }
 
-  // Formule plus agressive : utiliser moins de temps par coup
-  // (temps_restant / (coups_restants * 2)) + (incrément * 0.75)
-  int allocated_time = (my_time / (moves_to_go * 2)) + (my_inc * 3 / 4);
+  // Formule TRÈS conservative : utiliser beaucoup moins de temps par coup
+  // (temps_restant / (coups_restants * 3)) + (incrément * 0.5)
+  int allocated_time = (my_time / (moves_to_go * 3)) + (my_inc / 2);
 
-  // Sécurités :
-  // 1. Ne jamais utiliser plus de 1/10 du temps restant (sauf si très peu de
-  // temps)
-  int max_time = my_time / 10;
-  if (allocated_time > max_time && my_time > 5000) {
+  // Sécurités renforcées :
+  // 1. Ne JAMAIS utiliser plus de 1/15 du temps restant
+  int max_time = my_time / 15;
+  if (allocated_time > max_time) {
     allocated_time = max_time;
   }
 
@@ -302,9 +301,16 @@ int calculate_time_for_move(Board *board, GoParams *params) {
     allocated_time = 10;
   }
 
-  // 3. Laisser un buffer de 50ms pour la communication
-  if (allocated_time > 50) {
-    allocated_time -= 50;
+  // 3. Laisser un buffer de 100ms pour la communication et overhead
+  if (allocated_time > 100) {
+    allocated_time -= 100;
+  } else if (allocated_time > 20) {
+    allocated_time -= 20;
+  }
+
+  // 4. Maximum absolu pour éviter de bloquer trop longtemps
+  if (allocated_time > 2000) {
+    allocated_time = 2000; // Max 2 secondes par coup
   }
 
   DEBUG_LOG_UCI("Allocated time for this move: %dms (moves_to_go=%d)\n",
@@ -348,6 +354,29 @@ void handle_go(Board *board, char *params) {
 
   DEBUG_LOG_UCI("Search complete: depth=%d, score=%d, nodes=%d, nps=%d\n",
                 result.depth, result.score, result.nodes, result.nps);
+
+  // VALIDATION RAPIDE : Vérifier que le coup n'est pas invalide (from == -1)
+  if (result.best_move.from == -1 || result.best_move.to == -1) {
+    DEBUG_LOG_UCI(
+        "❌ ERREUR CRITIQUE: Coup invalide retourné par la recherche!\n");
+
+    // Génération d'urgence d'un coup légal
+    MoveList emergency_moves;
+    generate_legal_moves(board, &emergency_moves);
+
+    if (emergency_moves.count > 0) {
+      result.best_move = emergency_moves.moves[0];
+      DEBUG_LOG_UCI("    Fallback d'urgence: %s\n",
+                    move_to_string(&result.best_move));
+    } else {
+      // Situation impossible (pas de coups légaux)
+      DEBUG_LOG_UCI("    ERREUR: Aucun coup légal disponible!\n");
+      printf("bestmove 0000\n");
+      fflush(stdout);
+      DEBUG_LOG_UCI("=== HANDLE_GO END (ERROR) ===\n\n");
+      return;
+    }
+  }
 
   // Envoyer le résultat au format UCI
   printf("info depth %d score cp %d nodes %d nps %d pv %s\n", result.depth,

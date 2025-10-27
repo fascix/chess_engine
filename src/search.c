@@ -13,6 +13,11 @@
 #define DEBUG_LOG(...)
 #endif
 
+// Variables globales pour gérer le temps de recherche
+static clock_t search_start_time;
+static int search_time_limit_ms;
+static volatile int search_should_stop;
+
 // Forward declaration for move ordering
 void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
                  Move hash_move, int ply);
@@ -53,6 +58,24 @@ void undo_move(Board *board, int ply) { *board = search_backup_stack[ply]; }
 //      nécessaire)
 int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
                        Couleur color, int ply) {
+  // Vérifier le temps tous les 1024 noeuds (pour ne pas trop ralentir)
+  static int node_count = 0;
+  if (++node_count >= 1024) {
+    node_count = 0;
+    clock_t current = clock();
+    int elapsed =
+        (int)(((double)(current - search_start_time)) / CLOCKS_PER_SEC * 1000);
+    if (elapsed >= search_time_limit_ms) {
+      search_should_stop = 1;
+      return 0; // Retourner immédiatement
+    }
+  }
+
+  // Si on doit arrêter, retourner immédiatement
+  if (search_should_stop) {
+    return 0;
+  }
+
   // Sécurité: ply trop grand
   if (ply >= 128) {
     DEBUG_LOG("ERROR: ply=%d trop grand, retour score neutre\n", ply);
@@ -111,11 +134,58 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   Move best_move = {0};
   OrderedMoveList ordered_moves;
   Move hash_move = {0};
-  // Récupérer le hash_move de la TT si disponible
-  if (entry != NULL) {
-    hash_move = entry->best_move;
+  int hash_move_valid = 0;
+
+  // Récupérer et VALIDER le hash_move de la TT si disponible
+  if (entry != NULL && entry->best_move.from != 0) {
+    Move candidate = entry->best_move;
+
+    // VALIDATION CRITIQUE : Vérifier que la pièce appartient à la bonne couleur
+    Couleur piece_color = get_piece_color(board, candidate.from);
+    if (piece_color != color) {
+#ifdef DEBUG
+      if (ply <= 2) {
+        DEBUG_LOG("[TT] ⚠️ Hash move REJETÉ (mauvaise couleur): %c%d%c%d "
+                  "piece_color=%d expected=%d (ply=%d)\n",
+                  'a' + (candidate.from % 8), 1 + (candidate.from / 8),
+                  'a' + (candidate.to % 8), 1 + (candidate.to / 8), piece_color,
+                  color, ply);
+      }
+#endif
+    } else {
+      // Vérifier que le coup est dans la liste des coups légaux
+      for (int i = 0; i < moves.count; i++) {
+        if (moves.moves[i].from == candidate.from &&
+            moves.moves[i].to == candidate.to &&
+            moves.moves[i].type == candidate.type &&
+            (candidate.type != MOVE_PROMOTION ||
+             moves.moves[i].promotion == candidate.promotion)) {
+          hash_move = moves.moves[i];
+          hash_move_valid = 1;
+#ifdef DEBUG
+          if (ply <= 2) {
+            DEBUG_LOG("[TT] Hash move validé: %c%d%c%d (ply=%d)\n",
+                      'a' + (hash_move.from % 8), 1 + (hash_move.from / 8),
+                      'a' + (hash_move.to % 8), 1 + (hash_move.to / 8), ply);
+          }
+#endif
+          break;
+        }
+      }
+
+#ifdef DEBUG
+      if (!hash_move_valid && ply <= 2) {
+        DEBUG_LOG("[TT] ⚠️ Hash move REJETÉ (illégal): %c%d%c%d (ply=%d)\n",
+                  'a' + (candidate.from % 8), 1 + (candidate.from / 8),
+                  'a' + (candidate.to % 8), 1 + (candidate.to / 8), ply);
+      }
+#endif
+    }
   }
-  order_moves(board, &moves, &ordered_moves, hash_move, ply);
+
+  // Utiliser le hash_move seulement s'il est valide
+  order_moves(board, &moves, &ordered_moves,
+              hash_move_valid ? hash_move : (Move){0}, ply);
   // Sécurité OrderedMoveList: limiter à 256
   if (ordered_moves.count > 256) {
     DEBUG_LOG("WARNING: ordered_moves.count=%d > 256, tronqué à 256 coups\n",
@@ -887,8 +957,9 @@ int gives_check(const Board *board, const Move *move) {
 SearchResult search_best_move_with_min_depth(Board *board, int max_depth,
                                              int min_depth) {
   SearchResult result = {0};
-  result.best_move.from = A1;
-  result.best_move.to = A1;
+  // Initialisation avec marqueur invalide
+  result.best_move.from = -1;
+  result.best_move.to = -1;
   result.score = -INFINITY_SCORE;
 
   MoveList moves;
@@ -983,6 +1054,28 @@ SearchResult search_best_move_with_min_depth(Board *board, int max_depth,
     DEBUG_LOG("\n");
   }
 
+  // VALIDATION FINALE : S'assurer qu'on a un coup valide
+  if (result.best_move.from == -1) {
+    DEBUG_LOG("⚠️ AVERTISSEMENT: Aucun coup n'a amélioré le score!\n");
+    DEBUG_LOG("    Fallback: utilisation du premier coup non-mauvais\n");
+
+    // Prendre le premier coup qui n'est pas "obviously bad"
+    for (int i = 0; i < ordered_moves.count; i++) {
+      if (!is_obviously_bad_move(board, &ordered_moves.moves[i])) {
+        result.best_move = ordered_moves.moves[i];
+        result.score = -INFINITY_SCORE / 2; // Score neutre-mauvais
+        break;
+      }
+    }
+
+    // Si tous les coups sont "bad", prendre quand même le premier
+    if (result.best_move.from == -1 && ordered_moves.count > 0) {
+      result.best_move = ordered_moves.moves[0];
+      result.score = -INFINITY_SCORE / 2;
+      DEBUG_LOG("    Fallback final: utilisation du premier coup légal\n");
+    }
+  }
+
   DEBUG_LOG("\n>>> MEILLEUR COUP: %c%d%c%d (score=%d) <<<\n\n",
             'a' + (result.best_move.from % 8), 1 + (result.best_move.from / 8),
             'a' + (result.best_move.to % 8), 1 + (result.best_move.to / 8),
@@ -1037,10 +1130,17 @@ int is_obviously_bad_move(const Board *board, const Move *move) {
 // Interface principale SÉCURISÉE
 SearchResult search_iterative_deepening(Board *board, int max_depth,
                                         int time_limit_ms) {
-  clock_t start_time = clock();
+  // Initialiser les variables globales de temps
+  search_start_time = clock();
+  search_time_limit_ms = time_limit_ms;
+  search_should_stop = 0;
+
+  clock_t start_time = search_start_time;
   SearchResult best_result = {0};
   best_result.score = -INFINITY_SCORE;
   best_result.nodes_searched = 0;
+  best_result.best_move.from = -1;
+  best_result.best_move.to = -1;
 
   // Adapter la profondeur minimale en fonction du temps disponible
   // Pour des temps très courts (< 100ms), commencer à profondeur 1
@@ -1069,14 +1169,29 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     DEBUG_LOG("\n--- Depth %d (elapsed: %dms / %dms) ---\n", depth, elapsed_ms,
               time_limit_ms);
 
-    // Si on a déjà utilisé plus de 80% du temps, arrêter
-    if (elapsed_ms >= time_limit_ms * 8 / 10 && depth > min_depth) {
-      DEBUG_LOG("Time limit reached (80%%), stopping at depth %d\n", depth - 1);
+    // Si on a déjà utilisé plus de 50% du temps, arrêter (plus agressif)
+    if (elapsed_ms >= time_limit_ms / 2 && depth > min_depth) {
+      DEBUG_LOG("Time limit reached (50%%), stopping at depth %d\n", depth - 1);
+      break;
+    }
+
+    // Vérifier qu'on a assez de temps pour une itération complète
+    if (depth > min_depth && elapsed_ms * 3 >= time_limit_ms) {
+      DEBUG_LOG("Not enough time for depth %d, stopping at depth %d\n", depth,
+                depth - 1);
       break;
     }
 
     SearchResult current_result =
         search_best_move_with_min_depth(board, depth, min_depth);
+
+    // Si la recherche a été interrompue et qu'on n'a pas de coup valide, ne pas
+    // l'utiliser
+    if (search_should_stop && current_result.best_move.from == -1 &&
+        best_result.best_move.from != -1) {
+      DEBUG_LOG("Search interrupted, using previous depth result\n");
+      break;
+    }
 
     // Accumuler les noeuds
     best_result.nodes_searched += current_result.nodes_searched;
@@ -1091,9 +1206,12 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
       best_result.nps = (best_result.nodes_searched * 1000) / elapsed_ms;
     }
 
-    best_result.best_move = current_result.best_move;
-    best_result.score = current_result.score;
-    best_result.depth = current_result.depth;
+    // Ne mettre à jour que si on a un coup valide
+    if (current_result.best_move.from != -1) {
+      best_result.best_move = current_result.best_move;
+      best_result.score = current_result.score;
+      best_result.depth = current_result.depth;
+    }
 
     DEBUG_LOG("Depth %d complete: score=%d, nodes=%d, elapsed=%dms, nps=%d\n",
               depth, current_result.score, best_result.nodes_searched,
@@ -1102,6 +1220,12 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     // Arrêter si le temps est écoulé
     if (elapsed_ms >= time_limit_ms) {
       DEBUG_LOG("Time limit reached, stopping\n");
+      break;
+    }
+
+    // Si on a utilisé plus de 40% du temps pour cette itération, arrêter
+    if (elapsed_ms * 5 >= time_limit_ms * 2 && depth > min_depth) {
+      DEBUG_LOG("Used >40%% of time, stopping at depth %d\n", depth);
       break;
     }
 
@@ -1120,6 +1244,64 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
         (int)(((double)(end_time - start_time)) / CLOCKS_PER_SEC * 1000);
     if (total_ms > 0) {
       best_result.nps = (best_result.nodes_searched * 1000) / total_ms;
+    }
+  }
+
+  // VALIDATION FINALE CRITIQUE : Vérifier que le coup est légal
+  if (best_result.best_move.from != -1) {
+    // PREMIÈRE VÉRIFICATION : La pièce doit appartenir à la bonne couleur
+    Couleur piece_color = get_piece_color(board, best_result.best_move.from);
+    if (piece_color != board->to_move) {
+      DEBUG_LOG("❌ ERROR: Best move uses WRONG COLOR piece! piece_color=%d "
+                "expected=%d\n",
+                piece_color, board->to_move);
+      DEBUG_LOG("    Invalid move: %c%d%c%d\n",
+                'a' + (best_result.best_move.from % 8),
+                1 + (best_result.best_move.from / 8),
+                'a' + (best_result.best_move.to % 8),
+                1 + (best_result.best_move.to / 8));
+
+      // Forcer la régénération avec le premier coup légal
+      MoveList emergency_moves;
+      generate_legal_moves(board, &emergency_moves);
+      if (emergency_moves.count > 0) {
+        best_result.best_move = emergency_moves.moves[0];
+        best_result.score = -INFINITY_SCORE / 2;
+        DEBUG_LOG("    Emergency fallback: %s\n",
+                  move_to_string(&best_result.best_move));
+      } else {
+        best_result.best_move.from = -1;
+        best_result.best_move.to = -1;
+      }
+    } else {
+      // DEUXIÈME VÉRIFICATION : Le coup doit être dans la liste des coups
+      // légaux
+      MoveList legal_moves;
+      generate_legal_moves(board, &legal_moves);
+
+      int move_found = 0;
+      for (int i = 0; i < legal_moves.count; i++) {
+        if (legal_moves.moves[i].from == best_result.best_move.from &&
+            legal_moves.moves[i].to == best_result.best_move.to &&
+            legal_moves.moves[i].type == best_result.best_move.type) {
+          // Utiliser le coup complet de la liste légale
+          best_result.best_move = legal_moves.moves[i];
+          move_found = 1;
+          break;
+        }
+      }
+
+      if (!move_found) {
+        DEBUG_LOG(
+            "❌ ERROR: Best move is NOT in legal moves list! Falling back\n");
+        if (legal_moves.count > 0) {
+          best_result.best_move = legal_moves.moves[0];
+          best_result.score = -INFINITY_SCORE / 2;
+        } else {
+          best_result.best_move.from = -1;
+          best_result.best_move.to = -1;
+        }
+      }
     }
   }
 
