@@ -58,6 +58,8 @@ void parse_uci_command(char *line, Board *board) {
     handle_uci();
   } else if (strcmp(command, "isready") == 0) {
     handle_isready();
+  } else if (strcmp(command, "ucinewgame") == 0) {
+    handle_ucinewgame();
   } else if (strcmp(command, "position") == 0) {
     char *params = strtok(NULL, ""); // Récupérer le reste
     handle_position(board, params);
@@ -84,6 +86,14 @@ void handle_uci() {
 // Gestionnaire commande "isready"
 void handle_isready() {
   printf("readyok\n");
+  fflush(stdout);
+}
+
+// Gestionnaire commande "ucinewgame"
+void handle_ucinewgame() {
+  // Clear transposition table and reset search state for a new game
+  initialize_engine();
+  DEBUG_LOG_UCI("New game started, engine reset\n");
   fflush(stdout);
 }
 

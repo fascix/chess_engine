@@ -681,7 +681,7 @@ int quiescence_search(Board *board, int alpha, int beta, Couleur color,
 
 // Quiescence Search avec limite de profondeur
 int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
-                            int ply) { // Utiliser 'ply' pour la sauvegarde
+                            int ply) {
   // Limite de profondeur pour éviter les boucles infinies
   if (ply >= 128) { // Sécurité maximale
     int score = evaluate_position(board);
@@ -718,18 +718,23 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
                     .type = MOVE_NORMAL,
                     .promotion = EMPTY,
                     .captured_piece = EMPTY};
-  order_moves(board, &capture_moves, &ordered_captures, null_move,
-              ply); // Passer le ply
+  order_moves(board, &capture_moves, &ordered_captures, null_move, ply);
 
   // Chercher dans les captures
   for (int i = 0; i < ordered_captures.count; i++) {
-    // Utiliser le système de sauvegarde de la recherche principale
-    apply_move(board, &ordered_captures.moves[i], ply);
+    // FIX: Utiliser une sauvegarde locale au lieu du stack partagé
+    // Cela évite la corruption quand quiescence_search est appelé depuis
+    // negamax
+    Board local_backup = *board;
+
+    // Appliquer le mouvement directement
+    Board dummy_backup;
+    make_move_temp(board, &ordered_captures.moves[i], &dummy_backup);
 
     // Delta pruning - ignorer les captures très faibles
     int delta = piece_value(ordered_captures.moves[i].captured_piece) + 200;
     if (stand_pat + delta < alpha) {
-      undo_move(board, ply);
+      *board = local_backup; // Restaurer depuis le backup local
       continue;
     }
 
@@ -738,8 +743,8 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     int score =
         -quiescence_search_depth(board, -beta, -alpha, opponent, ply + 1);
 
-    // Restaurer le plateau
-    undo_move(board, ply);
+    // Restaurer le plateau depuis le backup local
+    *board = local_backup;
 
     // Mise à jour alpha-beta
     if (score >= beta) {

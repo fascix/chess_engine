@@ -16,6 +16,7 @@ void parse_uci_command(char *line, Board *board);
 // Gestionnaires de commandes spécifiques
 void handle_uci();
 void handle_isready();
+void handle_ucinewgame();
 void handle_position(Board *board, char *params);
 void handle_go(Board *board, char *params);
 void handle_stop();
