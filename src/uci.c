@@ -394,7 +394,35 @@ void handle_go(Board *board, char *params) {
     }
   }
 
-  // 2. DOUBLE VÉRIFICATION : Le coup doit être dans la liste des coups légaux
+  // 2. VÉRIFICATION ABSOLUE : La pièce doit exister sur la case from
+  PieceType piece_on_from = get_piece_type(board, result.best_move.from);
+  Couleur color_on_from = get_piece_color(board, result.best_move.from);
+
+  if (piece_on_from == EMPTY || color_on_from != board->to_move) {
+    DEBUG_LOG_UCI("❌ ERREUR CRITIQUE: Pas de pièce valide sur la case from! "
+                  "from=%c%d piece=%d color=%d expected_color=%d\n",
+                  'a' + (result.best_move.from % 8),
+                  1 + (result.best_move.from / 8), piece_on_from, color_on_from,
+                  board->to_move);
+
+    // Le coup est complètement invalide - régénérer
+    MoveList emergency_moves;
+    generate_legal_moves(board, &emergency_moves);
+
+    if (emergency_moves.count > 0) {
+      result.best_move = emergency_moves.moves[0];
+      DEBUG_LOG_UCI("    Fallback d'urgence: %s\n",
+                    move_to_string(&result.best_move));
+    } else {
+      DEBUG_LOG_UCI("    ERREUR: Aucun coup légal disponible!\n");
+      printf("bestmove 0000\n");
+      fflush(stdout);
+      DEBUG_LOG_UCI("=== HANDLE_GO END (ERROR) ===\n\n");
+      return;
+    }
+  }
+
+  // 3. DOUBLE VÉRIFICATION : Le coup doit être dans la liste des coups légaux
   MoveList legal_moves_check;
   generate_legal_moves(board, &legal_moves_check);
 
@@ -429,7 +457,7 @@ void handle_go(Board *board, char *params) {
     }
   }
 
-  // 3. VÉRIFICATION FINALE : from != to (pas de coup vers la même case)
+  // 4. VÉRIFICATION FINALE : from != to (pas de coup vers la même case)
   if (result.best_move.from == result.best_move.to) {
     DEBUG_LOG_UCI(
         "❌ ERREUR CRITIQUE: Coup vers la même case détecté! (%d -> %d)\n",
