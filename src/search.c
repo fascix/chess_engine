@@ -96,7 +96,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     return entry->score;
   }
   if (depth == 0) {
-    int eval = quiescence_search(board, alpha, beta, color);
+    int eval = quiescence_search(board, alpha, beta, color, ply);
     int static_eval = evaluate_position(board);
     static_eval = (color == WHITE) ? static_eval : -static_eval;
 #ifdef DEBUG
@@ -184,8 +184,13 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   }
 
   // Utiliser le hash_move seulement s'il est valide
+  Move invalid_move = {.from = -1,
+                       .to = -1,
+                       .type = MOVE_NORMAL,
+                       .promotion = EMPTY,
+                       .captured_piece = EMPTY};
   order_moves(board, &moves, &ordered_moves,
-              hash_move_valid ? hash_move : (Move){0}, ply);
+              hash_move_valid ? hash_move : invalid_move, ply);
   // Sécurité OrderedMoveList: limiter à 256
   if (ordered_moves.count > 256) {
     DEBUG_LOG("WARNING: ordered_moves.count=%d > 256, tronqué à 256 coups\n",
@@ -669,15 +674,16 @@ void generate_capture_moves(const Board *board, MoveList *moves) {
 }
 
 // Quiescence Search - recherche uniquement les coups "bruyants"
-int quiescence_search(Board *board, int alpha, int beta, Couleur color) {
-  return quiescence_search_depth(board, alpha, beta, color, 0);
+int quiescence_search(Board *board, int alpha, int beta, Couleur color,
+                      int ply) {
+  return quiescence_search_depth(board, alpha, beta, color, ply);
 }
 
 // Quiescence Search avec limite de profondeur
 int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
-                            int qs_depth) {
+                            int ply) { // Utiliser 'ply' pour la sauvegarde
   // Limite de profondeur pour éviter les boucles infinies
-  if (qs_depth >= 8) {
+  if (ply >= 128) { // Sécurité maximale
     int score = evaluate_position(board);
     return (color == WHITE) ? score : -score;
   }
@@ -707,28 +713,33 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
 
   // Trier les captures par MVV-LVA
   OrderedMoveList ordered_captures;
-  Move null_move = {0};
-  order_moves(board, &capture_moves, &ordered_captures, null_move, 0);
+  Move null_move = {.from = -1,
+                    .to = -1,
+                    .type = MOVE_NORMAL,
+                    .promotion = EMPTY,
+                    .captured_piece = EMPTY};
+  order_moves(board, &capture_moves, &ordered_captures, null_move,
+              ply); // Passer le ply
 
   // Chercher dans les captures
   for (int i = 0; i < ordered_captures.count; i++) {
-    Board backup = *board;
+    // Utiliser le système de sauvegarde de la recherche principale
+    apply_move(board, &ordered_captures.moves[i], ply);
 
     // Delta pruning - ignorer les captures très faibles
     int delta = piece_value(ordered_captures.moves[i].captured_piece) + 200;
     if (stand_pat + delta < alpha) {
+      undo_move(board, ply);
       continue;
     }
 
-    // Jouer la capture (temporaire)
-    make_move_temp(board, &ordered_captures.moves[i], &backup);
-
     // Recherche récursive
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
-    int score = -quiescence_search(board, -beta, -alpha, opponent);
+    int score =
+        -quiescence_search_depth(board, -beta, -alpha, opponent, ply + 1);
 
     // Restaurer le plateau
-    *board = backup;
+    undo_move(board, ply);
 
     // Mise à jour alpha-beta
     if (score >= beta) {
@@ -791,8 +802,8 @@ void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
     strcpy(debug_reasons[i], "history");
 #endif
 
-    // 1. Hash move - priorité absolue
-    if (hash_move.from == moves->moves[i].from &&
+    // 1. Hash move - priorité absolue (vérifier que hash_move est valide)
+    if (hash_move.from >= 0 && hash_move.from == moves->moves[i].from &&
         hash_move.to == moves->moves[i].to) {
       score = 2000000;
 #ifdef DEBUG
@@ -957,9 +968,12 @@ int gives_check(const Board *board, const Move *move) {
 SearchResult search_best_move_with_min_depth(Board *board, int max_depth,
                                              int min_depth) {
   SearchResult result = {0};
-  // Initialisation avec marqueur invalide
+  // Initialisation avec marqueur invalide EXPLICITE
   result.best_move.from = -1;
   result.best_move.to = -1;
+  result.best_move.type = MOVE_NORMAL;
+  result.best_move.promotion = EMPTY;
+  result.best_move.captured_piece = EMPTY;
   result.score = -INFINITY_SCORE;
 
   MoveList moves;
@@ -983,7 +997,11 @@ SearchResult search_best_move_with_min_depth(Board *board, int max_depth,
 
   // Ordonner les coups avant de les évaluer
   OrderedMoveList ordered_moves;
-  Move hash_move = {0};
+  Move hash_move = {.from = -1,
+                    .to = -1,
+                    .type = MOVE_NORMAL,
+                    .promotion = EMPTY,
+                    .captured_piece = EMPTY};
   order_moves(board, &moves, &ordered_moves, hash_move, 0);
 
   DEBUG_LOG("\nÉvaluation de %d coups:\n", ordered_moves.count);
@@ -1139,8 +1157,12 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
   SearchResult best_result = {0};
   best_result.score = -INFINITY_SCORE;
   best_result.nodes_searched = 0;
+  // Initialisation EXPLICITE du Move invalide
   best_result.best_move.from = -1;
   best_result.best_move.to = -1;
+  best_result.best_move.type = MOVE_NORMAL;
+  best_result.best_move.promotion = EMPTY;
+  best_result.best_move.captured_piece = EMPTY;
 
   // Adapter la profondeur minimale en fonction du temps disponible
   // Pour des temps très courts (< 100ms), commencer à profondeur 1

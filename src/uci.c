@@ -355,10 +355,16 @@ void handle_go(Board *board, char *params) {
   DEBUG_LOG_UCI("Search complete: depth=%d, score=%d, nodes=%d, nps=%d\n",
                 result.depth, result.score, result.nodes, result.nps);
 
-  // VALIDATION RAPIDE : Vérifier que le coup n'est pas invalide (from == -1)
-  if (result.best_move.from == -1 || result.best_move.to == -1) {
-    DEBUG_LOG_UCI(
-        "❌ ERREUR CRITIQUE: Coup invalide retourné par la recherche!\n");
+  // ============================================================
+  // VALIDATION CRITIQUE : Vérifier que le coup est VRAIMENT légal
+  // ============================================================
+
+  // 1. Vérifier que le coup n'est pas invalide (from == -1 ou from == to)
+  if (result.best_move.from == -1 || result.best_move.to == -1 ||
+      result.best_move.from == result.best_move.to) {
+    DEBUG_LOG_UCI("❌ ERREUR CRITIQUE: Coup invalide retourné par la recherche "
+                  "(from=%d, to=%d)!\n",
+                  result.best_move.from, result.best_move.to);
 
     // Génération d'urgence d'un coup légal
     MoveList emergency_moves;
@@ -375,6 +381,55 @@ void handle_go(Board *board, char *params) {
       fflush(stdout);
       DEBUG_LOG_UCI("=== HANDLE_GO END (ERROR) ===\n\n");
       return;
+    }
+  }
+
+  // 2. DOUBLE VÉRIFICATION : Le coup doit être dans la liste des coups légaux
+  MoveList legal_moves_check;
+  generate_legal_moves(board, &legal_moves_check);
+
+  int move_is_legal = 0;
+  for (int i = 0; i < legal_moves_check.count; i++) {
+    if (legal_moves_check.moves[i].from == result.best_move.from &&
+        legal_moves_check.moves[i].to == result.best_move.to &&
+        legal_moves_check.moves[i].type == result.best_move.type) {
+      // Utiliser le coup exact de la liste légale pour être sûr
+      result.best_move = legal_moves_check.moves[i];
+      move_is_legal = 1;
+      break;
+    }
+  }
+
+  if (!move_is_legal) {
+    DEBUG_LOG_UCI("❌ ERREUR CRITIQUE: Le coup %s n'est PAS légal dans la "
+                  "position actuelle!\n",
+                  move_to_string(&result.best_move));
+
+    // Fallback d'urgence
+    if (legal_moves_check.count > 0) {
+      result.best_move = legal_moves_check.moves[0];
+      DEBUG_LOG_UCI("    Fallback d'urgence: %s\n",
+                    move_to_string(&result.best_move));
+    } else {
+      DEBUG_LOG_UCI("    ERREUR: Aucun coup légal disponible!\n");
+      printf("bestmove 0000\n");
+      fflush(stdout);
+      DEBUG_LOG_UCI("=== HANDLE_GO END (ERROR) ===\n\n");
+      return;
+    }
+  }
+
+  // 3. VÉRIFICATION FINALE : from != to (pas de coup vers la même case)
+  if (result.best_move.from == result.best_move.to) {
+    DEBUG_LOG_UCI(
+        "❌ ERREUR CRITIQUE: Coup vers la même case détecté! (%d -> %d)\n",
+        result.best_move.from, result.best_move.to);
+
+    // Fallback ultime
+    if (legal_moves_check.count > 0) {
+      result.best_move = legal_moves_check.moves[0];
+      DEBUG_LOG_UCI("    Fallback ultime: %s\n",
+                    move_to_string(&result.best_move));
     }
   }
 
@@ -400,81 +455,33 @@ void handle_stop() {
 // Gestionnaire commande "quit"
 void handle_quit() { exit(0); }
 
-// Applique un coup UCI en mettant à jour correctement l'état du board
+// Applique un coup UCI en mettant à jour correctement l'état du board (version
+// robuste)
 void apply_uci_move(Board *board, const Move *move) {
-  /* IMPORTANT: save the color that is moving BEFORE applying the temporary
-     move. make_move_temp flips board->to_move, so reading board->to_move AFTER
-     would be wrong. */
-  Board backup;
+  Board dummy_backup; // Non utilisé, mais requis par make_move_temp
+
+  // Sauvegarder les informations AVANT que le coup ne soit joué
+  PieceType moving_piece = get_piece_type(board, move->from);
+  int is_capture =
+      (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT);
   Couleur moving_color = board->to_move;
 
-  /* Apply the move physically (make_move_temp will flip board->to_move) */
-  make_move_temp(board, move, &backup);
+  // Appliquer le coup en utilisant la fonction centralisée et corrigée
+  make_move_temp(board, move, &dummy_backup);
 
-  /* We increment the full-move number after Black has moved (i.e. when
-   * moving_color == BLACK) */
+  // Mettre à jour les compteurs de coups, que make_move_temp ne gère pas
+
+  // Compteur de demi-coups (pour la règle des 50 coups)
+  if (moving_piece == PAWN || is_capture) {
+    board->halfmove_clock = 0;
+  } else {
+    board->halfmove_clock++;
+  }
+
+  // Compteur de coups complets (incrémenté après le coup des noirs)
   if (moving_color == BLACK) {
     board->move_number++;
   }
-
-  PieceType piece_type = get_piece_type(&backup, move->from);
-
-  /* Handle castling explicitly using the known moving_color */
-  if (move->type == MOVE_CASTLE) {
-    Square king_from = move->from;
-    Square king_to = move->to;
-    int is_kingside = (king_to > king_from);
-
-    // Déterminer les positions de la tour
-    Square rook_from = is_kingside ? ((moving_color == WHITE) ? H1 : H8)
-                                   : ((moving_color == WHITE) ? A1 : A8);
-    Square rook_to = is_kingside ? ((moving_color == WHITE) ? F1 : F8)
-                                 : ((moving_color == WHITE) ? D1 : D8);
-
-    // Déplacer roi et tour
-    board->pieces[moving_color][KING] &= ~(1ULL << king_from);
-    board->pieces[moving_color][KING] |= (1ULL << king_to);
-    board->pieces[moving_color][ROOK] &= ~(1ULL << rook_from);
-    board->pieces[moving_color][ROOK] |= (1ULL << rook_to);
-
-    /* Rebuild occupied and all_pieces for moving_color */
-    board->occupied[moving_color] = 0;
-    for (PieceType pt = PAWN; pt <= KING; pt++)
-      board->occupied[moving_color] |= board->pieces[moving_color][pt];
-    board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
-
-    return;
-  }
-
-  /* En-passant capture: remove captured pawn using moving_color */
-  if (move->type == MOVE_EN_PASSANT) {
-    int captured_square = (moving_color == WHITE) ? move->to - 8 : move->to + 8;
-    board->pieces[(moving_color == WHITE) ? BLACK : WHITE][PAWN] &=
-        ~(1ULL << captured_square);
-    board->occupied[(moving_color == WHITE) ? BLACK : WHITE] &=
-        ~(1ULL << captured_square);
-  }
-
-  /* Normal move: the piece was already moved by make_move_temp, but we must
-   * ensure captures are removed */
-  Couleur opponent = (moving_color == WHITE) ? BLACK : WHITE;
-  for (PieceType pt = PAWN; pt <= KING; pt++) {
-    if (board->pieces[opponent][pt] & (1ULL << move->to)) {
-      board->pieces[opponent][pt] &= ~(1ULL << move->to);
-      break;
-    }
-  }
-
-  /* Recompute occupied bitboards and all_pieces for both colors */
-  board->occupied[moving_color] = 0;
-  for (PieceType pt = PAWN; pt <= KING; pt++)
-    board->occupied[moving_color] |= board->pieces[moving_color][pt];
-
-  board->occupied[opponent] = 0;
-  for (PieceType pt = PAWN; pt <= KING; pt++)
-    board->occupied[opponent] |= board->pieces[opponent][pt];
-
-  board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
 }
 
 // Appliquer une séquence de coups UCI
@@ -492,18 +499,26 @@ void apply_uci_moves(Board *board, char *moves_str) {
     MoveList legal_moves;
     generate_legal_moves(board, &legal_moves);
 
-    Move actual_move = {0};
+    Move actual_move;
     int found = 0;
+    // Logique de correspondance robuste
     for (int i = 0; i < legal_moves.count; i++) {
+      // Vérifier si les cases correspondent
       if (legal_moves.moves[i].from == uci_move.from &&
           legal_moves.moves[i].to == uci_move.to) {
-        if (uci_move.type == MOVE_PROMOTION &&
-            legal_moves.moves[i].type == MOVE_PROMOTION &&
-            legal_moves.moves[i].promotion == uci_move.promotion) {
-          actual_move = legal_moves.moves[i];
-          found = 1;
-          break;
-        } else if (uci_move.type == MOVE_NORMAL) {
+
+        // Si le coup UCI est une promotion, le type de promotion doit aussi
+        // correspondre
+        if (uci_move.type == MOVE_PROMOTION) {
+          if (legal_moves.moves[i].type == MOVE_PROMOTION &&
+              legal_moves.moves[i].promotion == uci_move.promotion) {
+            actual_move = legal_moves.moves[i];
+            found = 1;
+            break;
+          }
+        } else {
+          // Pour tous les autres types de coups (normaux, captures, roques,
+          // etc.), la correspondance des cases est suffisante.
           actual_move = legal_moves.moves[i];
           found = 1;
           break;

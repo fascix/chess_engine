@@ -83,9 +83,10 @@ int is_killer_move(Move move, int ply);
 void update_history(Move move, int depth, Couleur color);
 
 // Quiescence Search
-int quiescence_search(Board *board, int alpha, int beta, Couleur color);
+int quiescence_search(Board *board, int alpha, int beta, Couleur color,
+                      int ply);
 int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
-                            int qs_depth);
+                            int ply);
 void generate_capture_moves(const Board *board, MoveList *moves);
 
 // Fonctions utilitaires pour make/unmake

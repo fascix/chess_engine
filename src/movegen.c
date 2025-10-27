@@ -863,6 +863,19 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
       Couleur opponent = (piece_color == WHITE) ? BLACK : WHITE;
       board->pieces[opponent][move->captured_piece] &= ~(1ULL << move->to);
       board->occupied[opponent] &= ~(1ULL << move->to);
+
+      // NOUVEAU: Si une tour est capturée sur sa case initiale, annuler le
+      // droit de roque correspondant
+      if (move->captured_piece == ROOK) {
+        if (move->to == H1)
+          board->castle_rights &= ~WHITE_KINGSIDE;
+        if (move->to == A1)
+          board->castle_rights &= ~WHITE_QUEENSIDE;
+        if (move->to == H8)
+          board->castle_rights &= ~BLACK_KINGSIDE;
+        if (move->to == A8)
+          board->castle_rights &= ~BLACK_QUEENSIDE;
+      }
     }
   }
 
@@ -898,7 +911,7 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
   // Réinitialiser en_passant par défaut
   board->en_passant = -1;
   // Si un pion avance de deux cases, définir la case en_passant
-  if (piece_type == PAWN && (move->to - move->from) == 16) {
+  if (piece_type == PAWN && abs((int)move->to - (int)move->from) == 16) {
     board->en_passant =
         (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
   }
