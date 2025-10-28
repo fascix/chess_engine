@@ -849,8 +849,9 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     }
   }
 
-  // Gérer la capture
-  if (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT) {
+  // Gérer la capture (y compris les promotions avec capture)
+  if (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT ||
+      (move->type == MOVE_PROMOTION && move->captured_piece != EMPTY)) {
     if (move->type == MOVE_EN_PASSANT) {
       // En passant : retirer le pion capturé
       Square captured_square =
@@ -859,7 +860,8 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
       board->pieces[opponent][PAWN] &= ~(1ULL << captured_square);
       board->occupied[opponent] &= ~(1ULL << captured_square);
     } else {
-      // Capture normale : retirer la pièce capturée
+      // Capture normale (y compris promotion-capture) : retirer la pièce
+      // capturée
       Couleur opponent = (piece_color == WHITE) ? BLACK : WHITE;
       board->pieces[opponent][move->captured_piece] &= ~(1ULL << move->to);
       board->occupied[opponent] &= ~(1ULL << move->to);
