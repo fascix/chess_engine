@@ -1,5 +1,6 @@
 #include "search.h"
 #include <limits.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,6 +38,31 @@ static int history_scores[2][64][64]; // [color][from][to]
 
 static Board search_backup_stack[128]; // Stack pour sauvegardes (par ply)
 
+// ========== TABLE DE RÉDUCTIONS LMR ==========
+// Formule : reduction = log(depth) * log(move_number) / 2.5
+// Pré-calculée pour éviter les appels à log() pendant la recherche
+static int lmr_reductions[64][64]; // [depth][move_number]
+
+// Initialise la table de réductions LMR (appelée une fois au démarrage)
+void init_lmr_table() {
+  for (int depth = 1; depth < 64; depth++) {
+    for (int move_num = 1; move_num < 64; move_num++) {
+      // Formule standard : R = log(depth) * log(move_num) / diviseur
+      // diviseur = 2.5 (équilibre entre vitesse et précision)
+      double reduction = log(depth) * log(move_num) / 2.5;
+      lmr_reductions[depth][move_num] = (int)reduction;
+
+      // Clamp entre 0 et depth-1
+      if (lmr_reductions[depth][move_num] < 0) {
+        lmr_reductions[depth][move_num] = 0;
+      }
+      if (lmr_reductions[depth][move_num] >= depth) {
+        lmr_reductions[depth][move_num] = depth - 1;
+      }
+    }
+  }
+}
+
 // Applique temporairement un mouvement avec sauvegarde correcte
 void apply_move(Board *board, const Move *move, int ply) {
   // Sauvegarder l'état AVANT modification
@@ -50,14 +76,47 @@ void apply_move(Board *board, const Move *move, int ply) {
 // Annule un mouvement (restaure depuis backup)
 void undo_move(Board *board, int ply) { *board = search_backup_stack[ply]; }
 
-// Mise à jour de negamax_alpha_beta
+// ========== HELPER POUR NULL MOVE PRUNING ==========
+
+// Vérifie si le joueur a du matériel autre que des pions
+// (pour éviter les problèmes de zugzwang en finale de pions)
+int has_non_pawn_material(const Board *board, Couleur color) {
+  // On vérifie s'il y a des pièces autres que pions et roi
+  if (board->pieces[color][KNIGHT] != 0)
+    return 1; // Cavaliers
+  if (board->pieces[color][BISHOP] != 0)
+    return 1; // Fous
+  if (board->pieces[color][ROOK] != 0)
+    return 1; // Tours
+  if (board->pieces[color][QUEEN] != 0)
+    return 1; // Dames
+
+  return 0; // Seulement roi + pions (ou seulement roi)
+}
+
+// Vérifie si un coup est "quiet" (pas de capture, pas de promotion, pas
+// d'échec) Utilisé pour LMR et Futility Pruning
+int is_quiet_move(const Move *move) {
+  // Un coup est quiet s'il n'est pas :
+  // - Une capture
+  // - Une promotion
+  // - Un en-passant (type spécial de capture)
+  return (move->type != MOVE_CAPTURE && move->type != MOVE_PROMOTION &&
+          move->type != MOVE_EN_PASSANT);
+}
+
+// ========== NEGAMAX AVEC ALPHA-BETA, PVS ET NULL MOVE PRUNING ==========
+
 // Negamax avec Alpha-Beta et PVS (Principal Variation Search)
 // PVS: recherche le 1er coup avec fenêtre complète [-beta, -alpha],
 //      puis les suivants avec null window [-alpha-1, -alpha] pour détecter
 //      rapidement les coups qui n'améliorent pas alpha (avec re-recherche si
 //      nécessaire)
+//
+// NOUVEAU: in_null_move = 1 si on vient de faire un null move (évite double
+// NMP)
 int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
-                       Couleur color, int ply) {
+                       Couleur color, int ply, int in_null_move) {
   // Vérifier le temps tous les 1024 noeuds (pour ne pas trop ralentir)
   static int node_count = 0;
   if (++node_count >= 1024) {
@@ -111,6 +170,101 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 #endif
     return eval;
   }
+
+  // ========== NULL MOVE PRUNING ==========
+  // Idée : Si même en donnant un coup gratuit à l'adversaire (= passer notre
+  // tour),
+  //        notre position reste >= beta, alors on peut couper cette branche.
+  //        L'adversaire trouvera forcément mieux avec un vrai coup.
+  //
+  // Conditions de sécurité CRITIQUES :
+  // 1. depth >= 3 : Éviter les erreurs tactiques à faible profondeur
+  // 2. !in_null_move : Pas de double null move consécutif
+  // 3. !is_in_check : Interdit en échec (passer son tour serait illégal)
+  // 4. beta < MATE_SCORE : Ne pas utiliser dans séquence de mat
+  // 5. has_non_pawn_material : Désactiver en finale de pions (zugzwang)
+
+  if (depth >= 3 &&                          // Profondeur suffisante
+      !in_null_move &&                       // Pas déjà en null move
+      !is_in_check(board, color) &&          // Pas en échec
+      beta < MATE_SCORE &&                   // Pas dans séquence de mat
+      has_non_pawn_material(board, color)) { // Pas finale de pions seuls
+
+    // Sauvegarder l'état actuel
+    Couleur old_to_move = board->to_move;
+    int old_en_passant = board->en_passant;
+
+    // "Jouer" le coup null : inverser le trait (= passer notre tour)
+    board->to_move = (color == WHITE) ? BLACK : WHITE;
+    board->en_passant = -1; // Annuler l'en-passant (un coup a été "joué")
+
+    // Réduction R : on cherche avec une profondeur réduite
+    // R=2 : conservateur (plus précis mais plus lent)
+    // R=3 : agressif (plus rapide mais risque de rater des tactiques)
+    int R = 2;
+
+    // Recherche avec profondeur réduite et fenêtre null [-beta, -beta+1]
+    // On teste juste si score >= beta (fenêtre nulle pour aller vite)
+    Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+    int null_score =
+        -negamax_alpha_beta(board, depth - R - 1, -beta, -beta + 1, opponent,
+                            ply + 1, 1); // 1 = in_null_move
+
+    // Restaurer l'état du plateau
+    board->to_move = old_to_move;
+    board->en_passant = old_en_passant;
+
+    // Si la recherche null échoue haut (null_score >= beta)
+    // → Même en donnant un coup gratuit, notre position est trop bonne
+    // → Cutoff ! L'adversaire ne choisira jamais cette branche
+    if (null_score >= beta) {
+#ifdef DEBUG
+      if (ply <= 2) {
+        static int nmp_cutoff_count = 0;
+        if (nmp_cutoff_count++ < 5) {
+          DEBUG_LOG("[NMP_CUTOFF] ply=%d depth=%d null_score=%d >= beta=%d\n",
+                    ply, depth, null_score, beta);
+        }
+      }
+#endif
+      return beta; // Cutoff (cohérence avec fail-high classique)
+    }
+  }
+  // Fin du Null Move Pruning
+
+  // ========== REVERSE FUTILITY PRUNING (Static Null Move Pruning) ==========
+  // Idée : Si notre évaluation statique est TROP BONNE (bien au-dessus de
+  // beta),
+  //        on peut couper directement sans chercher les coups.
+  //        L'adversaire ne choisira jamais cette branche.
+  //
+  // Conditions :
+  // - depth <= 7 : Seulement à faible profondeur (risque tactique sinon)
+  // - !is_in_check : Pas en échec (les tactiques peuvent renverser la
+  // situation)
+  // - eval - margin >= beta : Notre position est bien meilleure que beta
+
+  if (depth <= 7 && !is_in_check(board, color)) {
+    int static_eval = evaluate_position(board);
+    static_eval = (color == WHITE) ? static_eval : -static_eval;
+
+    // Marge qui augmente avec la profondeur (plus profond = moins conservateur)
+    int rfp_margin = 120 * depth; // 120 centipawns par ply
+
+    if (static_eval - rfp_margin >= beta) {
+#ifdef DEBUG
+      if (ply <= 2) {
+        static int rfp_cutoff_count = 0;
+        if (rfp_cutoff_count++ < 5) {
+          DEBUG_LOG("[RFP_CUTOFF] ply=%d depth=%d eval=%d margin=%d beta=%d\n",
+                    ply, depth, static_eval, rfp_margin, beta);
+        }
+      }
+#endif
+      return static_eval - rfp_margin; // Cutoff conservateur
+    }
+  }
+  // Fin du Reverse Futility Pruning
 
   MoveList moves;
   generate_legal_moves(board, &moves);
@@ -198,32 +352,129 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     ordered_moves.count = 256;
   }
 
+  // Pré-calculer l'évaluation statique pour Futility Pruning
+  int static_eval_for_futility = -1;
+  int futility_pruning_active = 0;
+
+  if (depth <= 4 && !is_in_check(board, color)) {
+    static_eval_for_futility = evaluate_position(board);
+    static_eval_for_futility =
+        (color == WHITE) ? static_eval_for_futility : -static_eval_for_futility;
+    futility_pruning_active = 1;
+  }
+
   for (int i = 0; i < ordered_moves.count; i++) {
     // Sécurité avant apply_move
     if (ply >= 128) {
       DEBUG_LOG("ERROR: ply=%d trop grand avant apply_move, skip coup\n", ply);
       continue;
     }
+
+    // ========== FUTILITY PRUNING ==========
+    // Idée : Si notre position est TROP MAUVAISE (eval + marge < alpha),
+    //        et que le coup est "quiet", on peut l'ignorer car il ne peut
+    //        probablement pas améliorer alpha.
+    //
+    // Conditions :
+    // - depth <= 4 : Seulement à très faible profondeur
+    // - !is_in_check : Pas en échec
+    // - Le coup est quiet (pas de capture/promotion)
+    // - static_eval + margin < alpha : Position trop mauvaise
+
+    if (futility_pruning_active && i >= 1 && // Au moins essayer le premier coup
+        is_quiet_move(&ordered_moves.moves[i])) {
+
+      // Marge optimiste : même avec le meilleur coup quiet, peut-on battre
+      // alpha ?
+      int futility_margin = 200 * depth; // 200 centipawns par ply
+
+      if (static_eval_for_futility + futility_margin < alpha) {
+#ifdef DEBUG
+        if (ply <= 2 && i < 10) {
+          static int futility_skip_count = 0;
+          if (futility_skip_count++ < 5) {
+            DEBUG_LOG("[FUTILITY_SKIP] ply=%d depth=%d i=%d eval=%d margin=%d "
+                      "alpha=%d\n",
+                      ply, depth, i, static_eval_for_futility, futility_margin,
+                      alpha);
+          }
+        }
+#endif
+        continue; // Ignorer ce coup quiet
+      }
+    }
+    // Fin du Futility Pruning
+
     apply_move(board, &ordered_moves.moves[i], ply);
 
-    // Recherche récursive avec PVS (Principal Variation Search)
+    // ========== RECHERCHE RÉCURSIVE AVEC PVS + LMR ==========
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
     int score;
 
     if (i == 0) {
-      // Premier coup : recherche avec fenêtre complète (PV node)
+      // ===== Premier coup (PV node) : recherche complète =====
       score = -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent,
-                                  ply + 1);
+                                  ply + 1, 0);
     } else {
-      // Coups suivants : recherche avec fenêtre nulle (null window search)
-      score = -negamax_alpha_beta(board, depth - 1, -alpha - 1, -alpha,
-                                  opponent, ply + 1);
+      // ===== Coups suivants : PVS + LMR =====
 
-      // Si le coup améliore alpha et qu'on a une vraie fenêtre, re-rechercher
+      // Calculer la réduction LMR
+      int reduction = 0;
+
+      // Conditions LMR :
+      // 1. depth >= 3 : Profondeur suffisante
+      // 2. i >= 4 : Au moins 4 coups déjà explorés (les meilleurs)
+      // 3. Le coup est "quiet" (pas de capture, promotion, échec)
+      // 4. Pas en échec (on veut réduire seulement en positions calmes)
+
+      if (depth >= 3 && i >= 4 && is_quiet_move(&ordered_moves.moves[i]) &&
+          !is_in_check(board, color)) {
+
+        // Utiliser la table pré-calculée (clampée à 63 max)
+        int d_idx = (depth < 64) ? depth : 63;
+        int m_idx = (i < 64) ? i : 63;
+        reduction = lmr_reductions[d_idx][m_idx];
+
+        // Bonus : Réduire encore plus si le coup a un mauvais score
+        // d'historique (histoire heuristique négative = coup qui échoue
+        // souvent)
+        if (history_scores[color][ordered_moves.moves[i].from]
+                          [ordered_moves.moves[i].to] < 0) {
+          reduction++; // Réduction supplémentaire
+        }
+
+        // Clamp la réduction pour ne pas descendre à depth <= 0
+        if (reduction >= depth - 1) {
+          reduction = depth - 2;
+        }
+        if (reduction < 0) {
+          reduction = 0;
+        }
+      }
+
+      // Étape 1 : Recherche avec réduction (si LMR applicable)
+      if (reduction > 0) {
+        // Recherche réduite avec fenêtre null
+        score = -negamax_alpha_beta(board, depth - 1 - reduction, -alpha - 1,
+                                    -alpha, opponent, ply + 1, 0);
+      } else {
+        // Pas de réduction : recherche normale avec fenêtre null (PVS standard)
+        score = -negamax_alpha_beta(board, depth - 1, -alpha - 1, -alpha,
+                                    opponent, ply + 1, 0);
+      }
+
+      // Étape 2 : Re-recherche si le coup réduit surprend (score > alpha)
+      if (reduction > 0 && score > alpha) {
+        // Le coup réduit est meilleur que prévu ! Re-rechercher sans réduction
+        score = -negamax_alpha_beta(board, depth - 1, -alpha - 1, -alpha,
+                                    opponent, ply + 1, 0);
+      }
+
+      // Étape 3 : Re-recherche PVS si score améliore alpha (PV node potentiel)
       if (score > alpha && score < beta) {
-        // Re-search avec fenêtre complète
+        // Re-search avec fenêtre complète pour obtenir le score exact
         score = -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent,
-                                    ply + 1);
+                                    ply + 1, 0);
       }
     }
 
@@ -444,6 +695,10 @@ void initialize_engine() {
   // 3. Initialiser killer moves et history
   init_killer_moves();
   DEBUG_LOG("✓ Tables de move ordering initialisées\n");
+
+  // 4. Initialiser la table LMR
+  init_lmr_table();
+  DEBUG_LOG("✓ Table LMR initialisée\n");
 
   DEBUG_LOG("=== MOTEUR PRÊT ===\n\n");
 }
@@ -1035,8 +1290,9 @@ SearchResult search_best_move_with_min_depth(Board *board, int max_depth,
 #endif
 
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+    // in_null_move = 0 : on commence la recherche avec un vrai coup
     int score = -negamax_alpha_beta(board, search_depth - 1, -INFINITY_SCORE,
-                                    INFINITY_SCORE, opponent, 1);
+                                    INFINITY_SCORE, opponent, 1, 0);
     result.nodes_searched++;
 
     undo_move(board, 0);

@@ -97,5 +97,10 @@ void undo_move(Board *board, int ply);
 int gives_check(const Board *board, const Move *move);
 int moves_toward_center(const Board *board, const Move *move);
 int is_obviously_bad_move(const Board *board, const Move *move);
+int has_non_pawn_material(const Board *board, Couleur color);
+
+// Negamax avec paramètre in_null_move
+int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
+                       Couleur color, int ply, int in_null_move);
 
 #endif // SEARCH_H
