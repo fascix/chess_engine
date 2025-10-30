@@ -239,17 +239,18 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   //        L'adversaire ne choisira jamais cette branche.
   //
   // Conditions :
-  // - depth <= 7 : Seulement à faible profondeur (risque tactique sinon)
+  // - depth <= 3 : SEULEMENT à très faible profondeur (CRITIQUE: trop agressif
+  // avant!)
   // - !is_in_check : Pas en échec (les tactiques peuvent renverser la
   // situation)
   // - eval - margin >= beta : Notre position est bien meilleure que beta
 
-  if (depth <= 7 && !is_in_check(board, color)) {
+  if (depth <= 3 && !is_in_check(board, color)) {
     int static_eval = evaluate_position(board);
     static_eval = (color == WHITE) ? static_eval : -static_eval;
 
-    // Marge qui augmente avec la profondeur (plus profond = moins conservateur)
-    int rfp_margin = 120 * depth; // 120 centipawns par ply
+    // Marge réduite (moins agressif)
+    int rfp_margin = 100 * depth; // 100 centipawns par ply (au lieu de 120)
 
     if (static_eval - rfp_margin >= beta) {
 #ifdef DEBUG
@@ -356,7 +357,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   int static_eval_for_futility = -1;
   int futility_pruning_active = 0;
 
-  if (depth <= 4 && !is_in_check(board, color)) {
+  // CORRECTION: Futility seulement à depth <= 2 (au lieu de 4)
+  if (depth <= 2 && !is_in_check(board, color)) {
     static_eval_for_futility = evaluate_position(board);
     static_eval_for_futility =
         (color == WHITE) ? static_eval_for_futility : -static_eval_for_futility;
@@ -386,7 +388,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
       // Marge optimiste : même avec le meilleur coup quiet, peut-on battre
       // alpha ?
-      int futility_margin = 200 * depth; // 200 centipawns par ply
+      int futility_margin =
+          150 * depth; // 150 centipawns par ply (réduit de 200)
 
       if (static_eval_for_futility + futility_margin < alpha) {
 #ifdef DEBUG
@@ -1452,16 +1455,20 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     DEBUG_LOG("\n--- Depth %d (elapsed: %dms / %dms) ---\n", depth, elapsed_ms,
               time_limit_ms);
 
-    // Si on a déjà utilisé plus de 50% du temps, arrêter (plus agressif)
-    if (elapsed_ms >= time_limit_ms / 2 && depth > min_depth) {
-      DEBUG_LOG("Time limit reached (50%%), stopping at depth %d\n", depth - 1);
+    // AMÉLIORATION: Arrêter seulement si on a utilisé 80% du temps (au lieu de
+    // 50%) Cela permet de chercher plus profond
+    if (elapsed_ms >= (time_limit_ms * 4) / 5 && depth > min_depth) {
+      DEBUG_LOG("Time limit reached (80%%), stopping at depth %d\n", depth - 1);
       break;
     }
 
     // Vérifier qu'on a assez de temps pour une itération complète
-    if (depth > min_depth && elapsed_ms * 3 >= time_limit_ms) {
-      DEBUG_LOG("Not enough time for depth %d, stopping at depth %d\n", depth,
-                depth - 1);
+    // Heuristique: la prochaine profondeur prend ~4x le temps de la précédente
+    // On vérifie qu'il reste au moins 20% du temps (au lieu de 33%)
+    if (depth > min_depth && elapsed_ms * 5 >= time_limit_ms * 4) {
+      DEBUG_LOG("Not enough time for depth %d (need ~4x current), stopping at "
+                "depth %d\n",
+                depth + 1, depth);
       break;
     }
 
@@ -1500,17 +1507,15 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
               depth, current_result.score, best_result.nodes_searched,
               elapsed_ms, best_result.nps);
 
-    // Arrêter si le temps est écoulé
+    // Arrêter si le temps est écoulé (100% utilisé)
     if (elapsed_ms >= time_limit_ms) {
-      DEBUG_LOG("Time limit reached, stopping\n");
+      DEBUG_LOG("Time limit reached (100%%), stopping\n");
       break;
     }
 
-    // Si on a utilisé plus de 40% du temps pour cette itération, arrêter
-    if (elapsed_ms * 5 >= time_limit_ms * 2 && depth > min_depth) {
-      DEBUG_LOG("Used >40%% of time, stopping at depth %d\n", depth);
-      break;
-    }
+    // SUPPRESSION de la vérification "40% du temps pour cette itération"
+    // Cette heuristique est trop agressive et empêche d'utiliser tout le temps
+    // On laisse l'iterative deepening continuer tant qu'on a du temps
 
     // Arrêt si mat trouvé
     if (abs(current_result.score) >= MATE_SCORE - 100) {

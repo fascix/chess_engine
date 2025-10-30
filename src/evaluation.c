@@ -470,14 +470,27 @@ int evaluate_safe_development(const Board *board) {
 
       // Cavaliers développés (pas sur première rangée)
       int rank = square / 8;
+      int file = square % 8;
       int home_rank = (color == WHITE) ? 0 : 7;
 
       if (rank != home_rank) {
-        bonus += 25 * color_multiplier; // Développé
+        // NOUVELLE LOGIQUE: Pénaliser fortement les mauvaises cases
+        // Cases a3, a4, a5, a6, h3, h4, h5, h6 (bordures) sont MAUVAISES pour
+        // les cavaliers
+        int is_bad_square =
+            (file == 0 || file == 7) && (rank >= 2 && rank <= 5);
 
-        // Bonus supplémentaire s'il n'est pas pendu
-        if (!is_piece_hanging(board, square, color)) {
-          bonus += 15 * color_multiplier; // Sécurisé
+        if (is_bad_square) {
+          // PÉNALITÉ pour cavalier sur mauvaise case
+          bonus += -40 * color_multiplier; // Très mauvais !
+        } else {
+          // Bon développement
+          bonus += 25 * color_multiplier;
+
+          // Bonus supplémentaire s'il n'est pas pendu
+          if (!is_piece_hanging(board, square, color)) {
+            bonus += 15 * color_multiplier;
+          }
         }
       }
     }

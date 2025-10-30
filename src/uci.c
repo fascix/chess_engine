@@ -287,40 +287,57 @@ int calculate_time_for_move(Board *board, GoParams *params) {
     return 1000; // 1 seconde par défaut
   }
 
-  // Calcul du temps alloué avec stratégie CONSERVATIVE pour éviter les pertes
-  // au temps
+  // ========== NOUVELLE STRATÉGIE DE TIME MANAGEMENT ==========
+  // Objectif: Utiliser efficacement le temps disponible pour chercher plus
+  // profond
+
   int moves_to_go = params->movestogo;
   if (moves_to_go <= 0) {
-    // Estimer le nombre de coups restants de manière conservatrice
-    moves_to_go = 40; // Hypothèse : 40 coups jusqu'à la fin
+    // Estimer le nombre de coups restants selon la phase de jeu
+    // En début de partie: ~30 coups, en milieu: ~20, en fin: ~10
+    if (board->move_number < 10) {
+      moves_to_go = 30;
+    } else if (board->move_number < 30) {
+      moves_to_go = 20;
+    } else {
+      moves_to_go = 15;
+    }
   }
 
-  // Formule TRÈS conservative : utiliser beaucoup moins de temps par coup
-  // (temps_restant / (coups_restants * 3)) + (incrément * 0.5)
-  int allocated_time = (my_time / (moves_to_go * 3)) + (my_inc / 2);
+  // Formule AMÉLIORÉE: allouer plus de temps tout en gardant une marge de
+  // sécurité (temps_restant / (coups_restants * 1.5)) + incrément
+  int allocated_time = (my_time * 2 / (moves_to_go * 3)) + my_inc;
 
-  // Sécurités renforcées :
-  // 1. Ne JAMAIS utiliser plus de 1/15 du temps restant
-  int max_time = my_time / 15;
+  // Sécurités raisonnables:
+  // 1. Maximum: 1/10 du temps restant (au lieu de 1/15) + incrément
+  int max_time = (my_time / 10) + my_inc;
   if (allocated_time > max_time) {
     allocated_time = max_time;
   }
 
-  // 2. Minimum de 10ms pour éviter des moves trop rapides
-  if (allocated_time < 10) {
-    allocated_time = 10;
+  // 2. Minimum: 50ms pour permettre une recherche décente
+  if (allocated_time < 50) {
+    allocated_time = 50;
   }
 
-  // 3. Laisser un buffer de 100ms pour la communication et overhead
+  // 3. Buffer de sécurité réduit: seulement 50ms (au lieu de 100ms)
   if (allocated_time > 100) {
-    allocated_time -= 100;
-  } else if (allocated_time > 20) {
-    allocated_time -= 20;
+    allocated_time -= 50;
   }
 
-  // 4. Maximum absolu pour éviter de bloquer trop longtemps
-  if (allocated_time > 2000) {
-    allocated_time = 2000; // Max 2 secondes par coup
+  // 4. Maximum absolu raisonnable: 5 secondes par coup (au lieu de 2)
+  // (important pour les positions complexes)
+  if (allocated_time > 5000) {
+    allocated_time = 5000;
+  }
+
+  // 5. En situation d'urgence (< 1s restant), mode panique
+  if (my_time < 1000) {
+    // Utiliser seulement 1/5 du temps avec minimum 10ms
+    allocated_time = my_time / 5;
+    if (allocated_time < 10) {
+      allocated_time = 10;
+    }
   }
 
   DEBUG_LOG_UCI("Allocated time for this move: %dms (moves_to_go=%d)\n",
