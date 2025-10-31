@@ -1,7 +1,0 @@
-import pygame
-
-WINDOW_SIZE = 800
-TILE_SIZE = WINDOW_SIZE // 8
-
-WHITE = (238, 238, 210)
-BLACK = (118, 150, 86)
