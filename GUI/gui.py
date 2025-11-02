@@ -114,6 +114,32 @@ def highlight_en_passant_moves(screen, legal_moves, player_is_white=True):
             pygame.draw.circle(screen, (255, 0, 0), 
                              (x + TILE_SIZE // 2, y + TILE_SIZE // 2), 10)
 
+def display_draw(screen, reason):
+    """Affiche un message de partie nulle."""
+    font = pygame.font.Font(None, 64)
+    overlay = pygame.Surface((WINDOW_SIZE + 300, WINDOW_SIZE))
+    overlay.set_alpha(200)
+    overlay.fill((0, 0, 0))
+
+    message = "Partie nulle !"
+    reason_text = f"({reason})"
+
+    text_surface = font.render(message, True, (255, 165, 0))  # Orange
+    reason_surface = pygame.font.Font(None, 36).render(reason_text, True, (200, 200, 200))
+    
+    text_rect = text_surface.get_rect(center=(WINDOW_SIZE // 2 + 150, WINDOW_SIZE // 2 - 30))
+    reason_rect = reason_surface.get_rect(center=(WINDOW_SIZE // 2 + 150, WINDOW_SIZE // 2 + 20))
+
+    screen.blit(overlay, (0, 0))
+    screen.blit(text_surface, text_rect)
+    screen.blit(reason_surface, reason_rect)
+    pygame.display.flip()
+
+    # Attendre quelques secondes avant de retourner au menu
+    pygame.time.wait(4000)
+    from menu import main_menu
+    main_menu()
+
 def display_checkmate(screen, loser_color):
     """Affiche le message d'échec et mat."""
     font = pygame.font.Font(None, 64)

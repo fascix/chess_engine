@@ -210,6 +210,24 @@ def execute_move(board, move):
     # Ajouter la pièce capturée si elle existe
     if captured_piece and captured_color:
         captured_pieces[captured_color].append(captured_piece)
+    
+    # Vérifier la règle des 50 coups
+    if board.is_fifty_moves():
+        from gui import display_draw
+        display_draw(pygame.display.get_surface(), "Règle des 50 coups")
+        return
+    
+    # Vérifier le pat (stalemate)
+    if board.is_stalemate():
+        from gui import display_draw
+        display_draw(pygame.display.get_surface(), "Pat (Stalemate)")
+        return
+    
+    # Vérifier matériel insuffisant
+    if board.is_insufficient_material():
+        from gui import display_draw
+        display_draw(pygame.display.get_surface(), "Matériel insuffisant")
+        return
         
     if board.is_checkmate():
         # Import local pour éviter l'import circulaire
