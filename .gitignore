@@ -1,0 +1,10 @@
+# Dossier de build pour les .o et .d
+build
+build_debug
+
+# binaires du moteur 
+chess_engine
+chess_engine_debug
+
+# DS_Store
+.DS_Store
