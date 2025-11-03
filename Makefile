@@ -25,8 +25,9 @@ BUILD_DIR = build
 BUILD_DIR_DEBUG = build_debug
 # Ces dossiers permettent de séparer les fichiers objets et dépendances selon le type de build (release ou debug)
 
-SRC = $(wildcard Engine/*.c)
+SRC = Engine/board.c Engine/movegen.c Engine/perft.c Engine/uci.c Engine/timemanager.c Engine/search.c Engine/main.c
 # Liste tous les fichiers sources .c dans le dossier Engine
+# Note: Liste explicite pour contrôler l'ordre de compilation
 
 OBJ_RELEASE = $(patsubst Engine/%.c,$(BUILD_DIR)/%.o,$(SRC))
 # Liste les fichiers objets pour la build release, placés dans le dossier build
