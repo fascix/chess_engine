@@ -6,14 +6,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Macro pour logs de debug conditionnels
-#ifdef DEBUG
-#define DEBUG_LOG_UCI(...) fprintf(stderr, "[UCI] " __VA_ARGS__)
-#else
-#define DEBUG_LOG_UCI(...)
-#endif
+// Macro pour logs de debug conditionnels (dynamique)
+#define DEBUG_LOG_UCI(...)                                                     \
+  do {                                                                         \
+    if (uci_debug)                                                             \
+      fprintf(stderr, "[UCI] " __VA_ARGS__);                                   \
+  } while (0)
 
 volatile bool stop_search_flag = false; // Variable pour arrêter la recherche
+volatile int uci_debug = 0;             // Debug dynamique (0 ou 1)
+
+// Options UCI configurables
+UCIOptions uci_options = {
+    .hash_size_mb = 16, // Défaut: 16 MB
+    .ponder = 0,        // Défaut: désactivé
+    .own_book = 0,      // Défaut: pas de livre
+    .analyse_mode = 0   // Défaut: mode normal
+};
 
 // Boucle principale UCI
 void uci_loop() {
@@ -47,18 +56,31 @@ void parse_uci_command(char *line, Board *board) {
     handle_uci();
   } else if (strcmp(command, "isready") == 0) {
     handle_isready();
+  } else if (strcmp(command, "debug") == 0) {
+    char *params = strtok(NULL, "");
+    handle_debug(params);
+  } else if (strcmp(command, "setoption") == 0) {
+    char *params = strtok(NULL, "");
+    handle_setoption(params);
+  } else if (strcmp(command, "register") == 0) {
+    char *params = strtok(NULL, "");
+    handle_register(params);
   } else if (strcmp(command, "ucinewgame") == 0) {
     handle_ucinewgame();
   } else if (strcmp(command, "position") == 0) {
-    char *params = strtok(NULL, ""); // Récupérer le reste
+    char *params = strtok(NULL, "");
     handle_position(board, params);
   } else if (strcmp(command, "go") == 0) {
-    char *params = strtok(NULL, ""); // Récupérer le reste
+    char *params = strtok(NULL, "");
     handle_go(board, params);
+  } else if (strcmp(command, "ponderhit") == 0) {
+    handle_ponderhit();
   } else if (strcmp(command, "stop") == 0) {
     handle_stop();
   } else if (strcmp(command, "quit") == 0) {
     handle_quit();
+  } else {
+    DEBUG_LOG_UCI("Unknown command: %s\n", command);
   }
 }
 
@@ -68,14 +90,97 @@ void handle_uci() {
   fflush(stdout);
   printf("id author Fascix\n");
   fflush(stdout);
+
+  // Envoyer les options supportées (obligatoire pour conformité UCI)
+  printf("option name Hash type spin default 16 min 1 max 1024\n");
+  fflush(stdout);
+  printf("option name Ponder type check default false\n");
+  fflush(stdout);
+  printf("option name OwnBook type check default false\n");
+  fflush(stdout);
+  printf("option name UCI_AnalyseMode type check default false\n");
+  fflush(stdout);
+
   printf("uciok\n");
-  fflush(stdout); // essentiel pour UCI
+  fflush(stdout);
 }
 
 // Gestionnaire commande "isready"
 void handle_isready() {
   printf("readyok\n");
   fflush(stdout);
+}
+
+// Gestionnaire commande "debug"
+void handle_debug(char *params) {
+  if (!params)
+    return;
+
+  if (strcmp(params, "on") == 0) {
+    uci_debug = 1;
+    fprintf(stderr, "[UCI] Debug mode enabled\n");
+  } else if (strcmp(params, "off") == 0) {
+    uci_debug = 0;
+    fprintf(stderr, "[UCI] Debug mode disabled\n");
+  }
+}
+
+// Gestionnaire commande "setoption"
+void handle_setoption(char *params) {
+  if (!params)
+    return;
+
+  // Format: name <id> [value <x>]
+  char *name_token = strstr(params, "name");
+  if (!name_token)
+    return;
+
+  name_token += 5; // Passer "name "
+  while (*name_token == ' ')
+    name_token++; // Sauter les espaces
+
+  char *value_token = strstr(name_token, " value ");
+  char option_name[256];
+
+  if (value_token) {
+    size_t name_len = value_token - name_token;
+    strncpy(option_name, name_token, name_len);
+    option_name[name_len] = '\0';
+    value_token += 7; // Passer " value "
+  } else {
+    strncpy(option_name, name_token, sizeof(option_name) - 1);
+    option_name[sizeof(option_name) - 1] = '\0';
+  }
+
+  // Traiter les options connues
+  if (strcmp(option_name, "Hash") == 0 && value_token) {
+    int hash_mb = atoi(value_token);
+    if (hash_mb >= 1 && hash_mb <= 1024) {
+      uci_options.hash_size_mb = hash_mb;
+      DEBUG_LOG_UCI("Hash set to %d MB\n", hash_mb);
+    }
+  } else if (strcmp(option_name, "Ponder") == 0 && value_token) {
+    uci_options.ponder = (strcmp(value_token, "true") == 0) ? 1 : 0;
+    DEBUG_LOG_UCI("Ponder set to %d\n", uci_options.ponder);
+  } else if (strcmp(option_name, "OwnBook") == 0 && value_token) {
+    uci_options.own_book = (strcmp(value_token, "true") == 0) ? 1 : 0;
+    DEBUG_LOG_UCI("OwnBook set to %d\n", uci_options.own_book);
+  } else if (strcmp(option_name, "UCI_AnalyseMode") == 0 && value_token) {
+    uci_options.analyse_mode = (strcmp(value_token, "true") == 0) ? 1 : 0;
+    DEBUG_LOG_UCI("UCI_AnalyseMode set to %d\n", uci_options.analyse_mode);
+  } else {
+    DEBUG_LOG_UCI("Unknown or unsupported option: %s\n", option_name);
+  }
+}
+
+// Gestionnaire commande "register"
+void handle_register(char *params) {
+  // Cette commande est optionnelle (protection contre la copie)
+  // On l'ignore mais on la reconnaît pour éviter "unknown command"
+  DEBUG_LOG_UCI("Register command received (ignored): %s\n",
+                params ? params : "");
+  // On pourrait répondre "registration ok" ou "registration error"
+  // Pour un moteur libre, on ne fait rien
 }
 
 // Gestionnaire commande "ucinewgame"
@@ -281,27 +386,34 @@ void handle_go(Board *board, char *params) {
     return;
   }
 
-  // Envoyer le résultat au format UCI
-  printf("info depth %d score cp %d nodes %d nps %d pv %s\n", result.depth,
-         result.score, result.nodes, result.nps,
-         move_to_string(&result.best_move));
-  fflush(stdout);
-
+  // Envoyer le bestmove (info déjà envoyé par search_iterative_deepening)
   printf("bestmove %s\n", move_to_string(&result.best_move));
   fflush(stdout);
 
   DEBUG_LOG_UCI("=== HANDLE_GO END ===\n\n");
 }
 
+// Gestionnaire commande "ponderhit"
+void handle_ponderhit() {
+  // Quand le moteur était en mode "ponder" et que le coup prédit a été joué
+  // On doit basculer la recherche en mode normal
+  // Pour l'instant, on reconnaît la commande sans l'implémenter
+  DEBUG_LOG_UCI("Ponderhit received (pondering not yet implemented)\n");
+  // TODO: Quand le pondering sera implémenté, basculer le temps en mode normal
+}
+
 // Gestionnaire commande "stop"
 void handle_stop() {
   stop_search_flag = true;
-  printf("# Search stopped\n");
+  DEBUG_LOG_UCI("Stop command received\n");
   fflush(stdout);
 }
 
 // Gestionnaire commande "quit"
-void handle_quit() { exit(0); }
+void handle_quit() {
+  DEBUG_LOG_UCI("Quit command received, exiting\n");
+  exit(0);
+}
 
 // Applique un coup UCI en mettant à jour l'état du board
 void apply_uci_move(Board *board, const Move *move) {

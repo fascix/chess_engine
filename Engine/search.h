@@ -18,4 +18,8 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
                                         int time_limit_ms);
 void initialize_engine();
 
+// Fonction utilitaire pour envoyer des infos UCI pendant la recherche
+void send_search_info(int depth, int score, int nodes, int nps,
+                      const Move *pv_move);
+
 #endif // SEARCH_H

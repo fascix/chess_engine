@@ -10,11 +10,25 @@ void initialize_engine() {
 #endif
 }
 
-// Fonction de recherche itérative deepening (stub)
+// Fonction utilitaire pour envoyer des infos UCI pendant la recherche
+void send_search_info(int depth, int score, int nodes, int nps,
+                      const Move *pv_move) {
+  if (pv_move) {
+    printf("info depth %d score cp %d nodes %d nps %d pv %s\n", depth, score,
+           nodes, nps, move_to_string(pv_move));
+  } else {
+    printf("info depth %d score cp %d nodes %d nps %d\n", depth, score, nodes,
+           nps);
+  }
+  fflush(stdout);
+}
+
+// Fonction de recherche itérative deepening (stub amélioré avec info UCI)
 SearchResult search_iterative_deepening(Board *board, int max_depth,
                                         int time_limit_ms) {
   // TODO: Implémenter la recherche réelle
   // Pour l'instant, retourner simplement le premier coup légal
+  // MAIS envoyer des infos UCI pour montrer la progression
 
   SearchResult result;
   memset(&result, 0, sizeof(result));
@@ -27,7 +41,12 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     result.depth = 1;
     result.score = 0;
     result.nodes = legal_moves.count;
-    result.nps = 0;
+    result.nps =
+        legal_moves.count * 1000 / (time_limit_ms > 0 ? time_limit_ms : 1);
+
+    // Envoyer une info UCI pour montrer qu'on a trouvé un coup
+    send_search_info(result.depth, result.score, result.nodes, result.nps,
+                     &result.best_move);
   } else {
     // Aucun coup légal - retourner un coup invalide
     result.best_move.from = -1;

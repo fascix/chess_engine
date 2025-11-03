@@ -29,8 +29,11 @@ void parse_go_params(char *params, GoParams *go_params) {
   go_params->binc = 0;
   go_params->movestogo = -1;
   go_params->depth = -1;
+  go_params->nodes = -1;
+  go_params->mate = -1;
   go_params->movetime = -1;
   go_params->infinite = 0;
+  go_params->ponder = 0;
 
   DEBUG_LOG_TIME("Parsing go params: '%s'\n", params ? params : "(null)");
 
@@ -63,12 +66,42 @@ void parse_go_params(char *params, GoParams *go_params) {
       token = strtok(NULL, " ");
       if (token)
         go_params->depth = atoi(token);
+    } else if (strcmp(token, "nodes") == 0) {
+      token = strtok(NULL, " ");
+      if (token)
+        go_params->nodes = atoi(token);
+    } else if (strcmp(token, "mate") == 0) {
+      token = strtok(NULL, " ");
+      if (token)
+        go_params->mate = atoi(token);
     } else if (strcmp(token, "movetime") == 0) {
       token = strtok(NULL, " ");
       if (token)
         go_params->movetime = atoi(token);
     } else if (strcmp(token, "infinite") == 0) {
       go_params->infinite = 1;
+    } else if (strcmp(token, "ponder") == 0) {
+      go_params->ponder = 1;
+    } else if (strcmp(token, "searchmoves") == 0) {
+      // Ignorer proprement searchmoves (liste de coups à considérer)
+      // Format: searchmoves e2e4 d2d4 ...
+      // On saute tous les tokens jusqu'à un autre keyword
+      DEBUG_LOG_TIME("searchmoves parameter ignored\n");
+      token = strtok(NULL, " ");
+      while (token != NULL) {
+        // Vérifier si c'est un keyword connu
+        if (strcmp(token, "wtime") == 0 || strcmp(token, "btime") == 0 ||
+            strcmp(token, "winc") == 0 || strcmp(token, "binc") == 0 ||
+            strcmp(token, "movestogo") == 0 || strcmp(token, "depth") == 0 ||
+            strcmp(token, "nodes") == 0 || strcmp(token, "mate") == 0 ||
+            strcmp(token, "movetime") == 0 || strcmp(token, "infinite") == 0 ||
+            strcmp(token, "ponder") == 0) {
+          // Revenir en arrière pour retraiter ce token
+          break;
+        }
+        token = strtok(NULL, " ");
+      }
+      continue; // Retraiter le token courant
     } else {
       token = strtok(NULL, " ");
     }

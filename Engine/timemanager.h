@@ -11,8 +11,11 @@ typedef struct {
   int binc;      // Incrément pour les noirs (ms)
   int movestogo; // Nombre de coups avant le prochain contrôle de temps
   int depth;     // Profondeur maximale
+  int nodes;     // Nombre de nœuds maximal à explorer
+  int mate;      // Chercher un mat en X coups
   int movetime;  // Temps fixe pour ce coup (ms)
   int infinite;  // Recherche infinie
+  int ponder;    // Recherche en mode pondering
 } GoParams;
 
 // Parse les paramètres de la commande "go"
