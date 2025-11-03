@@ -1,20 +1,9 @@
 #include "evaluation.h"
 #include "Piece_Square_tables.h"
+#include "utils.h"
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-// Retourne la valeur d'une pièce
-int piece_value(PieceType piece) {
-  // amélioration avec la phase du jeu à faire
-  static const int values[] = {PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE,
-                               ROOK_VALUE, QUEEN_VALUE,  KING_VALUE};
-
-  if (piece >= PAWN && piece <= KING) {
-    return values[piece];
-  }
-  return 0;
-}
 
 // Évalue le matériel (différence de valeur des pièces)
 int evaluate_material(const Board *board) {

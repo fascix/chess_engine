@@ -3,6 +3,7 @@
 
 #include "board.h"
 #include "movegen.h"
+#include "utils.h"
 
 // Valeurs des pièces (en centipawns, 100 = 1 pion)
 // Valeurs plus arbitraire peuvent être mise par la suite (cf
@@ -27,8 +28,7 @@
 #define KING_OPEN_FILE_PENALTY -20
 #define CENTER_PAWN_BONUS 10
 
-// Phases de jeu
-typedef enum { OPENING_PHASE, MIDDLEGAME_PHASE, ENDGAME_PHASE } GamePhase;
+// Phases de jeu (défini dans utils.h)
 
 // Fonctions d'évaluation principales
 int evaluate_position(const Board *board);
@@ -50,7 +50,7 @@ int evaluate_position_interpolated(const Board *board, GamePhase phase,
 
 // Fonctions utilitaires
 int is_endgame(const Board *board);
-int piece_value(PieceType piece);
+// int piece_value(PieceType piece); // Dans utils.h
 GamePhase get_game_phase(const Board *board);
 float get_phase_factor(const Board *board);
 int is_pawn_passed(const Board *board, Square pawn_square, Couleur color);

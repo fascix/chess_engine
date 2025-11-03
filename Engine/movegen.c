@@ -35,65 +35,7 @@ Move create_promotion_move(Square from, Square to, PieceType promotion) {
   return move;
 }
 
-// Affiche un coup en notation lisible
-void print_move(const Move *move) {
-  // Conversion Square → coordonnées (A1, B2, etc.)
-  char from_str[3] = {'a' + (move->from % 8), '1' + (move->from / 8), '\0'};
-  char to_str[3] = {'a' + (move->to % 8), '1' + (move->to / 8), '\0'};
-
-  printf("%s%s", from_str, to_str);
-
-  // Affichage spécial selon le type
-  switch (move->type) {
-  case MOVE_PROMOTION: {
-    const char pieces[] = "PNBRQK"; // Pas d'espace ! PAWN=0->P, QUEEN=4->Q
-    printf("=%c", pieces[move->promotion]);
-    break;
-  }
-  case MOVE_CASTLE:
-    printf(" (roque)");
-    break;
-  case MOVE_EN_PASSANT:
-    printf(" (en passant)");
-    break;
-  case MOVE_CAPTURE:
-    printf(" (capture)");
-    break;
-  default:
-    break;
-  }
-}
-
-// Affiche toute la liste de coups
-void print_movelist(const MoveList *list) {
-  printf("Coups générés (%d) :\n", list->count);
-  for (int i = 0; i < list->count; i++) {
-    printf("%2d. ", i + 1);
-    print_move(&list->moves[i]);
-    printf("\n");
-  }
-}
-// Convertit un coup en string (thread-safe avec buffer static)
-char *move_to_string(const Move *move) {
-  static char buffer[16];
-  char from_str[3] = {'a' + (move->from % 8), '1' + (move->from / 8), '\0'};
-  char to_str[3] = {'a' + (move->to % 8), '1' + (move->to / 8), '\0'};
-
-  sprintf(buffer, "%s%s", from_str, to_str);
-
-  switch (move->type) {
-  case MOVE_PROMOTION: {
-    const char pieces[] = "pnbrqk"; // UCI utilise minuscules
-    sprintf(buffer + strlen(buffer), "%c",
-            pieces[move->promotion]); // UCI sans '='
-    break;
-  }
-  default:
-    break;
-  }
-
-  return buffer;
-}
+// Fonctions d'affichage déplacées vers utils.c
 // Génération complète de tous les coups légaux pour une position
 void generate_moves(const Board *board, MoveList *moves) {
   // Vérifications de sécurité

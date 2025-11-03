@@ -71,10 +71,10 @@ typedef enum {
 
 GameResult get_game_result(const Board *board);
 
-// Utilitaires d'affichage
-void print_move(const Move *move);
-void print_movelist(const MoveList *list);
-char *move_to_string(const Move *move);
+// Utilitaires d'affichage (déplacés vers utils.h)
+// void print_move(const Move *move);
+// void print_movelist(const MoveList *list);
+// char *move_to_string(const Move *move);
 
 #define ADD_PROMOTIONS(from, to, captured, moves)                              \
   do {                                                                         \
