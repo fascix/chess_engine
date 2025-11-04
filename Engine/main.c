@@ -1,7 +1,9 @@
+#include "search.h"
 #include "uci.h"
 
+// main.c
 int main() {
-  // Lancer la boucle UCI
+  initialize_engine();
   uci_loop();
   return 0;
 }

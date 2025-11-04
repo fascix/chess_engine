@@ -78,9 +78,37 @@ chess_engine: $(OBJ_RELEASE)
 chess_engine_debug: $(OBJ_DEBUG)
 	$(CC) $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -o $@ $^ -lm
 
-# Nettoyage des fichiers générés : exécutables et dossiers de build
+# ========== CIBLES DE NETTOYAGE ==========
+
+# Nettoyage basique : supprime les exécutables et dossiers build
 clean:
-	rm -rf chess_engine chess_engine_debug $(BUILD_DIR) $(BUILD_DIR_DEBUG) versions/*/chess_engine_*
+	@echo "🧹 Nettoyage des builds principaux..."
+	@rm -f chess_engine chess_engine_debug
+	@rm -rf $(BUILD_DIR) $(BUILD_DIR_DEBUG)
+	@echo "✅ Nettoyage terminé"
+
+# Nettoyage des versions : supprime tous les dossiers versions/v*_build
+clean-versions:
+	@echo "🧹 Nettoyage des versions..."
+	@rm -rf versions/v*_build
+	@echo "✅ Versions nettoyées"
+
+# Nettoyage des logs et fichiers temporaires
+clean-logs:
+	@echo "🧹 Nettoyage des logs..."
+	@rm -rf logs/*.log logs/*.txt
+	@rm -rf pgn_results/*.pgn
+	@echo "✅ Logs nettoyés"
+
+# Nettoyage complet : tout supprimer (builds + versions + logs)
+clean-all: clean clean-versions clean-logs
+	@echo "🧹 Nettoyage complet..."
+	@rm -f *.o *.d *.dSYM
+	@rm -rf *.dSYM
+	@echo "✅ Nettoyage complet terminé"
+
+# Alias pour clean-all
+distclean: clean-all
 
 # Inclusion des fichiers de dépendances automatiques générés lors de la compilation
 # Cela permet à make de connaître les dépendances exactes entre fichiers sources et headers
@@ -142,5 +170,40 @@ v10: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v10_build
 # Compilation de toutes les versions
 all_versions: v1 v2 v3 v4 v5 v6 v7 v8 v9 v10
 
+# Rebuild complet : clean + recompile everything
+rebuild: clean-all all
+
+# Rebuild des versions : clean versions + recompile all versions
+rebuild-versions: clean-versions all_versions
+
+# ========== CIBLES D'AIDE ==========
+
+# Affiche l'aide sur les commandes disponibles
+help:
+	@echo "📖 Commandes Make disponibles :"
+	@echo ""
+	@echo "  🔨 COMPILATION :"
+	@echo "    make              - Compile la version release (défaut)"
+	@echo "    make release      - Compile la version release"
+	@echo "    make debug        - Compile la version debug"
+	@echo "    make all_versions - Compile toutes les versions (v1-v10)"
+	@echo "    make v1..v10      - Compile une version spécifique"
+	@echo ""
+	@echo "  🧹 NETTOYAGE :"
+	@echo "    make clean            - Nettoie builds + exécutables principaux"
+	@echo "    make clean-versions   - Nettoie toutes les versions"
+	@echo "    make clean-logs       - Nettoie les logs et PGN"
+	@echo "    make clean-all        - Nettoyage complet (tout)"
+	@echo "    make distclean        - Alias pour clean-all"
+	@echo ""
+	@echo "  🔄 REBUILD :"
+	@echo "    make rebuild          - Clean + rebuild release"
+	@echo "    make rebuild-versions - Clean versions + rebuild all"
+	@echo ""
+	@echo "  📚 AUTRES :"
+	@echo "    make help             - Affiche cette aide"
+	@echo ""
+
 # Déclaration des cibles "virtuelles" pour éviter des conflits avec des fichiers du même nom
-.PHONY: all debug release clean v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 all_versions
+.PHONY: all debug release clean clean-versions clean-logs clean-all distclean \
+        v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 all_versions rebuild rebuild-versions help
