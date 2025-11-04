@@ -5,6 +5,15 @@ build_debug
 # binaires du moteur 
 chess_engine
 chess_engine_debug
+# + binaire de versionning
+versions
 
 # DS_Store
 .DS_Store
+
+# Fastchess 
+fastchess-mac-arm64
+fastchess-mac-arm64-a
+
+
+

@@ -1,66 +1,320 @@
 #include "search.h"
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
-// Fonction d'initialisation du moteur (stub)
-void initialize_engine() {
-  // TODO: Implémenter l'initialisation des tables de transposition, etc.
+// Macro pour logs de debug conditionnels
 #ifdef DEBUG
-  fprintf(stderr, "[SEARCH] Engine initialized\n");
+#define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DEBUG_LOG(...)
 #endif
+
+// Variables globales pour gérer le temps de recherche
+static clock_t search_start_time;
+static int search_time_limit_ms;
+static volatile int search_should_stop;
+
+// V3: Table de transposition globale
+static TranspositionTable tt_global;
+
+// ========== INITIALISATION DU MOTEUR ==========
+
+void initialize_engine(void) {
+  DEBUG_LOG("=== INITIALISATION DU MOTEUR (V1) ===\n");
+  init_zobrist();
+  init_killer_moves(); // Inclus pour l'instant, mais non utilisé en V1
+  init_lmr_table();    // Inclus pour l'instant, mais non utilisé en V1
+  tt_init(&tt_global); // V3
+  DEBUG_LOG("=== MOTEUR PRÊT ===\n\n");
 }
 
-// Fonction utilitaire pour envoyer des infos UCI pendant la recherche
-void send_search_info(int depth, int score, int nodes, int nps,
-                      const Move *pv_move) {
-  if (pv_move) {
-    printf("info depth %d score cp %d nodes %d nps %d pv %s\n", depth, score,
-           nodes, nps, move_to_string(pv_move));
-  } else {
-    printf("info depth %d score cp %d nodes %d nps %d\n", depth, score, nodes,
-           nps);
+// ========== NEGAMAX (V1: Alpha-Beta + Quiescence) ==========
+
+int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
+                       Couleur color, int ply, int in_null_move) {
+  // (in_null_move est ignoré en V1)
+  (void)in_null_move;
+
+  // Vérifier le temps tous les 2048 noeuds
+  static int node_count = 0;
+  if (++node_count >= 2048) {
+    node_count = 0;
+    if (search_time_limit_ms > 0) {
+      clock_t current = clock();
+      int elapsed_ms = (int)(((double)(current - search_start_time)) /
+                             CLOCKS_PER_SEC * 1000);
+      if (elapsed_ms >= search_time_limit_ms) {
+        search_should_stop = 1;
+      }
+    }
   }
-  fflush(stdout);
+
+  if (search_should_stop) {
+    return 0;
+  }
+
+  // V3: Transposition Table Probe
+  uint64_t hash = zobrist_hash(board);
+  TTEntry *tt_entry = tt_probe(&tt_global, hash);
+  if (tt_entry != NULL && tt_entry->depth >= depth) {
+    if (tt_entry->type == TT_EXACT) {
+      return tt_entry->score;
+    } else if (tt_entry->type == TT_LOWERBOUND) {
+      if (tt_entry->score >= beta) {
+        return tt_entry->score;
+      }
+    } else if (tt_entry->type == TT_UPPERBOUND) {
+      if (tt_entry->score <= alpha) {
+        return tt_entry->score;
+      }
+    }
+  }
+
+  if (ply >= 128) {
+    return evaluate_position(board);
+  }
+
+  if (depth == 0) {
+    return quiescence_search(board, alpha, beta, color, ply);
+  }
+
+  // V5: Reverse Futility Pruning
+  if (depth <= 3 && !is_in_check(board, color)) {
+    int static_eval = evaluate_position(board);
+    if (color == BLACK)
+      static_eval = -static_eval;
+
+    int rfp_margin = 100 * depth;
+    if (static_eval - rfp_margin >= beta) {
+      return static_eval - rfp_margin; // Cutoff
+    }
+  }
+
+  // V6: Null Move Pruning
+  if (depth >= 3 && !in_null_move && !is_in_check(board, color) &&
+      has_non_pawn_material(board, color)) {
+    // "Jouer" le coup nul
+    Board backup = *board;
+    board->to_move = (color == WHITE) ? BLACK : WHITE;
+    board->en_passant = -1;
+
+    int R = 2; // Réduction
+    int null_score =
+        -negamax_alpha_beta(board, depth - 1 - R, -beta, -beta + 1,
+                            (color == WHITE) ? BLACK : WHITE, ply + 1, 1);
+
+    *board = backup; // Restaure l'état
+
+    if (null_score >= beta) {
+      return beta; // Pruning
+    }
+  }
+
+  MoveList moves;
+  generate_legal_moves(board, &moves);
+
+  if (moves.count == 0) {
+    if (is_in_check(board, color)) {
+      return -MATE_SCORE + ply; // Mat
+    } else {
+      return STALEMATE_SCORE; // Pat
+    }
+  }
+
+  // V3: Récupérer le meilleur coup de la TT pour le move ordering
+  Move hash_move = {0};
+  if (tt_entry != NULL) {
+    hash_move = tt_entry->best_move;
+  }
+
+  // V2: Move Ordering
+  OrderedMoveList ordered_moves;
+  order_moves(board, &moves, &ordered_moves, hash_move, ply);
+
+  int max_score = -INFINITY_SCORE;
+  Move best_move = {0};
+  int alpha_orig = alpha;
+
+  int static_eval_for_futility = -INFINITY_SCORE;
+  int futility_pruning_active = (depth <= 2 && !is_in_check(board, color));
+  if (futility_pruning_active) {
+    static_eval_for_futility = evaluate_position(board);
+    if (color == BLACK)
+      static_eval_for_futility = -static_eval_for_futility;
+  }
+
+  for (int i = 0; i < ordered_moves.count; i++) {
+    // V10: Futility Pruning
+    if (futility_pruning_active && is_quiet_move(&ordered_moves.moves[i])) {
+      int futility_margin = 150 * depth;
+      if (static_eval_for_futility + futility_margin < alpha) {
+        continue; // Prune ce coup
+      }
+    }
+
+    apply_move(board, &ordered_moves.moves[i], ply);
+    Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+    int score;
+
+    // V4: Principal Variation Search (PVS)
+    if (i == 0) {
+      // Premier coup (PV-node), recherche avec une fenêtre complète
+      score = -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent,
+                                  ply + 1, 0);
+    } else {
+      // V7: Late Move Reductions (LMR)
+      int reduction = 0;
+      if (depth >= 3 && i >= 4 && is_quiet_move(&ordered_moves.moves[i])) {
+        reduction = get_lmr_reduction(depth, i);
+      }
+
+      // Recherche avec fenêtre nulle, potentiellement réduite
+      score = -negamax_alpha_beta(board, depth - 1 - reduction, -alpha - 1,
+                                  -alpha, opponent, ply + 1, 0);
+
+      // Si la recherche réduite a battu alpha, il faut re-chercher à la
+      // profondeur normale
+      if (reduction > 0 && score > alpha) {
+        score = -negamax_alpha_beta(board, depth - 1, -alpha - 1, -alpha,
+                                    opponent, ply + 1, 0);
+      }
+
+      // Si la recherche (réduite ou non) est prometteuse, faire une recherche
+      // complète (PVS)
+      if (score > alpha && score < beta) {
+        score = -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent,
+                                    ply + 1, 0);
+      }
+    }
+
+    undo_move(board, ply);
+
+    if (score > max_score) {
+      max_score = score;
+      best_move = ordered_moves.moves[i];
+    }
+
+    if (max_score > alpha) {
+      alpha = max_score;
+    }
+
+    if (alpha >= beta) {
+      // Beta cutoff (fail-high)
+      if (is_quiet_move(&best_move)) {
+        update_history(best_move, depth, color);
+        store_killer_move(best_move, ply);
+      }
+      tt_store(&tt_global, hash, depth, beta, TT_LOWERBOUND, best_move);
+      return beta;
+    }
+  }
+
+  // V3: Transposition Table Store
+  TTEntryType tt_type;
+  if (max_score <= alpha_orig) {
+    tt_type = TT_UPPERBOUND;
+  } else if (max_score >= beta) {
+    tt_type = TT_LOWERBOUND;
+  } else {
+    tt_type = TT_EXACT;
+  }
+  tt_store(&tt_global, hash, depth, max_score, tt_type, best_move);
+
+  return max_score;
 }
 
-// Fonction de recherche itérative deepening (stub amélioré avec info UCI)
+// ========== RECHERCHE ITÉRATIVE (Iterative Deepening) ==========
+
 SearchResult search_iterative_deepening(Board *board, int max_depth,
                                         int time_limit_ms) {
-  // TODO: Implémenter la recherche réelle
-  // Pour l'instant, retourner simplement le premier coup légal
-  // MAIS envoyer des infos UCI pour montrer la progression
+  search_start_time = clock();
+  search_time_limit_ms = time_limit_ms;
+  search_should_stop = 0;
 
-  SearchResult result;
-  memset(&result, 0, sizeof(result));
+  tt_new_search(&tt_global); // V3
 
-  MoveList legal_moves;
-  generate_legal_moves(board, &legal_moves);
+  SearchResult best_result = {0};
+  best_result.score = -INFINITY_SCORE;
+  best_result.nodes_searched = 0;
 
-  if (legal_moves.count > 0) {
-    result.best_move = legal_moves.moves[0];
-    result.depth = 1;
-    result.score = 0;
-    result.nodes = legal_moves.count;
-    result.nps =
-        legal_moves.count * 1000 / (time_limit_ms > 0 ? time_limit_ms : 1);
+  Move best_move_overall = {0};
+  int best_score_overall = -INFINITY_SCORE;
 
-    // Envoyer une info UCI pour montrer qu'on a trouvé un coup
-    send_search_info(result.depth, result.score, result.nodes, result.nps,
-                     &result.best_move);
-  } else {
-    // Aucun coup légal - retourner un coup invalide
-    result.best_move.from = -1;
-    result.best_move.to = -1;
-    result.depth = 0;
-    result.score = 0;
-    result.nodes = 0;
-    result.nps = 0;
+  for (int current_depth = 1; current_depth <= max_depth; current_depth++) {
+    MoveList moves;
+    generate_legal_moves(board, &moves);
+    if (moves.count == 0)
+      break;
+
+    // V2: Move Ordering
+    OrderedMoveList ordered_moves;
+    order_moves(board, &moves, &ordered_moves, (Move){0}, 0);
+
+    Move best_move_this_iter = {0};
+    int best_score_this_iter = -INFINITY_SCORE;
+    long nodes_this_iter = 0;
+
+    for (int i = 0; i < ordered_moves.count; i++) {
+      apply_move(board, &ordered_moves.moves[i], 0);
+      Couleur opponent = (board->to_move == WHITE) ? BLACK : WHITE;
+
+      int score = -negamax_alpha_beta(board, current_depth - 1, -INFINITY_SCORE,
+                                      INFINITY_SCORE, opponent, 1, 0);
+      nodes_this_iter++; // Approximation simple
+
+      undo_move(board, 0);
+
+      if (search_should_stop)
+        break;
+
+      if (score > best_score_this_iter) {
+        best_score_this_iter = score;
+        best_move_this_iter = moves.moves[i];
+      }
+    }
+
+    if (search_should_stop && best_move_overall.from == 0) {
+      // Si la recherche est interrompue avant même d'avoir trouvé un coup, on
+      // en prend un au hasard
+      best_move_overall = moves.moves[0];
+      best_score_overall = best_score_this_iter;
+      break;
+    } else if (search_should_stop) {
+      break;
+    }
+
+    best_move_overall = best_move_this_iter;
+    best_score_overall = best_score_this_iter;
+    best_result.nodes_searched += nodes_this_iter;
+
+    // Affichage UCI
+    clock_t end_time = clock();
+    int elapsed_ms =
+        (int)(((double)(end_time - search_start_time)) / CLOCKS_PER_SEC * 1000);
+    if (elapsed_ms == 0)
+      elapsed_ms = 1;
+    int nps = (int)(best_result.nodes_searched * 1000 / elapsed_ms);
+
+    printf("info depth %d score cp %d nodes %d nps %d time %d pv %s\n",
+           current_depth, best_score_overall, best_result.nodes_searched, nps,
+           elapsed_ms, move_to_string(&best_move_overall));
+
+    if (abs(best_score_overall) >= MATE_SCORE - 100) {
+      break; // Mat trouvé
+    }
   }
 
-#ifdef DEBUG
-  fprintf(stderr, "[SEARCH] Stub search: depth=%d, time_limit=%dms, moves=%d\n",
-          max_depth, time_limit_ms, legal_moves.count);
-#endif
+  best_result.best_move = best_move_overall;
+  best_result.score = best_score_overall;
+  best_result.depth = max_depth;
 
-  return result;
+  return best_result;
+}
+
+// Wrapper pour l'ancienne API
+SearchResult search_best_move(Board *board, int depth) {
+  return search_iterative_deepening(board, depth, 0);
 }
