@@ -13,7 +13,11 @@ versions
 
 # Fastchess 
 fastchess-mac-arm64
-fastchess-mac-arm64-a
+
+# testing 
+logs
+openings
+pgn_results
 
 
 
