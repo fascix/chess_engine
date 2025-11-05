@@ -74,11 +74,13 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   }
 
   if (ply >= 128) {
-    return evaluate_position(board);
+    int eval = evaluate_position(board);
+    return (color == WHITE) ? eval : -eval;
   }
 
   if (depth == 0) {
-    return quiescence_search(board, alpha, beta, color, ply);
+    int eval = quiescence_search(board, alpha, beta, color, ply);
+    return (color == WHITE) ? eval : -eval;
   }
 
   // V5: Reverse Futility Pruning
@@ -334,6 +336,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     printf("info depth %d score cp %d nodes %d nps %d time %d pv %s\n",
            current_depth, best_score_overall, best_result.nodes_searched, nps,
            elapsed_ms, move_to_string(&best_move_overall));
+    fflush(stdout);
 
     if (abs(best_score_overall) >= MATE_SCORE - 100) {
       break; // Mat trouvé

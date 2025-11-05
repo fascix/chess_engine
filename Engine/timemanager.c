@@ -131,8 +131,9 @@ int calculate_time_for_move(const Board *board, const GoParams *params) {
 
   // Cas 1: Temps fixe spécifié
   if (params->movetime > 0) {
-    DEBUG_LOG_TIME("Using fixed movetime: %dms\n", params->movetime);
-    return params->movetime;
+    int allocated_time = (int)(params->movetime * 0.9); // 90% du movetime
+    DEBUG_LOG_TIME("Using fixed movetime: %dms, allocated: %dms\n", params->movetime, allocated_time);
+    return allocated_time;
   }
 
   // Cas 2: Mode infini
@@ -182,9 +183,10 @@ int calculate_time_for_move(const Board *board, const GoParams *params) {
     allocated_time = MIN_TIME_MS;
   }
 
-  // Sécurité 3: Buffer de sécurité pour éviter les time-outs
-  if (allocated_time > 100) {
-    allocated_time -= SAFETY_BUFFER_MS;
+  // Sécurité 3: Buffer de sécurité pour éviter les time-outs (5%)
+  int safety_margin = (int)(allocated_time * 0.05);
+  if (allocated_time > safety_margin) {
+    allocated_time -= safety_margin;
   }
 
   // Sécurité 4: Maximum absolu pour positions complexes

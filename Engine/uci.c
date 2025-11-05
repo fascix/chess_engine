@@ -364,8 +364,27 @@ void handle_go(Board *board, char *params) {
   // Calculer le temps alloué
   int time_limit_ms = calculate_time_for_move(board, &go_params);
 
-  // Déterminer la profondeur maximale
-  int max_depth = (go_params.depth > 0) ? go_params.depth : 64;
+  int max_depth = 64;
+
+  if (go_params.depth > 0) {
+    max_depth = go_params.depth;
+    DEBUG_LOG_UCI("Using fixed depth from go_params: %d\n", max_depth);
+  } else if (time_limit_ms > 0) {
+    // Adapt depth based on time available
+    if (time_limit_ms < 1000) {
+      max_depth = 10;
+    } else if (time_limit_ms < 3000) {
+      max_depth = 12;
+    } else if (time_limit_ms < 10000) {
+      max_depth = 18;
+    } else {
+      max_depth = 64;
+    }
+    DEBUG_LOG_UCI("Adaptive depth set to %d based on time limit %d ms\n", max_depth, time_limit_ms);
+  } else {
+    max_depth = 64;
+    DEBUG_LOG_UCI("No depth or time limit specified, using max_depth=%d\n", max_depth);
+  }
 
   DEBUG_LOG_UCI("Starting search: max_depth=%d, time_limit=%dms\n", max_depth,
                 time_limit_ms);
