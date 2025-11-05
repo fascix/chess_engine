@@ -110,7 +110,12 @@ TTEntry *tt_probe(TranspositionTable *tt, uint64_t key) {
 // ========== NOUVELLE RECHERCHE ==========
 
 void tt_new_search(TranspositionTable *tt) {
-  tt->current_age++;
-  if (tt->current_age == 0)
-    tt->current_age = 1; // Éviter overflow
+  // Réinitialiser toutes les entrées pour éviter les résidus
+  memset(tt->entries, 0, sizeof(tt->entries));
+  tt->current_age = 1;
+
+#ifdef DEBUG
+  DEBUG_LOG("TT_NEW_SEARCH: toutes les entrées réinitialisées, age=%d\n",
+            tt->current_age);
+#endif
 }
