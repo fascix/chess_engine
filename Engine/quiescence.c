@@ -40,13 +40,11 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
   // Limite de profondeur pour éviter les boucles infinies
   if (ply >= 128) { // Sécurité maximale
     int score = evaluate_position(board);
-    return (color == WHITE) ? score : -score;
+    return score;
   }
 
   // Évaluation statique
   int stand_pat = evaluate_position(board);
-  if (color == BLACK)
-    stand_pat = -stand_pat;
 
   // Beta cutoff
   if (stand_pat >= beta) {
