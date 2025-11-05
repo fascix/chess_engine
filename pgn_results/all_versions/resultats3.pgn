@@ -1,0 +1,516 @@
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "4"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:02"]
+[GameStartTime "2025-11-05T18:06:38 +0100"]
+[GameEndTime "2025-11-05T18:06:41 +0100"]
+[PlyCount "23"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "E11"]
+[Opening "Bogo-Indian Defense: Wade-Smyslov Variation"]
+
+1. d2d4 {book} g8f6 {book} 2. c2c4 {book} e7e6 {book} 3. g1f3 {book} f8b4 {book}
+4. c1d2 {book} a7a5 {book} 5. d1c2 {book} d7d5 {book} 6. e2e3 {book} e8g8 {book}
+7. b1c3 {book} b7b6 {book} 8. f1d3 {book} d5c4 {book} 9. d3c4 {+0.15/7 0.284s}
+f6e4 {+6.69/5 0.291s} 10. c3e4 {+4.51/6 0.279s} d8g5 {+15.95/3 0.397s}
+11. e4g5 {+18.34/7 0.275s} e6e5 {+6.97/6 0.387s}
+12. c2h7 {+M1/7 0.272s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "5"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:02"]
+[GameStartTime "2025-11-05T18:06:38 +0100"]
+[GameEndTime "2025-11-05T18:06:41 +0100"]
+[PlyCount "24"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "A04"]
+[Opening "Zukertort Opening: Sicilian Invitation"]
+
+1. g1f3 {book} c7c5 {book} 2. e2e3 {book} g7g6 {book} 3. d2d4 {book} f8g7 {book}
+4. c2c3 {book} d7d6 {book} 5. f1e2 {book} g8f6 {book} 6. e1g1 {book} e8g8 {book}
+7. a2a4 {book} b8d7 {book} 8. b1a3 {book} d6d5 {book} 9. d1d3 {+4.38/5 0.297s}
+c5c4 {+0.35/6 0.284s} 10. f3h4 {+10.04/5 0.394s} c4d3 {+10.12/7 0.279s}
+11. h4f5 {+15.15/5 0.378s} d3e2 {+18.43/7 0.276s} 12. g1h1 {+17.09/5 0.374s}
+e2f1q {+M1/7 0.272s, Black mates} 0-1
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "2"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:05"]
+[GameStartTime "2025-11-05T18:06:38 +0100"]
+[GameEndTime "2025-11-05T18:06:44 +0100"]
+[PlyCount "33"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "C88"]
+[Opening "Ruy Lopez: Closed"]
+
+1. e2e4 {book} e7e5 {book} 2. g1f3 {book} b8c6 {book} 3. f1b5 {book} a7a6 {book}
+4. b5a4 {book} g8f6 {book} 5. e1g1 {book} f8e7 {book} 6. f1e1 {book} b7b5 {book}
+7. a4b3 {book} e8g8 {book} 8. a2a3 {book} g8h8 {book} 9. d2d4 {+0.70/7 0.283s}
+e7c5 {+2.68/3 0.291s} 10. d4c5 {+3.79/7 0.279s} f6d5 {+8.47/5 0.389s}
+11. e4d5 {+9.48/7 0.275s} d8g5 {+16.60/5 0.387s} 12. c1g5 {+21.43/7 0.273s}
+c6e7 {+17.18/6 0.375s} 13. g5e7 {+27.97/7 0.267s} g7g5 {+18.08/6 0.364s}
+14. e7f8 {+33.67/6 0.264s} e5e4 {+16.28/8 0.362s} 15. d1d4 {+M5/7 0.261s}
+f7f6 {+11.29/10 0.339s} 16. d4f6 {+M3/7 0.257s} h8g8 {+8.51/12 0.338s}
+17. d5d6 {+M1/6 0.255s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "8"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:05"]
+[GameStartTime "2025-11-05T18:06:38 +0100"]
+[GameEndTime "2025-11-05T18:06:44 +0100"]
+[PlyCount "33"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "B21"]
+[Opening "Sicilian Defense: Smith-Morra Gambit Accepted, Scheveningen Formation"]
+
+1. e2e4 {book} c7c5 {book} 2. g1f3 {book} d7d6 {book} 3. d2d4 {book} c5d4 {book}
+4. c2c3 {book} d4c3 {book} 5. b1c3 {book} b8c6 {book} 6. f1c4 {book} e7e6 {book}
+7. c1f4 {book} a7a6 {book} 8. a2a4 {book} f8e7 {book} 9. e1g1 {-0.54/6 0.283s}
+d8b6 {+1.79/4 0.305s} 10. a1b1 {-0.20/5 0.281s} e7h4 {+7.56/4 0.395s}
+11. f3h4 {+2.87/6 0.275s} b6f2 {+11.79/4 0.392s} 12. f1f2 {+16.55/6 0.271s}
+c6d4 {+9.36/5 0.380s} 13. d1d4 {+22.57/6 0.268s} d6d5 {+5.55/6 0.362s}
+14. d4g7 {+31.62/6 0.264s} e8d7 {+7.52/6 0.357s} 15. e4d5 {+36.87/6 0.261s}
+g8f6 {+11.64/7 0.344s} 16. g7f7 {+M3/6 0.259s} d7d8 {+0.97/11 0.338s}
+17. f4c7 {+M1/6 0.254s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "1"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:05"]
+[GameStartTime "2025-11-05T18:06:38 +0100"]
+[GameEndTime "2025-11-05T18:06:44 +0100"]
+[PlyCount "34"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "D12"]
+[Opening "Slav Defense: Quiet Variation, Schallopp Defense"]
+
+1. d2d4 {book} d7d5 {book} 2. c2c4 {book} c7c6 {book} 3. e2e3 {book} g8f6 {book}
+4. g1f3 {book} c8f5 {book} 5. b1c3 {book} e7e6 {book} 6. f3h4 {book} f5e4 {book}
+7. f2f3 {book} e4g6 {book} 8. h4g6 {book} h7g6 {book} 9. f3f4 {+1.61/5 0.292s}
+b8d7 {-0.24/6 0.283s} 10. d1h5 {+4.96/5 0.397s} f6h5 {+12.34/7 0.279s}
+11. f4f5 {+5.05/6 0.386s} d8h4 {+15.02/7 0.275s} 12. e1e2 {-0.84/7 0.370s}
+g6f5 {+16.31/7 0.274s} 13. b2b4 {+2.60/6 0.361s} f8b4 {+19.35/6 0.268s}
+14. e3e4 {+5.86/6 0.355s} b4c3 {+30.18/6 0.265s} 15. c1f4 {+14.09/6 0.342s}
+h4f4 {+35.66/6 0.261s} 16. h2h3 {+16.18/6 0.349s} f4d2 {+M3/6 0.257s}
+17. e2f3 {+4.31/10 0.324s} d5e4 {+M1/6 0.254s, Black mates} 0-1
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "6"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:05"]
+[GameStartTime "2025-11-05T18:06:38 +0100"]
+[GameEndTime "2025-11-05T18:06:44 +0100"]
+[PlyCount "35"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "B21"]
+[Opening "Sicilian Defense: McDonnell Attack"]
+
+1. e2e4 {book} c7c5 {book} 2. f2f4 {book} e7e6 {book} 3. g1f3 {book} d7d5 {book}
+4. f1b5 {book} c8d7 {book} 5. b5d7 {book} b8d7 {book} 6. d2d3 {book} f8d6 {book}
+7. e1g1 {book} g8e7 {book} 8. c2c4 {book} d5e4 {book} 9. d3e4 {0.00/7 0.283s}
+d8a5 {+6.15/5 0.292s} 10. d1d6 {+4.43/6 0.278s} a5a3 {+6.55/5 0.405s}
+11. b1a3 {+17.60/6 0.275s} e8f8 {+4.93/6 0.379s} 12. d6d7 {+23.80/6 0.272s}
+g7g5 {+8.77/7 0.370s} 13. f4g5 {+29.08/6 0.267s} b7b6 {+8.90/7 0.359s}
+14. f3e5 {+35.88/6 0.265s} h7h5 {+10.11/7 0.361s} 15. f1f7 {+45.26/6 0.262s}
+f8g8 {+0.40/12 0.342s} 16. f7g7 {+M5/6 0.258s} g8g7 {+2.51/9 0.345s}
+17. d7e7 {+M3/7 0.257s} g7g8 {+3.07/11 0.326s}
+18. e7f7 {+M1/7 0.251s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "3"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:06"]
+[GameStartTime "2025-11-05T18:06:38 +0100"]
+[GameEndTime "2025-11-05T18:06:45 +0100"]
+[PlyCount "36"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "A10"]
+[Opening "English Opening: Great Snake Variation"]
+
+1. c2c4 {book} g7g6 {book} 2. g1f3 {book} f8g7 {book} 3. b1c3 {book} e7e5 {book}
+4. g2g3 {book} g8e7 {book} 5. f1g2 {book} e8g8 {book} 6. d2d4 {book} e5d4 {book}
+7. f3d4 {book} b8c6 {book} 8. d4c6 {book} e7c6 {book} 9. c1g5 {+3.86/5 0.288s}
+d8g5 {+4.32/7 0.283s} 10. d1d4 {+6.25/5 0.389s} g7d4 {+18.15/7 0.279s}
+11. f2f3 {+6.09/5 0.381s} d4c3 {+20.61/6 0.274s} 12. e1f2 {+2.79/8 0.379s}
+c3b2 {+26.40/6 0.272s} 13. a1d1 {+10.46/6 0.369s} g5c5 {+28.52/6 0.267s}
+14. f2f1 {+8.80/8 0.355s} c5c4 {+29.21/6 0.265s} 15. d1d6 {+15.50/6 0.342s}
+c7d6 {+38.79/6 0.262s} 16. a2a3 {+15.65/7 0.340s} f8e8 {+M5/6 0.257s}
+17. g2h3 {+14.97/7 0.333s} c4e2 {+M3/6 0.254s} 18. f1g1 {+8.53/12 0.330s}
+b2d4 {+M1/6 0.252s, Black mates} 0-1
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "7"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:06"]
+[GameStartTime "2025-11-05T18:06:38 +0100"]
+[GameEndTime "2025-11-05T18:06:45 +0100"]
+[PlyCount "36"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "E10"]
+[Opening "Indian Defense: Anti-Nimzo-Indian"]
+
+1. d2d4 {book} g8f6 {book} 2. c2c4 {book} e7e6 {book} 3. g1f3 {book} c7c5 {book}
+4. g2g3 {book} c5d4 {book} 5. f3d4 {book} d8b6 {book} 6. f1g2 {book} f8c5 {book}
+7. e2e3 {book} b8c6 {book} 8. d4c2 {book} b6a6 {book} 9. d1d7 {+9.00/5 0.285s}
+c8d7 {+11.21/6 0.284s} 10. g2d5 {+3.23/6 0.393s} e6d5 {+18.17/6 0.279s}
+11. h2h4 {+9.82/5 0.394s} c6b4 {+19.32/6 0.275s} 12. e3e4 {+6.57/6 0.366s}
+b4c2 {+31.56/6 0.272s} 13. e1f1 {+8.11/8 0.360s} c2a1 {+34.36/6 0.267s}
+14. f1e2 {+21.05/6 0.354s} a6c4 {+45.33/6 0.266s} 15. e2e1 {+10.34/8 0.354s}
+a1c2 {+M7/6 0.262s} 16. e1d1 {+8.14/9 0.338s} d7g4 {+M5/6 0.257s}
+17. f2f3 {+9.35/9 0.337s} g4f3 {+M3/6 0.254s} 18. d1d2 {+6.13/13 0.323s}
+f6e4 {+M1/6 0.252s, Black mates} 0-1
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "9"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:06"]
+[GameStartTime "2025-11-05T18:06:41 +0100"]
+[GameEndTime "2025-11-05T18:06:47 +0100"]
+[PlyCount "36"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "E00"]
+[Opening "Catalan Opening"]
+
+1. d2d4 {book} g8f6 {book} 2. c2c4 {book} e7e6 {book} 3. g2g3 {book} d7d5 {book}
+4. g1f3 {book} d5c4 {book} 5. d1a4 {book} b8d7 {book} 6. a4c4 {book} c7c5 {book}
+7. f1g2 {book} d7b6 {book} 8. c4d3 {book} c5d4 {book} 9. d3a6 {+14.43/4 0.295s}
+b7a6 {+13.37/7 0.283s} 10. c1h6 {+12.95/5 0.390s} g7h6 {+18.12/7 0.278s}
+11. f3g5 {+14.89/5 0.384s} h6g5 {+21.95/7 0.276s} 12. g2e4 {+16.82/6 0.369s}
+f6e4 {+30.14/7 0.272s} 13. b2b3 {+16.88/6 0.361s} f8b4 {+34.35/7 0.268s}
+14. b1d2 {+16.10/7 0.362s} e4d2 {+37.28/6 0.265s} 15. f2f3 {+18.28/7 0.351s}
+d2b3 {+42.74/6 0.261s} 16. e1d1 {+18.91/9 0.344s} d8c7 {+M7/7 0.258s}
+17. h1e1 {+15.05/7 0.330s} b3a1 {+M3/6 0.254s} 18. a2a4 {+23.04/7 0.318s}
+c7c2 {+M1/6 0.251s, Black mates} 0-1
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "12"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:03"]
+[GameStartTime "2025-11-05T18:06:44 +0100"]
+[GameEndTime "2025-11-05T18:06:47 +0100"]
+[PlyCount "27"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "E07"]
+[Opening "Catalan Opening: Closed"]
+
+1. g1f3 {book} g8f6 {book} 2. c2c4 {book} e7e6 {book} 3. g2g3 {book} d7d5 {book}
+4. f1g2 {book} f8e7 {book} 5. e1g1 {book} e8g8 {book} 6. d2d4 {book} b8d7 {book}
+7. b1c3 {book} c7c6 {book} 8. b2b3 {book} a7a6 {book} 9. e2e3 {+0.21/6 0.283s}
+d7e5 {+2.64/5 0.288s} 10. d4e5 {+4.11/7 0.278s} d8d6 {+5.62/5 0.398s}
+11. e5d6 {+14.75/7 0.275s} g7g5 {+13.83/5 0.407s} 12. d6e7 {+22.58/7 0.271s}
+f6e8 {+16.03/4 0.380s} 13. c1a3 {+33.60/6 0.268s} c8d7 {+20.50/5 0.360s}
+14. e7f8q {+M1/6 0.266s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "10"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:06"]
+[GameStartTime "2025-11-05T18:06:41 +0100"]
+[GameEndTime "2025-11-05T18:06:47 +0100"]
+[PlyCount "37"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "E71"]
+[Opening "King's Indian Defense: Makogonov Variation"]
+
+1. d2d4 {book} g8f6 {book} 2. c2c4 {book} g7g6 {book} 3. b1c3 {book} f8g7 {book}
+4. e2e4 {book} d7d6 {book} 5. h2h3 {book} b8d7 {book} 6. f1d3 {book} e8g8 {book}
+7. c1g5 {book} c7c5 {book} 8. g1f3 {book} c5d4 {book} 9. f3d4 {-0.07/6 0.283s}
+f6g4 {-2.31/4 0.299s} 10. d4f3 {+0.45/6 0.280s} d8b6 {+8.05/4 0.413s}
+11. d1d2 {+0.35/6 0.275s} b6b5 {+16.44/4 0.391s} 12. c4b5 {+12.91/7 0.272s}
+b7b6 {+13.94/4 0.390s} 13. h3g4 {+16.76/6 0.268s} g7h6 {+16.87/5 0.369s}
+14. h1h6 {+22.26/6 0.265s} c8a6 {+13.77/6 0.351s} 15. b5a6 {+28.17/6 0.262s}
+d7c5 {+14.63/6 0.354s} 16. g5e7 {+32.29/7 0.258s} c5b7 {+16.13/6 0.336s}
+17. c3d5 {+43.25/6 0.254s} a8c8 {+15.00/6 0.323s} 18. d5f6 {+M3/6 0.252s}
+g8h8 {+10.79/8 0.334s} 19. h6h7 {+M1/6 0.249s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "11"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:05"]
+[GameStartTime "2025-11-05T18:06:44 +0100"]
+[GameEndTime "2025-11-05T18:06:49 +0100"]
+[PlyCount "32"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "B05"]
+[Opening "Alekhine Defense: Modern Variation, Main Line"]
+
+1. e2e4 {book} g8f6 {book} 2. e4e5 {book} f6d5 {book} 3. d2d4 {book} d7d6 {book}
+4. g1f3 {book} c8g4 {book} 5. f1e2 {book} e7e6 {book} 6. c2c4 {book} d5b6 {book}
+7. e5d6 {book} c7d6 {book} 8. c1e3 {book} f8e7 {book} 9. d1a4 {+5.26/4 0.284s}
+b6a4 {+10.98/7 0.282s} 10. a2a3 {+9.21/5 0.397s} a4b2 {+12.85/7 0.279s}
+11. e3h6 {+12.06/5 0.391s} g7h6 {+18.44/7 0.274s} 12. f3g5 {+13.48/6 0.383s}
+d8a5 {+26.15/7 0.273s} 13. b1c3 {+3.92/8 0.366s} a5c3 {+32.31/7 0.268s}
+14. e1f1 {+4.65/9 0.361s} g4e2 {+34.99/7 0.265s} 15. f1g1 {+12.35/8 0.340s}
+b2c4 {+39.96/6 0.262s} 16. f2f3 {+16.00/6 0.342s} c3e3 {+M1/6 0.258s, Black mates} 0-1
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "15"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:05"]
+[GameStartTime "2025-11-05T18:06:45 +0100"]
+[GameEndTime "2025-11-05T18:06:50 +0100"]
+[PlyCount "32"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "A07"]
+[Opening "King's Indian Attack: Keres Variation"]
+
+1. g1f3 {book} d7d5 {book} 2. g2g3 {book} c8g4 {book} 3. f1g2 {book} b8d7 {book}
+4. c2c4 {book} e7e6 {book} 5. d1b3 {book} d7c5 {book} 6. b3c2 {book} c7c6 {book}
+7. d2d3 {book} g8f6 {book} 8. b1d2 {book} f8e7 {book} 9. g2h3 {-0.53/4 0.306s}
+g4h3 {+4.02/6 0.283s} 10. c2a4 {+4.01/5 0.392s} c5a4 {+15.61/6 0.278s}
+11. h1g1 {+11.15/5 0.391s} d5c4 {+16.32/6 0.275s} 12. f3d4 {+11.90/5 0.389s}
+d8d4 {+23.72/6 0.272s} 13. e1d1 {+7.66/6 0.363s} a4b2 {+27.37/6 0.268s}
+14. d1c2 {+5.03/7 0.361s} c4d3 {+33.72/6 0.265s} 15. c2b1 {+12.34/7 0.347s}
+d4c3 {+M7/6 0.262s} 16. d2e4 {+16.26/5 0.346s} c3c2 {+M1/7 0.257s, Black mates} 0-1
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "18"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:02"]
+[GameStartTime "2025-11-05T18:06:47 +0100"]
+[GameEndTime "2025-11-05T18:06:50 +0100"]
+[PlyCount "25"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "B12"]
+[Opening "Caro-Kann Defense: Advance Variation, Tal Variation"]
+
+1. e2e4 {book} c7c6 {book} 2. d2d4 {book} d7d5 {book} 3. e4e5 {book} c8f5 {book}
+4. h2h4 {book} h7h5 {book} 5. c2c4 {book} e7e6 {book} 6. c1g5 {book} f8e7 {book}
+7. d1d2 {book} d5c4 {book} 8. f1c4 {book} b8d7 {book} 9. g1f3 {+0.17/6 0.282s}
+d8a5 {+11.19/3 0.324s} 10. d2a5 {+11.57/7 0.279s} e7d6 {+11.19/2 0.468s}
+11. e5d6 {+15.98/6 0.276s} d7c5 {+7.79/5 0.390s} 12. d4c5 {+23.62/6 0.273s}
+a8d8 {+8.34/6 0.373s} 13. a5d8 {+M1/6 0.268s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "20"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:01"]
+[GameStartTime "2025-11-05T18:06:49 +0100"]
+[GameEndTime "2025-11-05T18:06:50 +0100"]
+[PlyCount "21"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "A46"]
+[Opening "Indian Defense: London System"]
+
+1. d2d4 {book} g8f6 {book} 2. g1f3 {book} e7e6 {book} 3. c1f4 {book} f8e7 {book}
+4. b1d2 {book} d7d5 {book} 5. e2e3 {book} b7b6 {book} 6. f3e5 {book} e8g8 {book}
+7. d1f3 {book} c7c5 {book} 8. c2c3 {book} d8e8 {book} 9. f1d3 {+0.40/6 0.283s}
+f6h5 {+3.05/3 0.346s} 10. f3h5 {+3.84/6 0.279s} e8a4 {+1.11/5 0.398s}
+11. h5h7 {+M1/6 0.275s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "16"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:05"]
+[GameStartTime "2025-11-05T18:06:45 +0100"]
+[GameEndTime "2025-11-05T18:06:50 +0100"]
+[PlyCount "35"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "C54"]
+[Opening "Italian Game: Classical Variation, Giuoco Pianissimo, with d6"]
+
+1. e2e4 {book} e7e5 {book} 2. g1f3 {book} b8c6 {book} 3. f1c4 {book} g8f6 {book}
+4. d2d3 {book} f8c5 {book} 5. c2c3 {book} d7d6 {book} 6. c4b3 {book} e8g8 {book}
+7. b1d2 {book} a7a6 {book} 8. d2f1 {book} f6g4 {book} 9. d3d4 {+0.04/6 0.282s}
+d8g5 {+7.93/3 0.304s} 10. c1g5 {+11.14/7 0.279s} d6d5 {+10.55/4 0.396s}
+11. e4d5 {+15.11/6 0.275s} g4h2 {+18.46/4 0.394s} 12. h1h2 {+20.40/7 0.271s}
+c8h3 {+19.41/5 0.375s} 13. d5c6 {+26.47/6 0.267s} a8d8 {+23.21/5 0.365s}
+14. g5d8 {+32.37/6 0.266s} f8d8 {+28.13/4 0.374s} 15. d4c5 {+38.87/7 0.262s}
+d8d3 {+28.32/5 0.351s} 16. d1d3 {+57.30/7 0.258s} h7h5 {+19.76/6 0.337s}
+17. f3g5 {+M7/6 0.254s} g8f8 {+19.04/6 0.324s}
+18. d3d8 {+M1/6 0.252s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "14"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Result "1-0"]
+[GameDuration "00:00:08"]
+[GameStartTime "2025-11-05T18:06:44 +0100"]
+[GameEndTime "2025-11-05T18:06:52 +0100"]
+[PlyCount "43"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "A20"]
+[Opening "English Opening: King's English Variation"]
+
+1. c2c4 {book} e7e5 {book} 2. g2g3 {book} g8f6 {book} 3. f1g2 {book} h7h6 {book}
+4. d2d3 {book} f8c5 {book} 5. g1f3 {book} d7d6 {book} 6. e1g1 {book} b8c6 {book}
+7. b2b3 {book} e8g8 {book} 8. c1b2 {book} f8e8 {book} 9. b1c3 {-0.06/6 0.283s}
+c5f2 {+3.30/4 0.287s} 10. f1f2 {+0.58/7 0.280s} f6d5 {+4.90/4 0.408s}
+11. c4d5 {+7.20/7 0.276s} d8h4 {+14.99/5 0.382s} 12. f3h4 {+19.71/7 0.271s}
+c8h3 {+17.58/6 0.371s} 13. g2h3 {+24.87/6 0.268s} b7b5 {+18.75/6 0.368s}
+14. h3d7 {+30.94/6 0.265s} f7f5 {+20.19/5 0.365s} 15. d7e8 {+36.02/7 0.262s}
+a8d8 {+24.01/6 0.344s} 16. e8c6 {+42.12/7 0.258s} d8e8 {+33.76/6 0.336s}
+17. c6e8 {+51.51/7 0.254s} h6h5 {+32.31/7 0.327s} 18. c3b5 {+58.95/6 0.252s}
+a7a5 {+33.96/7 0.312s} 19. h4f5 {+63.21/6 0.248s} g8h8 {+31.68/8 0.304s}
+20. e8g6 {+M5/6 0.245s} a5a4 {+28.37/8 0.298s} 21. f5e7 {+M3/7 0.242s}
+h5h4 {+30.69/8 0.290s} 22. f2f8 {+M1/7 0.239s, White mates} 1-0
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "13"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:08"]
+[GameStartTime "2025-11-05T18:06:44 +0100"]
+[GameEndTime "2025-11-05T18:06:52 +0100"]
+[PlyCount "44"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "A81"]
+[Opening "Dutch Defense: Fianchetto Attack"]
+
+1. d2d4 {book} f7f5 {book} 2. g2g3 {book} g8f6 {book} 3. g1h3 {book} d7d6 {book}
+4. f1g2 {book} e7e5 {book} 5. e1g1 {book} b8c6 {book} 6. c2c3 {book} g7g6 {book}
+7. d4e5 {book} c6e5 {book} 8. d1b3 {book} c7c6 {book} 9. b3f7 {+15.18/5 0.289s}
+e5f7 {+10.95/7 0.283s} 10. c1h6 {+14.27/5 0.387s} f8h6 {+16.63/7 0.279s}
+11. f1c1 {+16.13/5 0.391s} h6c1 {+25.29/7 0.275s} 12. h3g5 {+19.84/6 0.378s}
+c1b2 {+33.56/7 0.271s} 13. g2d5 {+26.25/6 0.365s} c6d5 {+41.93/7 0.267s}
+14. g5h3 {+25.97/6 0.361s} b2a1 {+42.67/7 0.264s} 15. c3c4 {+29.10/6 0.347s}
+d8a5 {+47.65/6 0.261s} 16. h3g5 {+26.50/6 0.339s} a5a2 {+51.75/6 0.260s}
+17. b1c3 {+26.59/6 0.333s} a1c3 {+56.25/7 0.255s} 18. g5h7 {+31.69/7 0.315s}
+h8h7 {+63.81/6 0.251s} 19. g3g4 {+32.12/7 0.313s} a2e2 {+M7/6 0.249s}
+20. h2h4 {+28.42/8 0.305s} h7h4 {+M5/6 0.245s} 21. g1g2 {+27.31/8 0.292s}
+f6g4 {+M3/6 0.243s} 22. c4c5 {+26.05/10 0.287s} e2f2 {+M1/6 0.239s, Black mates} 0-1
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "17"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:06"]
+[GameStartTime "2025-11-05T18:06:47 +0100"]
+[GameEndTime "2025-11-05T18:06:53 +0100"]
+[PlyCount "36"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "D37"]
+[Opening "Queen's Gambit Declined: Harrwitz Attack, Two Knights Defense, Blockade Line"]
+
+1. d2d4 {book} e7e6 {book} 2. c2c4 {book} d7d5 {book} 3. g1f3 {book} g8f6 {book}
+4. b1c3 {book} f8e7 {book} 5. c1f4 {book} e8g8 {book} 6. e2e3 {book} b8d7 {book}
+7. c4c5 {book} c7c6 {book} 8. h2h3 {book} b7b6 {book} 9. f4c7 {+4.16/4 0.296s}
+d8c7 {+4.31/7 0.283s} 10. f3e5 {+4.28/5 0.390s} d7e5 {+6.32/7 0.278s}
+11. h1h2 {+8.11/6 0.378s} e5d3 {+11.13/7 0.275s} 12. d1d3 {+5.77/7 0.375s}
+c7h2 {+11.60/7 0.274s} 13. d3f5 {+11.48/5 0.361s} e6f5 {+26.32/7 0.267s}
+14. f1a6 {+12.03/6 0.359s} c8a6 {+35.82/7 0.265s} 15. f2f3 {+13.98/6 0.338s}
+h2g1 {+41.91/7 0.262s} 16. e1d2 {+9.31/8 0.347s} g1a1 {+42.21/7 0.257s}
+17. c3b1 {+29.09/7 0.324s} a1b2 {+51.86/7 0.254s} 18. d2e1 {+13.68/11 0.316s}
+b2e2 {+M1/7 0.251s, Black mates} 0-1
+
+[Event "Fastchess Tournament"]
+[Site "?"]
+[Date "2025.11.05"]
+[Round "19"]
+[White "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10"]
+[Black "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v10/stash-bot"]
+[Result "0-1"]
+[GameDuration "00:00:05"]
+[GameStartTime "2025-11-05T18:06:47 +0100"]
+[GameEndTime "2025-11-05T18:06:53 +0100"]
+[PlyCount "34"]
+[Termination "normal"]
+[TimeControl "10+0.1"]
+[ECO "B40"]
+[Opening "Sicilian Defense: French Variation"]
+
+1. e2e4 {book} c7c5 {book} 2. g1f3 {book} e7e6 {book} 3. b1c3 {book} a7a6 {book}
+4. g2g3 {book} b7b5 {book} 5. f1g2 {book} c8b7 {book} 6. d2d3 {book} d7d6 {book}
+7. e1g1 {book} g8f6 {book} 8. a2a3 {book} b8d7 {book} 9. c1h6 {+5.64/4 0.293s}
+g7h6 {+3.24/7 0.283s} 10. f3d4 {+5.80/5 0.394s} c5d4 {+7.23/7 0.279s}
+11. d1g4 {+14.97/5 0.390s} f6g4 {+19.61/7 0.274s} 12. b2b4 {+5.51/6 0.372s}
+d4c3 {+24.73/7 0.272s} 13. a1d1 {+8.56/6 0.363s} d6d5 {+24.99/7 0.268s}
+14. d1d2 {+11.83/7 0.348s} c3d2 {+33.49/7 0.265s} 15. f1e1 {+12.25/6 0.343s}
+d2e1q {+M5/7 0.262s} 16. g2f1 {+16.54/9 0.329s} e1f2 {+M3/6 0.258s}
+17. g1h1 {+13.17/12 0.326s} f2f1 {+M1/6 0.254s, Black mates} 0-1
+
