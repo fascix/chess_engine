@@ -124,15 +124,43 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     }
   }
 
-  // V3: Récupérer le meilleur coup de la TT pour le move ordering
+  // ========== FIX #1: VALIDATION DU HASH MOVE ==========
   Move hash_move = {0};
+  int hash_move_valid = 0;
+
+  // V3: Récupérer le meilleur coup de la TT pour le move ordering
   if (tt_entry != NULL) {
-    hash_move = tt_entry->best_move;
+    Move candidate = tt_entry->best_move;
+
+    // ✅ VALIDER que le coup est dans la liste des coups légaux
+    for (int i = 0; i < moves.count; i++) {
+      if (moves.moves[i].from == candidate.from &&
+          moves.moves[i].to == candidate.to &&
+          moves.moves[i].type == candidate.type &&
+          // Pour les promotions, vérifier aussi la pièce promue
+          (candidate.type != MOVE_PROMOTION ||
+           moves.moves[i].promotion == candidate.promotion)) {
+        hash_move = moves.moves[i]; // ✅ Coup complet validé
+        hash_move_valid = 1;
+#ifdef DEBUG
+        DEBUG_LOG("[TT] Hash move VALIDÉ: %s\n", move_to_string(&hash_move));
+#endif
+        break;
+      }
+    }
+
+#ifdef DEBUG
+    if (!hash_move_valid && (candidate.from != 0 || candidate.to != 0)) {
+      DEBUG_LOG("[TT] Hash move REJETÉ (illégal): %s\n",
+                move_to_string(&candidate));
+    }
+#endif
   }
 
-  // V2: Move Ordering
+  // V2: Move Ordering (utiliser hash_move seulement s'il est validé)
   OrderedMoveList ordered_moves;
-  order_moves(board, &moves, &ordered_moves, hash_move, ply);
+  order_moves(board, &moves, &ordered_moves,
+              hash_move_valid ? hash_move : (Move){0}, ply);
 
   int max_score = -INFINITY_SCORE;
   Move best_move = {0};
@@ -240,7 +268,10 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
   best_result.score = -INFINITY_SCORE;
   best_result.nodes_searched = 0;
 
-  Move best_move_overall = {0};
+  // ========== FIX #2: INITIALISATION SÉCURISÉE ==========
+  Move best_move_overall;
+  best_move_overall.from = -1; // ✅ Marqueur invalide
+  best_move_overall.to = -1;
   int best_score_overall = -INFINITY_SCORE;
 
   for (int current_depth = 1; current_depth <= max_depth; current_depth++) {
@@ -253,7 +284,8 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     OrderedMoveList ordered_moves;
     order_moves(board, &moves, &ordered_moves, (Move){0}, 0);
 
-    Move best_move_this_iter = {0};
+    // ✅ Initialisation avec un coup valide par défaut
+    Move best_move_this_iter = ordered_moves.moves[0];
     int best_score_this_iter = -INFINITY_SCORE;
     long nodes_this_iter = 0;
 
@@ -272,17 +304,18 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
       if (score > best_score_this_iter) {
         best_score_this_iter = score;
-        best_move_this_iter = moves.moves[i];
+        best_move_this_iter = ordered_moves.moves[i];
       }
     }
 
-    if (search_should_stop && best_move_overall.from == 0) {
-      // Si la recherche est interrompue avant même d'avoir trouvé un coup, on
-      // en prend un au hasard
-      best_move_overall = moves.moves[0];
+    // ✅ Sécurité : garder un coup valide même en cas d'interruption
+    if (search_should_stop && best_move_overall.from == -1) {
+      // Si c'est la 1ère itération interrompue, prendre le meilleur coup trouvé
+      best_move_overall = best_move_this_iter;
       best_score_overall = best_score_this_iter;
       break;
     } else if (search_should_stop) {
+      // Garder le meilleur coup de l'itération précédente
       break;
     }
 
@@ -304,6 +337,18 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
     if (abs(best_score_overall) >= MATE_SCORE - 100) {
       break; // Mat trouvé
+    }
+  }
+
+  // ✅ Vérification finale : coup valide ?
+  if (best_move_overall.from == -1 || best_move_overall.to == -1) {
+    // Fallback d'urgence : prendre le premier coup légal
+    MoveList emergency_moves;
+    generate_legal_moves(board, &emergency_moves);
+    if (emergency_moves.count > 0) {
+      best_move_overall = emergency_moves.moves[0];
+      DEBUG_LOG("[EMERGENCY] Aucun coup trouvé, fallback vers %s\n",
+                move_to_string(&best_move_overall));
     }
   }
 
