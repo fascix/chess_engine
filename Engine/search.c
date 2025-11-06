@@ -282,23 +282,29 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     if (moves.count == 0)
       break;
 
-    // V2: Move Ordering
     OrderedMoveList ordered_moves;
     order_moves(board, &moves, &ordered_moves, (Move){0}, 0);
 
-    // ✅ Initialisation avec un coup valide par défaut
     Move best_move_this_iter = ordered_moves.moves[0];
     int best_score_this_iter = -INFINITY_SCORE;
     long nodes_this_iter = 0;
 
+    // ✅ Sauvegarder le joueur à la racine
+    Couleur root_player = board->to_move;
+
     for (int i = 0; i < ordered_moves.count; i++) {
       apply_move(board, &ordered_moves.moves[i], 0);
-      Couleur opponent = (board->to_move == WHITE) ? BLACK : WHITE;
 
+      // La couleur à passer à negamax doit être la couleur qui est maintenant
+      // à jouer après avoir appliqué le coup (board->to_move).
+      Couleur color_for_negamax = board->to_move;
+
+      // negamax retourne l'évaluation du point de vue de color_for_negamax,
+      // on prend ensuite le négatif pour obtenir l'évaluation du joueur racine.
       int score = -negamax_alpha_beta(board, current_depth - 1, -INFINITY_SCORE,
-                                      INFINITY_SCORE, opponent, 1, 0);
-      nodes_this_iter++; // Approximation simple
+                                      INFINITY_SCORE, color_for_negamax, 1, 0);
 
+      nodes_this_iter++;
       undo_move(board, 0);
 
       if (search_should_stop)
@@ -310,14 +316,11 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
       }
     }
 
-    // ✅ Sécurité : garder un coup valide même en cas d'interruption
     if (search_should_stop && best_move_overall.from == -1) {
-      // Si c'est la 1ère itération interrompue, prendre le meilleur coup trouvé
       best_move_overall = best_move_this_iter;
       best_score_overall = best_score_this_iter;
       break;
     } else if (search_should_stop) {
-      // Garder le meilleur coup de l'itération précédente
       break;
     }
 
@@ -325,7 +328,6 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     best_score_overall = best_score_this_iter;
     best_result.nodes_searched += nodes_this_iter;
 
-    // Affichage UCI
     clock_t end_time = clock();
     int elapsed_ms =
         (int)(((double)(end_time - search_start_time)) / CLOCKS_PER_SEC * 1000);
@@ -333,13 +335,24 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
       elapsed_ms = 1;
     int nps = (int)(best_result.nodes_searched * 1000 / elapsed_ms);
 
+    // ✅ Normalisation du score pour UCI (toujours du point de vue BLANC)
+    int uci_score;
+    if (root_player == WHITE) {
+        uci_score = best_score_overall;
+    } else {
+        uci_score = -best_score_overall;
+    }
+
     printf("info depth %d score cp %d nodes %d nps %d time %d pv %s\n",
-           current_depth, best_score_overall, best_result.nodes_searched, nps,
+           current_depth, uci_score, best_result.nodes_searched, nps,
            elapsed_ms, move_to_string(&best_move_overall));
     fflush(stdout);
 
+    // ✅ Mettre à jour le score du résultat global dans la même logique
+    best_result.score = uci_score;
+
     if (abs(best_score_overall) >= MATE_SCORE - 100) {
-      break; // Mat trouvé
+      break;
     }
   }
 
