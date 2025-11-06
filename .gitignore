@@ -1,23 +1,28 @@
-# Dossier de build pour les .o et .d
-build
-build_debug
-
-# binaires du moteur 
+# Executables
 chess_engine
 chess_engine_debug
-# + binaire de versionning
-versions
 
-# DS_Store
+# Debug symbols (macOS)
+*.dSYM/
+
+# macOS system files
 .DS_Store
 
-# Fastchess 
-fastchess-mac-arm64
+# Test outputs
+*.log
+*.pgn
 
-# testing 
-logs/
-openings/
-pgn_results/
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
+# Build artifacts
+*.o
+*.a
 
-
+chess_engine_optimized
+chess_engine_test
+python_gui/__pycache__/
