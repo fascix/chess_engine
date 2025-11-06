@@ -22,3 +22,5 @@ pgn_results/
 
 # cache python
 python_gui/__pycache__/
+
+_codeql_detected_source_root/

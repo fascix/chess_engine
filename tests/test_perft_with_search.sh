@@ -16,6 +16,8 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+engine="./chess_engine"
+
 # Fonction pour vérifier si un nombre correspond à l'attendu
 check_result() {
     local result=$1
@@ -42,12 +44,12 @@ echo ""
 
 # Perft profondeur 1 (devrait donner 20 coups)
 echo "Perft profondeur 1 (attendu: 20 coups)"
-result=$(echo -e "uci\nposition startpos\nperft 1\nquit" | ./chess_engine 2>/dev/null | grep -E "^[a-h][1-8][a-h][1-8]:" | wc -l)
+result=$(echo -e "uci\nposition startpos\nperft 1\nquit" | $engine 2>/dev/null | grep -E "^[a-h][1-8][a-h][1-8]:" | wc -l)
 check_result "$result" "20" "Perft depth 1"
 
 # Perft profondeur 2 (devrait donner 400 positions)
 echo "Perft profondeur 2 (attendu: 400 positions)"
-result=$(echo -e "uci\nposition startpos\nperft 2\nquit" | ./chess_engine 2>/dev/null | grep "Total:" | awk '{print $2}')
+result=$(echo -e "uci\nposition startpos\nperft 2\nquit" | $engine 2>/dev/null | grep "Total:" | awk '{print $2}')
 check_result "$result" "400" "Perft depth 2"
 
 echo ""
@@ -73,7 +75,7 @@ result_d3=$(timeout 10 bash -c '{
   echo "go depth 3"
   sleep 3
   echo "quit"
-} | ./chess_engine 2>/dev/null' | grep "^info depth 3" | tail -1)
+} | '"$engine"' 2>/dev/null' | grep "^info depth 3" | tail -1)
 echo "$result_d3"
 score_d3=$(echo "$result_d3" | grep -oP "score cp \K-?\d+")
 
@@ -89,7 +91,7 @@ result_d4=$(timeout 10 bash -c '{
   echo "go depth 4"
   sleep 3
   echo "quit"
-} | ./chess_engine 2>/dev/null' | grep "^info depth 4" | tail -1)
+} | '"$engine"' 2>/dev/null' | grep "^info depth 4" | tail -1)
 echo "$result_d4"
 score_d4=$(echo "$result_d4" | grep -oP "score cp \K-?\d+")
 
@@ -105,7 +107,7 @@ result_d5=$(timeout 10 bash -c '{
   echo "go depth 5"
   sleep 5
   echo "quit"
-} | ./chess_engine 2>/dev/null' | grep "^info depth 5" | tail -1)
+} | '"$engine"' 2>/dev/null' | grep "^info depth 5" | tail -1)
 echo "$result_d5"
 score_d5=$(echo "$result_d5" | grep -oP "score cp \K-?\d+")
 
@@ -146,7 +148,7 @@ result=$(timeout 5 bash -c '{
   echo "perft 1"
   sleep 2
   echo "quit"
-} | ./chess_engine 2>/dev/null' | grep -E "^[a-h][1-8]" | wc -l)
+} | '"$engine"' 2>/dev/null' | grep -E "^[a-h][1-8]" | wc -l)
 
 echo "Nombre de coups légaux: $result"
 
@@ -163,7 +165,7 @@ result_tactical=$(timeout 10 bash -c '{
   echo "go depth 4"
   sleep 5
   echo "quit"
-} | ./chess_engine 2>/dev/null' | grep "bestmove")
+} | '"$engine"' 2>/dev/null' | grep "bestmove")
 
 echo "$result_tactical"
 bestmove=$(echo "$result_tactical" | awk '{print $2}')
@@ -198,7 +200,7 @@ result=$(timeout 5 bash -c '{
   echo "perft 1"
   sleep 2
   echo "quit"
-} | ./chess_engine 2>/dev/null' | grep -E "^[a-h][1-8]" | wc -l)
+} | '"$engine"' 2>/dev/null' | grep -E "^[a-h][1-8]" | wc -l)
 
 echo "Nombre de coups légaux: $result"
 
@@ -215,7 +217,7 @@ result_mate=$(timeout 10 bash -c '{
   echo "go depth 2"
   sleep 3
   echo "quit"
-} | ./chess_engine 2>/dev/null')
+} | '"$engine"' 2>/dev/null')
 
 echo "$result_mate" | grep "^info depth"
 bestmove_mate=$(echo "$result_mate" | grep "bestmove" | awk '{print $2}')
@@ -255,7 +257,7 @@ result=$(timeout 5 bash -c '{
   echo "perft 1"
   sleep 2
   echo "quit"
-} | ./chess_engine 2>/dev/null' | grep -E "^[a-h][1-8]" | wc -l)
+} | '"$engine"' 2>/dev/null' | grep -E "^[a-h][1-8]" | wc -l)
 
 check_result "$result" "48" "Perft depth 1 Kiwipete"
 
@@ -269,7 +271,7 @@ result=$(timeout 10 bash -c '{
   echo "perft 2"
   sleep 5
   echo "quit"
-} | ./chess_engine 2>/dev/null' | grep "Total:" | awk '{print $2}')
+} | '"$engine"' 2>/dev/null' | grep "Total:" | awk '{print $2}')
 
 check_result "$result" "2039" "Perft depth 2 Kiwipete"
 
@@ -286,7 +288,7 @@ result_kiwi=$(timeout 15 bash -c '{
   echo "go depth 4"
   sleep 10
   echo "quit"
-} | ./chess_engine 2>/dev/null' | grep "^info depth 4" | tail -1)
+} | '"$engine"' 2>/dev/null' | grep "^info depth 4" | tail -1)
 
 echo "$result_kiwi"
 
