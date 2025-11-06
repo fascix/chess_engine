@@ -84,7 +84,7 @@ def main_menu():
     running = True
     while running:
         # Charger l'image de fond
-        background_image = pygame.image.load('background.jpg')
+        background_image = pygame.image.load('./assets/background.jpg')
         background_image = pygame.transform.scale(background_image, (WINDOW_SIZE, WINDOW_SIZE))
         screen.blit(background_image, (0, 0))
 

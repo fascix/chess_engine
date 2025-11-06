@@ -40,6 +40,9 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
   // Limite de profondeur pour éviter les boucles infinies
   if (ply >= 128) { // Sécurité maximale
     int score = evaluate_position(board);
+#ifdef DEBUG
+    DEBUG_LOG("[QUIESCENCE] ply>=128, eval=%d\n", score);
+#endif
     return score;
   }
 
@@ -48,6 +51,9 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
 
   // Beta cutoff
   if (stand_pat >= beta) {
+#ifdef DEBUG
+    DEBUG_LOG("[QUIESCENCE] stand_pat=%d >= beta=%d, cutoff\n", stand_pat, beta);
+#endif
     return beta;
   }
 
@@ -62,6 +68,9 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
 
   // Pas de captures = position quiète
   if (capture_moves.count == 0) {
+#ifdef DEBUG
+    DEBUG_LOG("[QUIESCENCE] Quiet position, stand_pat=%d\n", stand_pat);
+#endif
     return stand_pat;
   }
 
@@ -89,6 +98,9 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     int delta = piece_value(ordered_captures.moves[i].captured_piece) + 200;
     if (stand_pat + delta < alpha) {
       *board = local_backup; // Restaurer depuis le backup local
+#ifdef DEBUG
+      DEBUG_LOG("[QUIESCENCE] Delta prune: stand_pat=%d delta=%d alpha=%d\n", stand_pat, delta, alpha);
+#endif
       continue;
     }
 
@@ -100,8 +112,15 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     // Restaurer le plateau depuis le backup local
     *board = local_backup;
 
+#ifdef DEBUG
+    DEBUG_LOG("[QUIESCENCE] ply=%d move=%s score=%d\n", ply, move_to_string(&ordered_captures.moves[i]), score);
+#endif
+
     // Mise à jour alpha-beta
     if (score >= beta) {
+#ifdef DEBUG
+      DEBUG_LOG("[QUIESCENCE] Beta cutoff: score=%d >= beta=%d\n", score, beta);
+#endif
       return beta; // Beta cutoff
     }
 

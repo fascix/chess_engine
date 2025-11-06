@@ -35,7 +35,7 @@ def load_images():
         for piece in pieces:
             piece_id = color + piece
             images[piece_id] = pygame.transform.scale(
-                pygame.image.load(f"pieces/{color}/{piece}.png"), (TILE_SIZE, TILE_SIZE)
+                pygame.image.load(f"./assets/pieces/{color}/{piece}.png"), (TILE_SIZE, TILE_SIZE)
             )
     return images
 

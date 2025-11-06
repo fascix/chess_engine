@@ -75,22 +75,28 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
   if (ply >= 128) {
     int eval = evaluate_position(board);
-    return (color == WHITE) ? eval : -eval;
+#ifdef DEBUG
+    DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (static) color=%s\n", ply, depth, eval, color == WHITE ? "WHITE" : "BLACK");
+#endif
+    return eval;
   }
 
   if (depth == 0) {
     int eval = quiescence_search(board, alpha, beta, color, ply);
-    return (color == WHITE) ? eval : -eval;
+#ifdef DEBUG
+    DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (quiescence) color=%s\n", ply, depth, eval, color == WHITE ? "WHITE" : "BLACK");
+#endif
+    return eval;
   }
 
   // V5: Reverse Futility Pruning
   if (depth <= 3 && !is_in_check(board, color)) {
     int static_eval = evaluate_position(board);
-    if (color == BLACK)
-      static_eval = -static_eval;
-
     int rfp_margin = 100 * depth;
     if (static_eval - rfp_margin >= beta) {
+#ifdef DEBUG
+      DEBUG_LOG("[NEGAMAX] RFP prune at ply=%d, static_eval=%d, margin=%d, beta=%d\n", ply, static_eval, rfp_margin, beta);
+#endif
       return static_eval - rfp_margin; // Cutoff
     }
   }
@@ -110,6 +116,9 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
     *board = backup; // Restaure l'état
 
+#ifdef DEBUG
+    DEBUG_LOG("[NEGAMAX] Null move prune? score=%d beta=%d ply=%d\n", null_score, beta, ply);
+#endif
     if (null_score >= beta) {
       return beta; // Pruning
     }
@@ -172,8 +181,6 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   int futility_pruning_active = (depth <= 2 && !is_in_check(board, color));
   if (futility_pruning_active) {
     static_eval_for_futility = evaluate_position(board);
-    if (color == BLACK)
-      static_eval_for_futility = -static_eval_for_futility;
   }
 
   for (int i = 0; i < ordered_moves.count; i++) {
@@ -222,6 +229,10 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
     undo_move(board, ply);
 
+#ifdef DEBUG
+    DEBUG_LOG("[NEGAMAX] ply=%d move=%s score=%d color=%s\n", ply, move_to_string(&ordered_moves.moves[i]), score, color == WHITE ? "WHITE" : "BLACK");
+#endif
+
     if (score > max_score) {
       max_score = score;
       best_move = ordered_moves.moves[i];
@@ -238,6 +249,9 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
         store_killer_move(best_move, ply);
       }
       tt_store(&tt_global, hash, depth, beta, TT_LOWERBOUND, best_move);
+#ifdef DEBUG
+      DEBUG_LOG("[NEGAMAX] ply=%d beta cutoff move=%s score=%d\n", ply, move_to_string(&best_move), beta);
+#endif
       return beta;
     }
   }
@@ -304,6 +318,10 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
       int score = -negamax_alpha_beta(board, current_depth - 1, -INFINITY_SCORE,
                                       INFINITY_SCORE, color_for_negamax, 1, 0);
 
+#ifdef DEBUG
+      DEBUG_LOG("[ITERATIVE] depth=%d move=%s score=%d root_player=%s\n", current_depth, move_to_string(&ordered_moves.moves[i]), score, root_player == WHITE ? "WHITE" : "BLACK");
+#endif
+
       nodes_this_iter++;
       undo_move(board, 0);
 
@@ -336,20 +354,12 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     int nps = (int)(best_result.nodes_searched * 1000 / elapsed_ms);
 
     // ✅ Normalisation du score pour UCI (toujours du point de vue BLANC)
-    int uci_score;
-    if (root_player == WHITE) {
-        uci_score = best_score_overall;
-    } else {
-        uci_score = -best_score_overall;
-    }
+    best_result.score = (root_player == WHITE) ? best_score_overall : -best_score_overall;
 
     printf("info depth %d score cp %d nodes %d nps %d time %d pv %s\n",
-           current_depth, uci_score, best_result.nodes_searched, nps,
+           current_depth, best_result.score, best_result.nodes_searched, nps,
            elapsed_ms, move_to_string(&best_move_overall));
     fflush(stdout);
-
-    // ✅ Mettre à jour le score du résultat global dans la même logique
-    best_result.score = uci_score;
 
     if (abs(best_score_overall) >= MATE_SCORE - 100) {
       break;
@@ -369,7 +379,8 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
   }
 
   best_result.best_move = best_move_overall;
-  best_result.score = best_score_overall;
+  // On conserve la normalisation du score pour UCI
+  // best_result.score déjà mis à jour dans la boucle
   best_result.depth = max_depth;
 
   return best_result;
