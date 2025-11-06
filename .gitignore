@@ -25,3 +25,4 @@ chess_engine_debug
 
 chess_engine_optimized
 chess_engine_test
+python_gui/__pycache__/
