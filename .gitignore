@@ -15,9 +15,9 @@ versions
 fastchess-mac-arm64
 
 # testing 
-logs
-openings
-pgn_results
+logs/
+openings/
+pgn_results/
 
 
 
