@@ -312,7 +312,6 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
     Move best_move_this_iter = ordered_moves.moves[0];
     int best_score_this_iter = -INFINITY_SCORE;
-    long nodes_this_iter = 0;
 
     // ✅ Sauvegarder le joueur à la racine
     Couleur root_player = board->to_move;
@@ -333,7 +332,6 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
       DEBUG_LOG("[ITERATIVE] depth=%d move=%s score=%d root_player=%s\n", current_depth, move_to_string(&ordered_moves.moves[i]), score, root_player == WHITE ? "WHITE" : "BLACK");
 #endif
 
-      nodes_this_iter++;
       undo_move(board, 0);
 
       if (search_should_stop)
