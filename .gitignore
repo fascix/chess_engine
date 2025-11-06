@@ -23,3 +23,5 @@ chess_engine_debug
 *.o
 *.a
 
+chess_engine_optimized
+chess_engine_test

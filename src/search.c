@@ -48,8 +48,8 @@ void init_lmr_table() {
   for (int depth = 1; depth < 64; depth++) {
     for (int move_num = 1; move_num < 64; move_num++) {
       // Formule standard : R = log(depth) * log(move_num) / diviseur
-      // diviseur = 2.5 (équilibre entre vitesse et précision)
-      double reduction = log(depth) * log(move_num) / 2.5;
+      // diviseur = 2.0 (améliore la réduction, cherche plus de coups)
+      double reduction = log(depth) * log(move_num) / 2.0;
       lmr_reductions[depth][move_num] = (int)reduction;
 
       // Clamp entre 0 et depth-1
@@ -198,10 +198,10 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     board->to_move = (color == WHITE) ? BLACK : WHITE;
     board->en_passant = -1; // Annuler l'en-passant (un coup a été "joué")
 
-    // Réduction R : on cherche avec une profondeur réduite
-    // R=2 : conservateur (plus précis mais plus lent)
-    // R=3 : agressif (plus rapide mais risque de rater des tactiques)
-    int R = 2;
+    // Réduction R : adaptative selon la profondeur
+    // R=3 pour profondeur >= 6 (position stable, peut réduire plus)
+    // R=2 pour profondeur < 6 (éviter les erreurs tactiques)
+    int R = (depth >= 6) ? 3 : 2;
 
     // Recherche avec profondeur réduite et fenêtre null [-beta, -beta+1]
     // On teste juste si score >= beta (fenêtre nulle pour aller vite)
@@ -239,18 +239,17 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   //        L'adversaire ne choisira jamais cette branche.
   //
   // Conditions :
-  // - depth <= 3 : SEULEMENT à très faible profondeur (CRITIQUE: trop agressif
-  // avant!)
+  // - depth <= 2 : SEULEMENT à très faible profondeur (moins agressif)
   // - !is_in_check : Pas en échec (les tactiques peuvent renverser la
   // situation)
   // - eval - margin >= beta : Notre position est bien meilleure que beta
 
-  if (depth <= 3 && !is_in_check(board, color)) {
+  if (depth <= 2 && !is_in_check(board, color)) {
     int static_eval = evaluate_position(board);
     static_eval = (color == WHITE) ? static_eval : -static_eval;
 
-    // Marge réduite (moins agressif)
-    int rfp_margin = 100 * depth; // 100 centipawns par ply (au lieu de 120)
+    // Marge augmentée pour être moins agressif
+    int rfp_margin = 150 * depth; // 150 centipawns par ply (au lieu de 100)
 
     if (static_eval - rfp_margin >= beta) {
 #ifdef DEBUG
@@ -378,7 +377,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     //        probablement pas améliorer alpha.
     //
     // Conditions :
-    // - depth <= 4 : Seulement à très faible profondeur
+    // - depth <= 2 : Seulement à très faible profondeur (moins agressif)
     // - !is_in_check : Pas en échec
     // - Le coup est quiet (pas de capture/promotion)
     // - static_eval + margin < alpha : Position trop mauvaise
@@ -386,10 +385,9 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     if (futility_pruning_active && i >= 1 && // Au moins essayer le premier coup
         is_quiet_move(&ordered_moves.moves[i])) {
 
-      // Marge optimiste : même avec le meilleur coup quiet, peut-on battre
-      // alpha ?
+      // Marge optimiste augmentée pour être moins agressif
       int futility_margin =
-          150 * depth; // 150 centipawns par ply (réduit de 200)
+          200 * depth; // 200 centipawns par ply (augmenté de 150)
 
       if (static_eval_for_futility + futility_margin < alpha) {
 #ifdef DEBUG
@@ -990,7 +988,7 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     make_move_temp(board, &ordered_captures.moves[i], &dummy_backup);
 
     // Delta pruning - ignorer les captures très faibles
-    int delta = piece_value(ordered_captures.moves[i].captured_piece) + 200;
+    int delta = piece_value(ordered_captures.moves[i].captured_piece) + 300;
     if (stand_pat + delta < alpha) {
       *board = local_backup; // Restaurer depuis le backup local
       continue;
@@ -1455,17 +1453,17 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     DEBUG_LOG("\n--- Depth %d (elapsed: %dms / %dms) ---\n", depth, elapsed_ms,
               time_limit_ms);
 
-    // AMÉLIORATION: Arrêter seulement si on a utilisé 80% du temps (au lieu de
-    // 50%) Cela permet de chercher plus profond
-    if (elapsed_ms >= (time_limit_ms * 4) / 5 && depth > min_depth) {
-      DEBUG_LOG("Time limit reached (80%%), stopping at depth %d\n", depth - 1);
+    // AMÉLIORATION: Arrêter seulement si on a utilisé 95% du temps
+    // Cela permet de chercher plus profond tout en gardant une petite marge
+    if (elapsed_ms >= (time_limit_ms * 19) / 20 && depth > min_depth) {
+      DEBUG_LOG("Time limit reached (95%%), stopping at depth %d\n", depth - 1);
       break;
     }
 
     // Vérifier qu'on a assez de temps pour une itération complète
     // Heuristique: la prochaine profondeur prend ~4x le temps de la précédente
-    // On vérifie qu'il reste au moins 20% du temps (au lieu de 33%)
-    if (depth > min_depth && elapsed_ms * 5 >= time_limit_ms * 4) {
+    // On vérifie qu'il reste au moins 5% du temps (au lieu de 20%)
+    if (depth > min_depth && elapsed_ms * 20 >= time_limit_ms * 19) {
       DEBUG_LOG("Not enough time for depth %d (need ~4x current), stopping at "
                 "depth %d\n",
                 depth + 1, depth);
