@@ -75,6 +75,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
   if (ply >= 128) {
     int eval = evaluate_position(board);
+    // evaluate_position returns from white's perspective, adjust for current player
+    if (color == BLACK) eval = -eval;
 #ifdef DEBUG
     DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (static) color=%s\n", ply, depth, eval, color == WHITE ? "WHITE" : "BLACK");
 #endif
@@ -92,6 +94,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   // V5: Reverse Futility Pruning
   if (depth <= 3 && !is_in_check(board, color)) {
     int static_eval = evaluate_position(board);
+    // evaluate_position returns from white's perspective, adjust for current player
+    if (color == BLACK) static_eval = -static_eval;
     int rfp_margin = 100 * depth;
     if (static_eval - rfp_margin >= beta) {
 #ifdef DEBUG
@@ -181,6 +185,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   int futility_pruning_active = (depth <= 2 && !is_in_check(board, color));
   if (futility_pruning_active) {
     static_eval_for_futility = evaluate_position(board);
+    // evaluate_position returns from white's perspective, adjust for current player
+    if (color == BLACK) static_eval_for_futility = -static_eval_for_futility;
   }
 
   for (int i = 0; i < ordered_moves.count; i++) {
