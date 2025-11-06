@@ -8,6 +8,9 @@ chess_engine_debug
 # + binaire de versionning
 versions
 
+# Dossier pour la version actuelle
+chess_engine/
+
 # DS_Store
 .DS_Store
 
@@ -23,4 +26,6 @@ pgn_results/
 # cache python
 python_gui/__pycache__/
 
+# CodeQL detection
+_codeql_detected_source_root
 _codeql_detected_source_root/

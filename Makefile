@@ -83,8 +83,9 @@ chess_engine_debug: $(OBJ_DEBUG)
 # Nettoyage basique : supprime les exécutables et dossiers build
 clean:
 	@echo "🧹 Nettoyage des builds principaux..."
-	@rm -f chess_engine chess_engine_debug
+	@rm -f chess_engine_debug
 	@rm -rf $(BUILD_DIR) $(BUILD_DIR_DEBUG)
+	@rm -rf chess_engine
 	@echo "✅ Nettoyage terminé"
 
 # Nettoyage des versions : supprime tous les dossiers versions/v*_build
@@ -121,7 +122,7 @@ distclean: clean-all
 COMMON_OBJ_V = $(BUILD_DIR)/board.o $(BUILD_DIR)/movegen.o $(BUILD_DIR)/utils.o \
                $(BUILD_DIR)/evaluation.o $(BUILD_DIR)/zobrist.o $(BUILD_DIR)/transposition.o \
                $(BUILD_DIR)/move_ordering.o $(BUILD_DIR)/quiescence.o $(BUILD_DIR)/search_helpers.o \
-               $(BUILD_DIR)/uci.o $(BUILD_DIR)/timemanager.o $(BUILD_DIR)/main.o
+               $(BUILD_DIR)/perft.o $(BUILD_DIR)/uci.o $(BUILD_DIR)/timemanager.o $(BUILD_DIR)/main.o
 
 # Création des dossiers versions si nécessaires
 versions/v%_build:
@@ -167,6 +168,15 @@ v9: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v9_build
 v10: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v10_build
 	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=10 -o versions/v10_build/chess_engine_v10 $^ -lm
 
+# Création du dossier chess_engine pour la version actuelle
+chess_engine_dir:
+	@if [ -f chess_engine ]; then rm -f chess_engine; fi
+	@mkdir -p chess_engine
+
+# Version actuelle (complète) dans le dossier chess_engine
+current: $(OBJ_RELEASE) | chess_engine_dir
+	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -o chess_engine/chess_engine $^ -lm
+
 # Compilation de toutes les versions
 all_versions: v1 v2 v3 v4 v5 v6 v7 v8 v9 v10
 
@@ -186,6 +196,7 @@ help:
 	@echo "    make              - Compile la version release (défaut)"
 	@echo "    make release      - Compile la version release"
 	@echo "    make debug        - Compile la version debug"
+	@echo "    make current      - Compile la version actuelle dans chess_engine/"
 	@echo "    make all_versions - Compile toutes les versions (v1-v10)"
 	@echo "    make v1..v10      - Compile une version spécifique"
 	@echo ""
@@ -206,4 +217,4 @@ help:
 
 # Déclaration des cibles "virtuelles" pour éviter des conflits avec des fichiers du même nom
 .PHONY: all debug release clean clean-versions clean-logs clean-all distclean \
-        v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 all_versions rebuild rebuild-versions help
+        v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 all_versions current rebuild rebuild-versions help
