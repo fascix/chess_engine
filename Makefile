@@ -170,7 +170,7 @@ v10: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v10_build
 
 # Création du dossier chess_engine pour la version actuelle
 chess_engine_dir:
-	@if [ -f chess_engine ]; then rm -f chess_engine; fi
+	@if [ -e chess_engine ]; then rm -rf chess_engine; fi
 	@mkdir -p chess_engine
 
 # Version actuelle (complète) dans le dossier chess_engine
