@@ -1,6 +1,5 @@
 #include "uci.h"
 #include "search.h"
-#include "perft.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,9 +66,6 @@ void parse_uci_command(char *line, Board *board) {
   } else if (strcmp(command, "go") == 0) {
     char *params = strtok(NULL, ""); // Récupérer le reste
     handle_go(board, params);
-  } else if (strcmp(command, "perft") == 0) {
-    char *params = strtok(NULL, ""); // Récupérer le reste
-    handle_perft(board, params);
   } else if (strcmp(command, "stop") == 0) {
     handle_stop();
   } else if (strcmp(command, "quit") == 0) {
@@ -596,28 +592,4 @@ void apply_uci_moves(Board *board, char *moves_str) {
 
     move_str = strtok(NULL, " ");
   }
-}
-
-// Gestionnaire commande "perft"
-void handle_perft(Board *board, char *params) {
-  if (params == NULL) {
-    printf("info string perft requires depth parameter\n");
-    fflush(stdout);
-    return;
-  }
-
-  int depth = atoi(params);
-  if (depth < 1 || depth > 10) {
-    printf("info string perft depth must be between 1 and 10\n");
-    fflush(stdout);
-    return;
-  }
-
-  // Utiliser perft_divide pour afficher chaque coup et son nombre de positions
-  perft_divide(board, depth);
-  
-  // Calculer et afficher le total
-  unsigned long total = perft(board, depth);
-  printf("Total: %lu\n", total);
-  fflush(stdout);
 }

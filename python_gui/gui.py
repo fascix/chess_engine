@@ -114,36 +114,6 @@ def highlight_en_passant_moves(screen, legal_moves, player_is_white=True):
             pygame.draw.circle(screen, (255, 0, 0), 
                              (x + TILE_SIZE // 2, y + TILE_SIZE // 2), 10)
 
-def highlight_last_move(screen, last_move, player_is_white=True):
-    """Highlights the last move played on the board."""
-    if last_move is None:
-        return
-    
-    from_square = last_move.from_square
-    to_square = last_move.to_square
-    
-    # Convert square indices based on board orientation
-    if player_is_white:
-        from_row, from_col = 7 - chess.square_rank(from_square), chess.square_file(from_square)
-        to_row, to_col = 7 - chess.square_rank(to_square), chess.square_file(to_square)
-    else:
-        from_row, from_col = chess.square_rank(from_square), 7 - chess.square_file(from_square)
-        to_row, to_col = chess.square_rank(to_square), 7 - chess.square_file(to_square)
-    
-    # Draw semi-transparent highlight for from square
-    from_x, from_y = from_col * TILE_SIZE, from_row * TILE_SIZE
-    highlight_surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
-    highlight_surface.set_alpha(100)
-    highlight_surface.fill((255, 255, 0))  # Yellow
-    screen.blit(highlight_surface, (from_x, from_y))
-    
-    # Draw semi-transparent highlight for to square
-    to_x, to_y = to_col * TILE_SIZE, to_row * TILE_SIZE
-    highlight_surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
-    highlight_surface.set_alpha(100)
-    highlight_surface.fill((255, 255, 0))  # Yellow
-    screen.blit(highlight_surface, (to_x, to_y))
-
 def display_checkmate(screen, loser_color):
     """Affiche le message d'échec et mat."""
     font = pygame.font.Font(None, 64)
@@ -173,7 +143,6 @@ def render_game(screen, board, font, player_is_white=True):
     
     # Dessiner l'échiquier
     draw_board(screen)
-    highlight_last_move(screen, game_logic.last_move, player_is_white)  # Highlight last move
     highlight_selected_piece(screen, game_logic.selected_piece, player_is_white)
     draw_pieces(screen, board, images, game_logic.selected_piece if game_logic.drag_mode else None, player_is_white)
     highlight_legal_moves(screen, game_logic.legal_moves, player_is_white)
