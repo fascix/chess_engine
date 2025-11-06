@@ -16,6 +16,7 @@
 static clock_t search_start_time;
 static int search_time_limit_ms;
 static volatile int search_should_stop;
+static long global_nodes_searched; // Global counter for all nodes explored
 
 // V3: Table de transposition globale
 static TranspositionTable tt_global;
@@ -35,6 +36,9 @@ void initialize_engine(void) {
 
 int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
                        Couleur color, int ply, int in_null_move) {
+  // Increment global node counter
+  global_nodes_searched++;
+  
   // (in_null_move est ignoré en V1)
   (void)in_null_move;
 
@@ -283,6 +287,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
   search_start_time = clock();
   search_time_limit_ms = time_limit_ms;
   search_should_stop = 0;
+  global_nodes_searched = 0; // Reset global counter
 
   tt_new_search(&tt_global); // V3
 
@@ -350,7 +355,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
     best_move_overall = best_move_this_iter;
     best_score_overall = best_score_this_iter;
-    best_result.nodes_searched += nodes_this_iter;
+    best_result.nodes_searched = global_nodes_searched; // Use global counter
 
     clock_t end_time = clock();
     int elapsed_ms =
