@@ -529,7 +529,11 @@ int evaluate_position(const Board *board) {
   int score = 0;
   int material = evaluate_material(board);
   int pst = evaluate_piece_square_tables(board);
-  int hanging = evaluate_hanging_pieces(board) * 2;
+  // FIX: Removed hanging pieces evaluation from static eval
+  // Hanging pieces should be handled by search/quiescence, not static eval
+  // because pieces can move to safety. The engine must capture them, not just
+  // count them as "virtually captured" in static evaluation.
+  // int hanging = evaluate_hanging_pieces(board) * 2;
   int safe_dev = evaluate_safe_development(board);
   int pawn_adv_penalty = evaluate_pawn_advancement_penalty(board);
 
@@ -538,7 +542,7 @@ int evaluate_position(const Board *board) {
   score += pst;
 
   // NOUVELLES ÉVALUATIONS TACTIQUES
-  score += hanging;  // Très important !
+  // score += hanging;  // REMOVED - causes severe overestimation
   score += safe_dev; // Pour l'ouverture
 
   // Autres évaluations selon la phase
@@ -563,9 +567,9 @@ int evaluate_position(const Board *board) {
 #ifdef DEBUG
   if (should_log) {
     fprintf(stderr,
-            "[EVAL] mat=%d pst=%d hanging=%d safe_dev=%d pawn_pen=%d "
+            "[EVAL] mat=%d pst=%d safe_dev=%d pawn_pen=%d "
             "phase_bonus=%d -> TOTAL=%d\n",
-            material, pst, hanging, safe_dev, pawn_adv_penalty, phase_bonus,
+            material, pst, safe_dev, pawn_adv_penalty, phase_bonus,
             score);
   }
 #endif
