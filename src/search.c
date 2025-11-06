@@ -48,7 +48,7 @@ void init_lmr_table() {
   for (int depth = 1; depth < 64; depth++) {
     for (int move_num = 1; move_num < 64; move_num++) {
       // Formule standard : R = log(depth) * log(move_num) / diviseur
-      // diviseur = 2.0 (améliore la réduction, cherche plus de coups)
+      // diviseur = 2.0 (réduit moins agressivement, cherche plus de coups)
       double reduction = log(depth) * log(move_num) / 2.0;
       lmr_reductions[depth][move_num] = (int)reduction;
 
@@ -387,7 +387,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
       // Marge optimiste augmentée pour être moins agressif
       int futility_margin =
-          200 * depth; // 200 centipawns par ply (augmenté de 150)
+          200 * depth; // 200 centipawns par ply (au lieu de 150)
 
       if (static_eval_for_futility + futility_margin < alpha) {
 #ifdef DEBUG
