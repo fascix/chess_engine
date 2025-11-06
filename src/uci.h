@@ -19,6 +19,7 @@ void handle_isready();
 void handle_ucinewgame();
 void handle_position(Board *board, char *params);
 void handle_go(Board *board, char *params);
+void handle_perft(Board *board, char *params);
 void handle_stop();
 void handle_quit();
 
