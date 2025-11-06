@@ -40,6 +40,8 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
   // Limite de profondeur pour éviter les boucles infinies
   if (ply >= 128) { // Sécurité maximale
     int score = evaluate_position(board);
+    // evaluate_position returns from white's perspective, adjust for current player
+    if (color == BLACK) score = -score;
 #ifdef DEBUG
     DEBUG_LOG("[QUIESCENCE] ply>=128, eval=%d\n", score);
 #endif
@@ -48,6 +50,8 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
 
   // Évaluation statique
   int stand_pat = evaluate_position(board);
+  // evaluate_position returns from white's perspective, adjust for current player
+  if (color == BLACK) stand_pat = -stand_pat;
 
   // Beta cutoff
   if (stand_pat >= beta) {

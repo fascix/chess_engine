@@ -16,6 +16,7 @@
 static clock_t search_start_time;
 static int search_time_limit_ms;
 static volatile int search_should_stop;
+static long global_nodes_searched; // Global counter for all nodes explored
 
 // V3: Table de transposition globale
 static TranspositionTable tt_global;
@@ -35,6 +36,9 @@ void initialize_engine(void) {
 
 int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
                        Couleur color, int ply, int in_null_move) {
+  // Increment global node counter
+  global_nodes_searched++;
+  
   // (in_null_move est ignoré en V1)
   (void)in_null_move;
 
@@ -75,6 +79,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
   if (ply >= 128) {
     int eval = evaluate_position(board);
+    // evaluate_position returns from white's perspective, adjust for current player
+    if (color == BLACK) eval = -eval;
 #ifdef DEBUG
     DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (static) color=%s\n", ply, depth, eval, color == WHITE ? "WHITE" : "BLACK");
 #endif
@@ -92,6 +98,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   // V5: Reverse Futility Pruning
   if (depth <= 3 && !is_in_check(board, color)) {
     int static_eval = evaluate_position(board);
+    // evaluate_position returns from white's perspective, adjust for current player
+    if (color == BLACK) static_eval = -static_eval;
     int rfp_margin = 100 * depth;
     if (static_eval - rfp_margin >= beta) {
 #ifdef DEBUG
@@ -181,6 +189,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   int futility_pruning_active = (depth <= 2 && !is_in_check(board, color));
   if (futility_pruning_active) {
     static_eval_for_futility = evaluate_position(board);
+    // evaluate_position returns from white's perspective, adjust for current player
+    if (color == BLACK) static_eval_for_futility = -static_eval_for_futility;
   }
 
   for (int i = 0; i < ordered_moves.count; i++) {
@@ -277,6 +287,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
   search_start_time = clock();
   search_time_limit_ms = time_limit_ms;
   search_should_stop = 0;
+  global_nodes_searched = 0; // Reset global counter
 
   tt_new_search(&tt_global); // V3
 
@@ -301,7 +312,6 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
     Move best_move_this_iter = ordered_moves.moves[0];
     int best_score_this_iter = -INFINITY_SCORE;
-    long nodes_this_iter = 0;
 
     // ✅ Sauvegarder le joueur à la racine
     Couleur root_player = board->to_move;
@@ -322,7 +332,6 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
       DEBUG_LOG("[ITERATIVE] depth=%d move=%s score=%d root_player=%s\n", current_depth, move_to_string(&ordered_moves.moves[i]), score, root_player == WHITE ? "WHITE" : "BLACK");
 #endif
 
-      nodes_this_iter++;
       undo_move(board, 0);
 
       if (search_should_stop)
@@ -344,7 +353,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
     best_move_overall = best_move_this_iter;
     best_score_overall = best_score_this_iter;
-    best_result.nodes_searched += nodes_this_iter;
+    best_result.nodes_searched = global_nodes_searched; // Use global counter
 
     clock_t end_time = clock();
     int elapsed_ms =
