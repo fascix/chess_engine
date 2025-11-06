@@ -1,4 +1,5 @@
 #include "uci.h"
+#include "perft.h"
 #include "search.h"
 #include "timemanager.h"
 #include <stdbool.h>
@@ -48,40 +49,29 @@ void uci_loop() {
   }
 }
 
-// Parser de commandes
-void parse_uci_command(char *line, Board *board) {
-  char *command = strtok(line, " ");
-
-  if (strcmp(command, "uci") == 0) {
-    handle_uci();
-  } else if (strcmp(command, "isready") == 0) {
-    handle_isready();
-  } else if (strcmp(command, "debug") == 0) {
-    char *params = strtok(NULL, "");
-    handle_debug(params);
-  } else if (strcmp(command, "setoption") == 0) {
-    char *params = strtok(NULL, "");
-    handle_setoption(params);
-  } else if (strcmp(command, "register") == 0) {
-    char *params = strtok(NULL, "");
-    handle_register(params);
-  } else if (strcmp(command, "ucinewgame") == 0) {
-    handle_ucinewgame();
-  } else if (strcmp(command, "position") == 0) {
-    char *params = strtok(NULL, "");
-    handle_position(board, params);
-  } else if (strcmp(command, "go") == 0) {
-    char *params = strtok(NULL, "");
-    handle_go(board, params);
-  } else if (strcmp(command, "ponderhit") == 0) {
-    handle_ponderhit();
-  } else if (strcmp(command, "stop") == 0) {
-    handle_stop();
-  } else if (strcmp(command, "quit") == 0) {
-    handle_quit();
-  } else {
-    DEBUG_LOG_UCI("Unknown command: %s\n", command);
+// Gestionnaire commande "perft"
+void handle_perft(Board *board, char *params) {
+  if (params == NULL) {
+    printf("info string perft requires depth parameter\n");
+    fflush(stdout);
+    return;
   }
+
+  int depth = atoi(params);
+  if (depth < 1 || depth > 10) {
+    printf("info string perft depth must be between 1 and 10\n");
+    fflush(stdout);
+    return;
+  }
+
+  // Utiliser perft_divide pour afficher chaque coup et son nombre de
+  // positions
+  perft_divide(board, depth);
+
+  // Calculer et afficher le total
+  unsigned long total = perft(board, depth);
+  printf("Total: %lu\n", total);
+  fflush(stdout);
 }
 
 // Gestionnaire commande "uci"
@@ -380,10 +370,12 @@ void handle_go(Board *board, char *params) {
     } else {
       max_depth = 64;
     }
-    DEBUG_LOG_UCI("Adaptive depth set to %d based on time limit %d ms\n", max_depth, time_limit_ms);
+    DEBUG_LOG_UCI("Adaptive depth set to %d based on time limit %d ms\n",
+                  max_depth, time_limit_ms);
   } else {
     max_depth = 64;
-    DEBUG_LOG_UCI("No depth or time limit specified, using max_depth=%d\n", max_depth);
+    DEBUG_LOG_UCI("No depth or time limit specified, using max_depth=%d\n",
+                  max_depth);
   }
 
   DEBUG_LOG_UCI("Starting search: max_depth=%d, time_limit=%dms\n", max_depth,
@@ -507,5 +499,44 @@ void apply_uci_moves(Board *board, char *moves_str) {
     }
 
     move_str = strtok(NULL, " ");
+  }
+}
+
+// Parser de commandes
+void parse_uci_command(char *line, Board *board) {
+  char *command = strtok(line, " ");
+
+  if (strcmp(command, "uci") == 0) {
+    handle_uci();
+  } else if (strcmp(command, "isready") == 0) {
+    handle_isready();
+  } else if (strcmp(command, "debug") == 0) {
+    char *params = strtok(NULL, "");
+    handle_debug(params);
+  } else if (strcmp(command, "setoption") == 0) {
+    char *params = strtok(NULL, "");
+    handle_setoption(params);
+  } else if (strcmp(command, "register") == 0) {
+    char *params = strtok(NULL, "");
+    handle_register(params);
+  } else if (strcmp(command, "ucinewgame") == 0) {
+    handle_ucinewgame();
+  } else if (strcmp(command, "position") == 0) {
+    char *params = strtok(NULL, "");
+    handle_position(board, params);
+  } else if (strcmp(command, "go") == 0) {
+    char *params = strtok(NULL, "");
+    handle_go(board, params);
+  } else if (strcmp(command, "perft") == 0) {
+    char *params = strtok(NULL, "");
+    handle_perft(board, params);
+  } else if (strcmp(command, "ponderhit") == 0) {
+    handle_ponderhit();
+  } else if (strcmp(command, "stop") == 0) {
+    handle_stop();
+  } else if (strcmp(command, "quit") == 0) {
+    handle_quit();
+  } else {
+    DEBUG_LOG_UCI("Unknown command: %s\n", command);
   }
 }

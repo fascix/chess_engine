@@ -38,7 +38,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
                        Couleur color, int ply, int in_null_move) {
   // Increment global node counter
   global_nodes_searched++;
-  
+
   // (in_null_move est ignoré en V1)
   (void)in_null_move;
 
@@ -79,10 +79,13 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
   if (ply >= 128) {
     int eval = evaluate_position(board);
-    // evaluate_position returns from white's perspective, adjust for current player
-    if (color == BLACK) eval = -eval;
+    // evaluate_position returns from white's perspective, adjust for current
+    // player
+    if (color == BLACK)
+      eval = -eval;
 #ifdef DEBUG
-    DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (static) color=%s\n", ply, depth, eval, color == WHITE ? "WHITE" : "BLACK");
+    DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (static) color=%s\n", ply,
+              depth, eval, color == WHITE ? "WHITE" : "BLACK");
 #endif
     return eval;
   }
@@ -90,20 +93,25 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   if (depth == 0) {
     int eval = quiescence_search(board, alpha, beta, color, ply);
 #ifdef DEBUG
-    DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (quiescence) color=%s\n", ply, depth, eval, color == WHITE ? "WHITE" : "BLACK");
+    DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (quiescence) color=%s\n", ply,
+              depth, eval, color == WHITE ? "WHITE" : "BLACK");
 #endif
     return eval;
   }
 
   // V5: Reverse Futility Pruning
-  if (depth <= 3 && !is_in_check(board, color)) {
+  if (depth <= 2 && !is_in_check(board, color)) {
     int static_eval = evaluate_position(board);
-    // evaluate_position returns from white's perspective, adjust for current player
-    if (color == BLACK) static_eval = -static_eval;
-    int rfp_margin = 100 * depth;
+    // evaluate_position returns from white's perspective, adjust for current
+    // player
+    if (color == BLACK)
+      static_eval = -static_eval;
+    int rfp_margin = 150 * depth;
     if (static_eval - rfp_margin >= beta) {
 #ifdef DEBUG
-      DEBUG_LOG("[NEGAMAX] RFP prune at ply=%d, static_eval=%d, margin=%d, beta=%d\n", ply, static_eval, rfp_margin, beta);
+      DEBUG_LOG(
+          "[NEGAMAX] RFP prune at ply=%d, static_eval=%d, margin=%d, beta=%d\n",
+          ply, static_eval, rfp_margin, beta);
 #endif
       return static_eval - rfp_margin; // Cutoff
     }
@@ -117,7 +125,10 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     board->to_move = (color == WHITE) ? BLACK : WHITE;
     board->en_passant = -1;
 
-    int R = 2; // Réduction
+    // Réduction R : adaptative selon la profondeur
+    // R=3 pour profondeur >= 6 (position stable, peut réduire plus)
+    // R=2 pour profondeur < 6 (éviter les erreurs tactiques)
+    int R = (depth >= 6) ? 3 : 2;
     int null_score =
         -negamax_alpha_beta(board, depth - 1 - R, -beta, -beta + 1,
                             (color == WHITE) ? BLACK : WHITE, ply + 1, 1);
@@ -125,7 +136,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     *board = backup; // Restaure l'état
 
 #ifdef DEBUG
-    DEBUG_LOG("[NEGAMAX] Null move prune? score=%d beta=%d ply=%d\n", null_score, beta, ply);
+    DEBUG_LOG("[NEGAMAX] Null move prune? score=%d beta=%d ply=%d\n",
+              null_score, beta, ply);
 #endif
     if (null_score >= beta) {
       return beta; // Pruning
@@ -189,14 +201,16 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   int futility_pruning_active = (depth <= 2 && !is_in_check(board, color));
   if (futility_pruning_active) {
     static_eval_for_futility = evaluate_position(board);
-    // evaluate_position returns from white's perspective, adjust for current player
-    if (color == BLACK) static_eval_for_futility = -static_eval_for_futility;
+    // evaluate_position returns from white's perspective, adjust for current
+    // player
+    if (color == BLACK)
+      static_eval_for_futility = -static_eval_for_futility;
   }
 
   for (int i = 0; i < ordered_moves.count; i++) {
     // V10: Futility Pruning
     if (futility_pruning_active && is_quiet_move(&ordered_moves.moves[i])) {
-      int futility_margin = 150 * depth;
+      int futility_margin = 200 * depth;
       if (static_eval_for_futility + futility_margin < alpha) {
         continue; // Prune ce coup
       }
@@ -240,7 +254,9 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     undo_move(board, ply);
 
 #ifdef DEBUG
-    DEBUG_LOG("[NEGAMAX] ply=%d move=%s score=%d color=%s\n", ply, move_to_string(&ordered_moves.moves[i]), score, color == WHITE ? "WHITE" : "BLACK");
+    DEBUG_LOG("[NEGAMAX] ply=%d move=%s score=%d color=%s\n", ply,
+              move_to_string(&ordered_moves.moves[i]), score,
+              color == WHITE ? "WHITE" : "BLACK");
 #endif
 
     if (score > max_score) {
@@ -260,7 +276,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
       }
       tt_store(&tt_global, hash, depth, beta, TT_LOWERBOUND, best_move);
 #ifdef DEBUG
-      DEBUG_LOG("[NEGAMAX] ply=%d beta cutoff move=%s score=%d\n", ply, move_to_string(&best_move), beta);
+      DEBUG_LOG("[NEGAMAX] ply=%d beta cutoff move=%s score=%d\n", ply,
+                move_to_string(&best_move), beta);
 #endif
       return beta;
     }
@@ -329,7 +346,9 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
                                       INFINITY_SCORE, color_for_negamax, 1, 0);
 
 #ifdef DEBUG
-      DEBUG_LOG("[ITERATIVE] depth=%d move=%s score=%d root_player=%s\n", current_depth, move_to_string(&ordered_moves.moves[i]), score, root_player == WHITE ? "WHITE" : "BLACK");
+      DEBUG_LOG("[ITERATIVE] depth=%d move=%s score=%d root_player=%s\n",
+                current_depth, move_to_string(&ordered_moves.moves[i]), score,
+                root_player == WHITE ? "WHITE" : "BLACK");
 #endif
 
       undo_move(board, 0);
@@ -363,7 +382,8 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     int nps = (int)(best_result.nodes_searched * 1000 / elapsed_ms);
 
     // ✅ Normalisation du score pour UCI (toujours du point de vue BLANC)
-    best_result.score = (root_player == WHITE) ? best_score_overall : -best_score_overall;
+    best_result.score =
+        (root_player == WHITE) ? best_score_overall : -best_score_overall;
 
     printf("info depth %d score cp %d nodes %d nps %d time %d pv %s\n",
            current_depth, best_result.score, best_result.nodes_searched, nps,

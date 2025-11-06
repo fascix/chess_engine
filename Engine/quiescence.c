@@ -99,7 +99,7 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     make_move_temp(board, &ordered_captures.moves[i], &dummy_backup);
 
     // Delta pruning - ignorer les captures très faibles
-    int delta = piece_value(ordered_captures.moves[i].captured_piece) + 200;
+    int delta = piece_value(ordered_captures.moves[i].captured_piece) + 300;
     if (stand_pat + delta < alpha) {
       *board = local_backup; // Restaurer depuis le backup local
 #ifdef DEBUG

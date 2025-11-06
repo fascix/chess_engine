@@ -11,7 +11,7 @@
 #endif
 
 // Constantes pour la gestion du temps
-#define DEFAULT_TIME_MS 1000
+#define DEFAULT_TIME_MS 3000
 #define MIN_TIME_MS 50
 #define PANIC_THRESHOLD_MS 1000
 #define PANIC_TIME_DIVISOR 5
@@ -131,7 +131,7 @@ int calculate_time_for_move(const Board *board, const GoParams *params) {
 
   // Cas 1: Temps fixe spécifié
   if (params->movetime > 0) {
-    int allocated_time = (int)(params->movetime * 0.9); // 90% du movetime
+    int allocated_time = (int)(params->movetime * 0.95); // 90% du movetime
     DEBUG_LOG_TIME("Using fixed movetime: %dms, allocated: %dms\n", params->movetime, allocated_time);
     return allocated_time;
   }

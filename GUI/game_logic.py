@@ -7,6 +7,7 @@ import chess.engine
 import time
 import threading
 import queue
+import config
 from settings import *
 
 # Variables globales pour le jeu
@@ -27,19 +28,30 @@ captured_pieces = {'white': [], 'black': []}
 
 # Variables pour le threading du moteur
 engine_queue = queue.Queue()
+engine_queue2 = queue.Queue()
 engine_thinking = False
 engine_move_ready = False
 pending_engine_move = None
 game_paused = False
 
+
+# Variables pour bot vs bot
+engine2_thinking = False
+engine2_move_ready = False
+pending_engine2_move = None
+
 # Variable pour l'orientation du plateau
 player_is_white = True
+
+# Variable pour le dernier coup joué
+last_move = None
 
 def reset_game():
     """Remet à zéro toutes les variables de jeu."""
     global board, selected_piece, legal_moves, dragging, captured_pieces
     global engine_thinking, engine_move_ready, pending_engine_move
-    
+    global engine2_thinking, engine2_move_ready, pending_engine2_move, last_move
+
     board = chess.Board()
     selected_piece = None
     legal_moves = []
@@ -48,12 +60,18 @@ def reset_game():
     engine_thinking = False
     engine_move_ready = False
     pending_engine_move = None
+    engine2_thinking = False
+    engine2_move_ready = False
+    pending_engine2_move = None
+    last_move = None
 
-def engine_worker(board_copy, result_queue):
+def engine_worker(board_copy, result_queue, engine_path=None):
     """Worker thread pour calculer le coup du moteur sans bloquer l'interface."""
     engine = None
     try:
-        engine = chess.engine.SimpleEngine.popen_uci("../versions/v10_build/chess_engine_v10")
+        if engine_path is None:
+            engine_path = config.get_bot1_path()
+        engine = chess.engine.SimpleEngine.popen_uci(engine_path)
         result = engine.play(board_copy, chess.engine.Limit(time=1.0))
         result_queue.put(result.move)
     except Exception as e:
@@ -66,7 +84,7 @@ def engine_worker(board_copy, result_queue):
             except:
                 pass
 
-def start_engine_calculation(board):
+def start_engine_calculation(board, engine_path=None):
     """Démarre le calcul du moteur dans un thread séparé."""
     global engine_thinking, engine_move_ready, pending_engine_move
     engine_thinking = True
@@ -74,7 +92,21 @@ def start_engine_calculation(board):
     pending_engine_move = None
     
     board_copy = board.copy()
-    thread = threading.Thread(target=engine_worker, args=(board_copy, engine_queue))
+    thread = threading.Thread(target=engine_worker, args=(board_copy, engine_queue, engine_path))
+    thread.daemon = True
+    thread.start()
+    
+
+def start_engine2_calculation(board):
+    """Démarre le calcul du second moteur (bot vs bot)."""
+    global engine2_thinking, engine2_move_ready, pending_engine2_move
+    engine2_thinking = True
+    engine2_move_ready = False
+    pending_engine2_move = None
+    
+    board_copy = board.copy()
+    engine2_path = config.get_bot2_path()
+    thread = threading.Thread(target=engine_worker, args=(board_copy, engine_queue2, engine2_path))
     thread.daemon = True
     thread.start()
 
@@ -87,6 +119,19 @@ def check_engine_result():
         engine_thinking = False
         engine_move_ready = True
         pending_engine_move = move
+        return True
+    except queue.Empty:
+        return False
+
+def check_engine2_result():
+    """Vérifie si le second moteur a terminé son calcul."""
+    global engine2_thinking, engine2_move_ready, pending_engine2_move
+    
+    try:
+        move = engine_queue2.get_nowait()
+        engine2_thinking = False
+        engine2_move_ready = True
+        pending_engine2_move = move
         return True
     except queue.Empty:
         return False
@@ -191,6 +236,7 @@ def handle_drop(event, board):
 
 def execute_move(board, move):
     """Exécute un mouvement et gère les captures."""
+    global last_move
     captured_piece = None
     captured_color = None
     
@@ -206,6 +252,7 @@ def execute_move(board, move):
             captured_color = 'white' if captured_piece.color == chess.WHITE else 'black'
 
     board.push(move)
+    last_move = move  # Store the last move made
 
     # Ajouter la pièce capturée si elle existe
     if captured_piece and captured_color:
@@ -229,10 +276,7 @@ def execute_move(board, move):
         display_draw(pygame.display.get_surface(), "Matériel insuffisant")
         return
         
-    if board.is_checkmate():
-        # Import local pour éviter l'import circulaire
-        from gui import display_checkmate
-        display_checkmate(pygame.display.get_surface(), board.turn)
+    
 
 def update_timers():
     """Met à jour les timers des joueurs."""

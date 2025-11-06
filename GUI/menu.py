@@ -121,7 +121,7 @@ def game_mode_menu():
     pygame.display.set_caption("Sélection du mode de jeu")
 
     font = pygame.font.Font(None, 48)
-    menu_options = ["Mode 2 joueurs", "Mode Chess Engine (bot)", "Retour"]
+    menu_options = ["Mode 2 joueurs", "Mode Chess Engine (bot)", "Mode Bot vs Bot", "Retour"]    
     selected_index = 0
 
     running = True
@@ -152,7 +152,9 @@ def game_mode_menu():
                         timer_menu("solo")
                     elif selected_index == 1:  # Bot
                         timer_menu("bot")
-                    elif selected_index == 2:  # Retour
+                    elif selected_index == 2:  # Bot vs Bot
+                        timer_menu("bot_vs_bot")
+                    elif selected_index == 3:  # Retour  # Retour
                         main_menu()
 
 def timer_menu(mode):
@@ -190,6 +192,9 @@ def timer_menu(mode):
                     if mode == "solo":
                         from game_modes import solo_game
                         solo_game(timer, True)  # Mode 2 joueurs, les blancs commencent toujours
+                    elif mode == "bot_vs_bot":
+                        from game_modes import bot_vs_bot
+                        bot_vs_bot(timer)
                     else:
                         color_choice_menu("bot", timer)
                     return
@@ -261,6 +266,8 @@ def settings_menu():
         options = [
             f"Drag & Drop {'(actif)' if game_logic.drag_mode else ''}",
             f"Mode Clic {'(actif)' if not game_logic.drag_mode else ''}",
+            "Choisir Bot 1 vs Player",
+            "Choisir Bot 2 vs Bot",
             "Retour"
         ]
 
@@ -290,5 +297,73 @@ def settings_menu():
                     elif selected_index == 1:
                         game_logic.drag_mode = False
                     elif selected_index == 2:
+                        bot_selection_menu(1)
+                    elif selected_index == 3:
+                        bot_selection_menu(2)
+                    elif selected_index == 4:
                         main_menu()
                         return
+
+
+def bot_selection_menu(bot_number):
+    """Menu pour choisir le bot (1 ou 2)."""
+    import config
+    
+    pygame.display.set_caption(f"Sélection Bot {bot_number}")
+    screen = pygame.display.get_surface()
+    font = pygame.font.Font(None, 48)
+    small_font = pygame.font.Font(None, 32)
+    
+    # Liste des bots disponibles
+    bot_list = list(config.bot_engines.keys())
+    selected_index = 0
+    
+    # Trouver l'index du bot actuellement sélectionné
+    current_bot = config.selected_bot1 if bot_number == 1 else config.selected_bot2
+    if current_bot in bot_list:
+        selected_index = bot_list.index(current_bot)
+
+    running = True
+    while running:
+        screen.fill((0, 0, 0))
+
+        title_text = font.render(f"Choisir Bot {bot_number}:", True, (255, 255, 255))
+        screen.blit(title_text, (WINDOW_SIZE // 4, 100))
+
+        for i, bot_name in enumerate(bot_list):
+            bot_path = config.bot_engines[bot_name]
+            display_path = bot_path if bot_path else "(vide)"
+            
+            color = (255, 255, 255)
+            if i == selected_index:
+                text = font.render(f"> {bot_name}", True, (255, 255, 0))
+                path_text = small_font.render(display_path, True, (200, 200, 0))
+            else:
+                text = font.render(bot_name, True, color)
+                path_text = small_font.render(display_path, True, (150, 150, 150))
+
+            screen.blit(text, (WINDOW_SIZE // 4, 200 + i * 80))
+            screen.blit(path_text, (WINDOW_SIZE // 4 + 20, 230 + i * 80))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_index = (selected_index - 1) % len(bot_list)
+                elif event.key == pygame.K_DOWN:
+                    selected_index = (selected_index + 1) % len(bot_list)
+                elif event.key == pygame.K_RETURN:
+                    # Sélectionner le bot
+                    if bot_number == 1:
+                        config.set_bot1(bot_list[selected_index])
+                    else:
+                        config.set_bot2(bot_list[selected_index])
+                    settings_menu()
+                    return
+                elif event.key == pygame.K_ESCAPE:
+                    settings_menu()
+                    return

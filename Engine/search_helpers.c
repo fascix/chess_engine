@@ -46,20 +46,20 @@ int is_quiet_move(const Move *move) {
 void init_lmr_table(void) {
   for (int depth = 1; depth < 64; depth++) {
     for (int move_num = 1; move_num < 64; move_num++) {
-      // Formule standard : R = log(depth) * log(move_num) / diviseur
-      // diviseur = 2.5 (équilibre entre vitesse et précision)
-      double reduction = log(depth) * log(move_num) / 2.5;
-      lmr_reductions[depth][move_num] = (int)reduction;
+      // Nouvelle formule (Ethereal)
+      double reduction = 0.7844 + log(depth) * log(move_num) / 2.4696;
 
-      // Clamp entre 0 et depth-1
-      if (lmr_reductions[depth][move_num] < 0) {
-        lmr_reductions[depth][move_num] = 0;
-      }
-      if (lmr_reductions[depth][move_num] >= depth) {
-        lmr_reductions[depth][move_num] = depth - 1;
-      }
+      // Clamp entre 0 et depth - 1
+      if (reduction < 0)
+        reduction = 0;
+      if (reduction >= depth)
+        reduction = depth - 1;
+
+      lmr_reductions[depth][move_num] = (int)reduction;
     }
   }
+
+  DEBUG_LOG("[LMR] Table initialisée avec formule Ethereal\n");
 }
 
 int get_lmr_reduction(int depth, int move_number) {

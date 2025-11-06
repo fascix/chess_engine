@@ -20,4 +20,5 @@ openings/
 pgn_results/
 
 
-
+# cache python
+python_gui/__pycache__/
