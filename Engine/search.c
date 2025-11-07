@@ -172,27 +172,32 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   if (tt_entry != NULL) {
     Move candidate = tt_entry->best_move;
 
-    // ✅ VALIDER que le coup est dans la liste des coups légaux
-    for (int i = 0; i < moves.count; i++) {
-      if (moves.moves[i].from == candidate.from &&
-          moves.moves[i].to == candidate.to &&
-          moves.moves[i].type == candidate.type &&
-          // Pour les promotions, vérifier aussi la pièce promue
-          (candidate.type != MOVE_PROMOTION ||
-           moves.moves[i].promotion == candidate.promotion)) {
-        hash_move = moves.moves[i]; // ✅ Coup complet validé
-        hash_move_valid = 1;
+    // ✅ VALIDER d'abord que le coup a des cases valides (0-63)
+    if (candidate.from >= 0 && candidate.from < 64 && candidate.to >= 0 &&
+        candidate.to < 64) {
+      // ✅ VALIDER que le coup est dans la liste des coups légaux
+      for (int i = 0; i < moves.count; i++) {
+        if (moves.moves[i].from == candidate.from &&
+            moves.moves[i].to == candidate.to &&
+            moves.moves[i].type == candidate.type &&
+            // Pour les promotions, vérifier aussi la pièce promue
+            (candidate.type != MOVE_PROMOTION ||
+             moves.moves[i].promotion == candidate.promotion)) {
+          hash_move = moves.moves[i]; // ✅ Coup complet validé
+          hash_move_valid = 1;
 #ifdef DEBUG
-        DEBUG_LOG("[TT] Hash move VALIDÉ: %s\n", move_to_string(&hash_move));
+          DEBUG_LOG("[TT] Hash move VALIDÉ: %s\n",
+                    move_to_string(&hash_move));
 #endif
-        break;
+          break;
+        }
       }
     }
 
 #ifdef DEBUG
     if (!hash_move_valid && (candidate.from != 0 || candidate.to != 0)) {
-      DEBUG_LOG("[TT] Hash move REJETÉ (illégal): %s\n",
-                move_to_string(&candidate));
+      DEBUG_LOG("[TT] Hash move REJETÉ (illégal): from=%d to=%d\n",
+                candidate.from, candidate.to);
     }
 #endif
   }

@@ -1,4 +1,5 @@
 #include "transposition.h"
+#include "evaluation.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -61,9 +62,9 @@ void tt_store(TranspositionTable *tt, uint64_t key, int depth, int score,
     // Adjust mate scores: convert from "mate in N from current position"
     // to "mate in N from root" by adding ply distance
     int adjusted_score = score;
-    if (score >= 30000 - 128) { // Mate score for us
+    if (score >= MATE_SCORE - 128) { // Mate score for us
       adjusted_score = score + ply;
-    } else if (score <= -30000 + 128) { // Mate score against us
+    } else if (score <= -MATE_SCORE + 128) { // Mate score against us
       adjusted_score = score - ply;
     }
 
@@ -108,9 +109,9 @@ TTEntry *tt_probe(TranspositionTable *tt, uint64_t key, int ply,
     // Adjust mate scores: convert from "mate in N from root"
     // to "mate in N from current position" by subtracting ply distance
     int adjusted_score = entry->score;
-    if (entry->score >= 30000 - 128) { // Mate score for us
+    if (entry->score >= MATE_SCORE - 128) { // Mate score for us
       adjusted_score = entry->score - ply;
-    } else if (entry->score <= -30000 + 128) { // Mate score against us
+    } else if (entry->score <= -MATE_SCORE + 128) { // Mate score against us
       adjusted_score = entry->score + ply;
     }
 
