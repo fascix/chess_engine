@@ -172,7 +172,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   if (tt_entry != NULL) {
     Move candidate = tt_entry->best_move;
 
-    // ✅ VALIDER d'abord que le coup a des cases valides (0-63)
+    // ✅ VALIDER d'abord que le coup a des cases valides (0-63 pour un échiquier 8x8)
     if (candidate.from >= 0 && candidate.from < 64 && candidate.to >= 0 &&
         candidate.to < 64) {
       // ✅ VALIDER que le coup est dans la liste des coups légaux

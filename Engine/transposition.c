@@ -1,5 +1,5 @@
 #include "transposition.h"
-#include "evaluation.h"
+#include "evaluation.h" // For MATE_SCORE constant
 #include <stdio.h>
 #include <string.h>
 
