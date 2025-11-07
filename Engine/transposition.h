@@ -37,10 +37,11 @@ void tt_init(TranspositionTable *tt);
 
 // Stocke une entrée dans la table
 void tt_store(TranspositionTable *tt, uint64_t key, int depth, int score,
-              TTEntryType type, Move best_move);
+              TTEntryType type, Move best_move, int ply);
 
-// Sonde la table (retourne NULL si pas trouvé)
-TTEntry *tt_probe(TranspositionTable *tt, uint64_t key);
+// Sonde la table (retourne NULL si pas trouvé, score ajusté retourné dans score_out si non-NULL)
+TTEntry *tt_probe(TranspositionTable *tt, uint64_t key, int ply,
+                  int *score_out);
 
 // Nouvelle recherche (incrémente l'age)
 void tt_new_search(TranspositionTable *tt);

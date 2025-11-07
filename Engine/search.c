@@ -62,17 +62,26 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
   // V3: Transposition Table Probe
   uint64_t hash = zobrist_hash(board);
-  TTEntry *tt_entry = tt_probe(&tt_global, hash);
+  int tt_score;
+  TTEntry *tt_entry = tt_probe(&tt_global, hash, ply, &tt_score);
   if (tt_entry != NULL && tt_entry->depth >= depth) {
     if (tt_entry->type == TT_EXACT) {
-      return tt_entry->score;
+      return tt_score;
     } else if (tt_entry->type == TT_LOWERBOUND) {
-      if (tt_entry->score >= beta) {
-        return tt_entry->score;
+      if (tt_score >= beta) {
+        return tt_score;
+      }
+      // Update alpha if we have a better lower bound
+      if (tt_score > alpha) {
+        alpha = tt_score;
       }
     } else if (tt_entry->type == TT_UPPERBOUND) {
-      if (tt_entry->score <= alpha) {
-        return tt_entry->score;
+      if (tt_score <= alpha) {
+        return tt_score;
+      }
+      // Update beta if we have a better upper bound
+      if (tt_score < beta) {
+        beta = tt_score;
       }
     }
   }
@@ -274,7 +283,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
         update_history(best_move, depth, color);
         store_killer_move(best_move, ply);
       }
-      tt_store(&tt_global, hash, depth, beta, TT_LOWERBOUND, best_move);
+      tt_store(&tt_global, hash, depth, beta, TT_LOWERBOUND, best_move, ply);
 #ifdef DEBUG
       DEBUG_LOG("[NEGAMAX] ply=%d beta cutoff move=%s score=%d\n", ply,
                 move_to_string(&best_move), beta);
@@ -292,7 +301,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   } else {
     tt_type = TT_EXACT;
   }
-  tt_store(&tt_global, hash, depth, max_score, tt_type, best_move);
+  tt_store(&tt_global, hash, depth, max_score, tt_type, best_move, ply);
 
   return max_score;
 }
