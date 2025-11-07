@@ -9,6 +9,10 @@
 #define TT_SIZE 1048576
 #define TT_MASK (TT_SIZE - 1)
 
+// Constantes pour la gestion des scores de mat
+#define TT_MATE_THRESHOLD 128  // Distance max depuis MATE_SCORE pour détecter un mat
+#define TT_MAX_AGE 250         // Age maximum avant réinitialisation
+
 // Type d'entrée dans la table de transposition
 typedef enum {
   TT_EXACT,      // Score exact
