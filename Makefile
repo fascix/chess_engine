@@ -118,55 +118,26 @@ distclean: clean-all
 
 # ========== VERSIONS PROGRESSIVES (pour tests ELO) ==========
 
-# Modules communs pour toutes les versions
-COMMON_OBJ_V = $(BUILD_DIR)/board.o $(BUILD_DIR)/movegen.o $(BUILD_DIR)/utils.o \
-               $(BUILD_DIR)/evaluation.o $(BUILD_DIR)/zobrist.o $(BUILD_DIR)/transposition.o \
-               $(BUILD_DIR)/move_ordering.o $(BUILD_DIR)/quiescence.o $(BUILD_DIR)/search_helpers.o \
-               $(BUILD_DIR)/perft.o $(BUILD_DIR)/uci.o $(BUILD_DIR)/timemanager.o $(BUILD_DIR)/main.o
+# Modules sources communs
+MODULES_SRC = Engine/board.c Engine/movegen.c Engine/utils.c Engine/evaluation.c \
+              Engine/zobrist.c Engine/transposition.c Engine/move_ordering.c \
+              Engine/quiescence.c Engine/search_helpers.c Engine/perft.c \
+              Engine/uci.c Engine/timemanager.c Engine/search.c Engine/main.c
 
 # Création des dossiers versions si nécessaires
 versions/v%_build:
 	mkdir -p $@
 
-# V1: Iterative Deepening + Alpha-Beta + Quiescence (baseline)
-v1: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v1_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=1 -o versions/v1_build/chess_engine_v1 $^ -lm
+# Fonction pour compiler une version avec son propre VERSION
+define COMPILE_VERSION
+v$(1): | versions/v$(1)_build
+	@echo "🔨 Compilation de la version $(1)..."
+	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=$(1) $(MODULES_SRC) -o versions/v$(1)_build/chess_engine_v$(1) -lm
+	@echo "✅ Version $(1) compilée"
+endef
 
-# V2: + Move Ordering (MVV-LVA)
-v2: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v2_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=2 -o versions/v2_build/chess_engine_v2 $^ -lm
-
-# V3: + Transposition Table
-v3: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v3_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=3 -o versions/v3_build/chess_engine_v3 $^ -lm
-
-# V4: + Principal Variation Search (PVS)
-v4: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v4_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=4 -o versions/v4_build/chess_engine_v4 $^ -lm
-
-# V5: + Reverse Futility Pruning
-v5: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v5_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=5 -o versions/v5_build/chess_engine_v5 $^ -lm
-
-# V6: + Null Move Pruning
-v6: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v6_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=6 -o versions/v6_build/chess_engine_v6 $^ -lm
-
-# V7: + Late Move Reductions (LMR)
-v7: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v7_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=7 -o versions/v7_build/chess_engine_v7 $^ -lm
-
-# V8: + Butterfly History Heuristic
-v8: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v8_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=8 -o versions/v8_build/chess_engine_v8 $^ -lm
-
-# V9: + Killer Moves
-v9: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v9_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=9 -o versions/v9_build/chess_engine_v9 $^ -lm
-
-# V10: + Futility Pruning (VERSION COMPLÈTE)
-v10: $(BUILD_DIR)/search.o $(COMMON_OBJ_V) | versions/v10_build
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -DVERSION=10 -o versions/v10_build/chess_engine_v10 $^ -lm
+# Générer les règles pour chaque version
+$(foreach v,1 2 3 4 5 6 7 8 9 10,$(eval $(call COMPILE_VERSION,$(v))))
 
 # Création du dossier chess_engine pour la version actuelle
 chess_engine_dir:
