@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # === Configuration ===
-FASTCHESS="./fastchess-mac-arm64/fastchess"  # chemin vers fastchess (adapter si besoin)
-OPENINGS="./fastchess-mac-arm64/openings/8moves_v3.pgn"  # chemin vers le fichier d'ouvertures
+FASTCHESS="../fastchess-mac-arm64/fastchess"  # chemin vers fastchess (adapter si besoin)
+OPENINGS="../fastchess-mac-arm64/openings/8moves_v3.pgn"  # chemin vers le fichier d'ouvertures
 
 # === Étape 1 : Saisie utilisateur ===
 read -p "Chemin du moteur 1 : " ENGINE1
@@ -10,8 +10,8 @@ read -p "Chemin du moteur 2 : " ENGINE2
 read -p "Nombre de parties (games) : " GAMES
 
 # === Étape 2 : Détermination du numéro de fichier ===
-LOG_DIR="./fastchess-mac-arm64/logs"
-PGN_DIR="./fastchess-mac-arm64/pgn_results"
+LOG_DIR="../fastchess-mac-arm64/logs"
+PGN_DIR="../fastchess-mac-arm64/pgn_results"
 
 mkdir -p "$LOG_DIR" "$PGN_DIR"
 
