@@ -147,7 +147,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
           "[NEGAMAX] RFP prune at ply=%d, static_eval=%d, margin=%d, beta=%d\n",
           ply, static_eval, rfp_margin, beta);
 #endif
-      return static_eval - rfp_margin; // Cutoff
+      return beta; 
     }
   }
 #endif
