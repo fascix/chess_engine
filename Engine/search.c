@@ -37,7 +37,7 @@ void initialize_engine(void) {
   init_killer_moves(); // V9: Killer Moves
 #endif
 #if VERSION >= 7
-  init_lmr_table();    // V7: Late Move Reductions
+  init_lmr_table(); // V7: Late Move Reductions
 #endif
 #if VERSION >= 3
   tt_init(&tt_global); // V3: Transposition Table
@@ -81,7 +81,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 #else
   uint64_t hash = 0;
   TTEntry *tt_entry = NULL;
-  (void)hash; // Suppress unused warning
+  (void)hash;     // Suppress unused warning
   (void)tt_entry; // Suppress unused warning
 #endif
 
@@ -147,7 +147,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
           "[NEGAMAX] RFP prune at ply=%d, static_eval=%d, margin=%d, beta=%d\n",
           ply, static_eval, rfp_margin, beta);
 #endif
-      return beta; 
+      return beta;
     }
   }
 #endif
@@ -201,7 +201,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   if (tt_entry != NULL) {
     Move candidate = tt_entry->best_move;
 
-    // ✅ VALIDER d'abord que le coup a des cases valides (0-63 pour un échiquier 8x8)
+    // ✅ VALIDER d'abord que le coup a des cases valides (0-63 pour un
+    // échiquier 8x8)
     if (candidate.from >= 0 && candidate.from < 64 && candidate.to >= 0 &&
         candidate.to < 64) {
       // ✅ VALIDER que le coup est dans la liste des coups légaux
@@ -215,8 +216,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
           hash_move = moves.moves[i]; // ✅ Coup complet validé
           hash_move_valid = 1;
 #ifdef DEBUG
-          DEBUG_LOG("[TT] Hash move VALIDÉ: %s\n",
-                    move_to_string(&hash_move));
+          DEBUG_LOG("[TT] Hash move VALIDÉ: %s\n", move_to_string(&hash_move));
 #endif
           break;
         }

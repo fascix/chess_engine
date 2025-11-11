@@ -32,7 +32,7 @@
         "additional_lines_rgx": [],
         "event_name": "Fastchess Tournament",
         "site": "?",
-        "file": "../fastchess-mac-arm64/pgn_results/resultats15.pgn",
+        "file": "../fastchess-mac-arm64/pgn_results/resultats19.pgn",
         "notation": 2,
         "track_nodes": false,
         "track_seldepth": false,
@@ -58,7 +58,7 @@
     },
     "config_name": "config.json",
     "output": 1,
-    "seed": 18070609996040621187,
+    "seed": 8466779982603758328,
     "variant": 0,
     "type": 0,
     "gauntlet_seeds": 1,
@@ -77,7 +77,7 @@
     "affinity": false,
     "show_latency": false,
     "log": {
-        "file": "../fastchess-mac-arm64/logs/parties15.log",
+        "file": "../fastchess-mac-arm64/logs/parties19.log",
         "level": 2,
         "compress": false,
         "realtime": true,
@@ -127,9 +127,9 @@
     ],
     "stats": {
         "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v6_build/chess_engine_v6 vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v7_build/chess_engine_v7": {
-            "wins": 3,
+            "wins": 4,
             "losses": 4,
-            "draws": 3,
+            "draws": 2,
             "penta_WW": 0,
             "penta_WD": 0,
             "penta_WL": 0,
@@ -138,8 +138,8 @@
             "penta_LL": 0
         },
         "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v7_build/chess_engine_v7 vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v6_build/chess_engine_v6": {
-            "wins": 2,
-            "losses": 2,
+            "wins": 3,
+            "losses": 1,
             "draws": 6,
             "penta_WW": 0,
             "penta_WD": 0,
