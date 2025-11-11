@@ -32,7 +32,7 @@
         "additional_lines_rgx": [],
         "event_name": "Fastchess Tournament",
         "site": "?",
-        "file": "../fastchess-mac-arm64/pgn_results/resultats9.pgn",
+        "file": "../fastchess-mac-arm64/pgn_results/resultats13.pgn",
         "notation": 2,
         "track_nodes": false,
         "track_seldepth": false,
@@ -58,7 +58,7 @@
     },
     "config_name": "config.json",
     "output": 1,
-    "seed": 7087028093482659191,
+    "seed": 4311922273757985326,
     "variant": 0,
     "type": 0,
     "gauntlet_seeds": 1,
@@ -67,7 +67,7 @@
     "wait": 0,
     "autosaveinterval": 20,
     "games": 1,
-    "rounds": 10,
+    "rounds": 20,
     "concurrency": 8,
     "force_concurrency": false,
     "recover": true,
@@ -77,7 +77,7 @@
     "affinity": false,
     "show_latency": false,
     "log": {
-        "file": "../fastchess-mac-arm64/logs/parties9.log",
+        "file": "../fastchess-mac-arm64/logs/parties13.log",
         "level": 2,
         "compress": false,
         "realtime": true,
@@ -85,9 +85,9 @@
     },
     "engines": [
         {
-            "name": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v3_build/chess_engine_v3",
+            "name": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v5_build/chess_engine_v5",
             "dir": "",
-            "cmd": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v3_build/chess_engine_v3",
+            "cmd": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v5_build/chess_engine_v5",
             "args": "",
             "restart": false,
             "options": [],
@@ -105,9 +105,9 @@
             "variant": 0
         },
         {
-            "name": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v4_build/chess_engine_v4",
+            "name": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v7_build/chess_engine_v7",
             "dir": "",
-            "cmd": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v4_build/chess_engine_v4",
+            "cmd": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v7_build/chess_engine_v7",
             "args": "",
             "restart": false,
             "options": [],
@@ -126,10 +126,10 @@
         }
     ],
     "stats": {
-        "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v4_build/chess_engine_v4 vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v3_build/chess_engine_v3": {
+        "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v5_build/chess_engine_v5 vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v7_build/chess_engine_v7": {
             "wins": 0,
-            "losses": 1,
-            "draws": 4,
+            "losses": 2,
+            "draws": 8,
             "penta_WW": 0,
             "penta_WD": 0,
             "penta_WL": 0,
@@ -137,10 +137,10 @@
             "penta_LD": 0,
             "penta_LL": 0
         },
-        "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v3_build/chess_engine_v3 vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v4_build/chess_engine_v4": {
-            "wins": 1,
-            "losses": 0,
-            "draws": 4,
+        "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v7_build/chess_engine_v7 vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v5_build/chess_engine_v5": {
+            "wins": 3,
+            "losses": 1,
+            "draws": 6,
             "penta_WW": 0,
             "penta_WD": 0,
             "penta_WL": 0,
