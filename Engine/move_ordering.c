@@ -128,149 +128,53 @@ void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
                  Move hash_move, int ply) {
   ordered->count = moves->count;
 
-#ifdef DEBUG
-  int debug_scores[256] = {0};
-  char debug_reasons[256][32];
-#endif
-
   for (int i = 0; i < moves->count; i++) {
     ordered->moves[i] = moves->moves[i];
+    Move *move = &ordered->moves[i];
     int score = 0;
 
-#ifdef DEBUG
-    strcpy(debug_reasons[i], "history");
-#endif
-
-    // 1. Hash move - priorité absolue (vérifier que hash_move est valide)
-    if (hash_move.from >= 0 && hash_move.from == moves->moves[i].from &&
-        hash_move.to == moves->moves[i].to) {
-      score = 2000000;
-#ifdef DEBUG
-      strcpy(debug_reasons[i], "hash_move");
-#endif
+    // 1. Hash move (priorité maximale)
+    if (hash_move.from == move->from && hash_move.to == move->to) {
+      score = 1000000;
     }
-    // 2. Bonnes captures (SEE > 0)
-    else if (moves->moves[i].type == MOVE_CAPTURE ||
-             moves->moves[i].type == MOVE_EN_PASSANT) {
-      int see_score = see_capture(board, &moves->moves[i]);
-      if (see_score > 0) {
-        score = 1000000 + see_score;
-#ifdef DEBUG
-        strcpy(debug_reasons[i], "good_capture");
-        debug_scores[i] = see_score;
-#endif
-      } else {
-        // Mauvaises captures en dernier
-        score = -100000 + see_score;
-#ifdef DEBUG
-        strcpy(debug_reasons[i], "bad_capture");
-        debug_scores[i] = see_score;
-#endif
-      }
+    // 2. Captures (MVV-LVA)
+    else if (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT) {
+      score = 100000 + mvv_lva_score(move);
     }
-    // 3. Promotions
-    else if (moves->moves[i].type == MOVE_PROMOTION) {
-      score = 900000 + piece_value(moves->moves[i].promotion);
-#ifdef DEBUG
-      strcpy(debug_reasons[i], "promotion");
-#endif
+#if VERSION >= 9
+    // 3. Killer moves
+    else if (is_killer_move(*move, ply)) {
+      score = 90000;
     }
-    // 4. Killer moves
-    else if (is_killer_move(moves->moves[i], ply)) {
-      score = 800000;
-#ifdef DEBUG
-      strcpy(debug_reasons[i], "killer");
 #endif
-    }
-    // 5. Échecs (approximation)
-    else if (gives_check(board, &moves->moves[i])) {
-      score = 700000;
-#ifdef DEBUG
-      strcpy(debug_reasons[i], "check");
-#endif
-    }
-    // 6. Coups qui développent vers le centre
-    else if (moves_toward_center(board, &moves->moves[i])) {
-      score = 50000;
-
-      // BONUS: En ouverture, préférer développer les pièces plutôt que les
-      // pions
-      if (board->move_number <= 10) {
-        PieceType piece = get_piece_type(board, moves->moves[i].from);
-        if (piece == KNIGHT) {
-          score += 15000; // Les cavaliers en premier
-        } else if (piece == BISHOP) {
-          score += 10000; // Puis les fous
-        } else if (piece == PAWN) {
-          // Bonus pour pions centraux (d4, e4, d5, e5)
-          int to_file = moves->moves[i].to % 8;
-          int to_rank = moves->moves[i].to / 8;
-          if ((to_file == 3 || to_file == 4) &&
-              (to_rank == 3 || to_rank == 4)) {
-            score += 5000; // e4, d4, e5, d5
-          } else {
-            score -= 2000; // Pénalité pour autres pions
-          }
-        }
-      }
-
-#ifdef DEBUG
-      strcpy(debug_reasons[i], "center");
-#endif
-    }
-    // 7. History heuristic
+#if VERSION >= 8
+    // 4. History heuristic pour les coups quiet ← CETTE LIGNE MANQUE !
     else {
-      Couleur color = board->to_move;
-      score = history_scores[color][moves->moves[i].from][moves->moves[i].to];
-#ifdef DEBUG
-      debug_scores[i] = score;
-#endif
+      score = history_scores[board->to_move][move->from][move->to];
     }
+#else
+    // Sans history : score par défaut
+    else {
+      score = 0;
+    }
+#endif
 
     ordered->scores[i] = score;
   }
 
-  // Tri par insertion (efficace pour petites listes)
-  for (int i = 1; i < ordered->count; i++) {
-    Move temp_move = ordered->moves[i];
-    int temp_score = ordered->scores[i];
-#ifdef DEBUG
-    char temp_reason[32];
-    strcpy(temp_reason, debug_reasons[i]);
-    int temp_debug_score = debug_scores[i];
-#endif
-    int j = i - 1;
-
-    while (j >= 0 && ordered->scores[j] < temp_score) {
-      ordered->moves[j + 1] = ordered->moves[j];
-      ordered->scores[j + 1] = ordered->scores[j];
-#ifdef DEBUG
-      strcpy(debug_reasons[j + 1], debug_reasons[j]);
-      debug_scores[j + 1] = debug_scores[j];
-#endif
-      j--;
-    }
-
-    ordered->moves[j + 1] = temp_move;
-    ordered->scores[j + 1] = temp_score;
-#ifdef DEBUG
-    strcpy(debug_reasons[j + 1], temp_reason);
-    debug_scores[j + 1] = temp_debug_score;
-#endif
-  }
-
-#ifdef DEBUG
-  if (ply == 0 &&
-      ordered->count <= 30) { // Log seulement au ply 0 et si pas trop de coups
-    DEBUG_LOG("\n[ORDER_MOVES] Tri de %d coups (ply=%d):\n", ordered->count,
-              ply);
-    for (int i = 0; i < ordered->count && i < 10; i++) { // Top 10 coups
-      DEBUG_LOG(
-          "  %2d. %c%d%c%d score=%7d reason=%s\n", i + 1,
-          'a' + (ordered->moves[i].from % 8), 1 + (ordered->moves[i].from / 8),
-          'a' + (ordered->moves[i].to % 8), 1 + (ordered->moves[i].to / 8),
-          ordered->scores[i], debug_reasons[i]);
+  // Tri par score décroissant
+  for (int i = 0; i < ordered->count - 1; i++) {
+    for (int j = i + 1; j < ordered->count; j++) {
+      if (ordered->scores[j] > ordered->scores[i]) {
+        // Swap scores
+        int temp_score = ordered->scores[i];
+        ordered->scores[i] = ordered->scores[j];
+        ordered->scores[j] = temp_score;
+        // Swap moves
+        Move temp_move = ordered->moves[i];
+        ordered->moves[i] = ordered->moves[j];
+        ordered->moves[j] = temp_move;
+      }
     }
   }
-#endif
 }

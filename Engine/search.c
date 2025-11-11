@@ -266,7 +266,11 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   for (int i = 0; i < ordered_moves.count; i++) {
 #if VERSION >= 10
     // V10: Futility Pruning
-    if (futility_pruning_active && is_quiet_move(&ordered_moves.moves[i])) {
+    // Conditions strictes pour éviter de pruner des coups importants
+    if (i >= 3 && // Laisser au moins 3 coups s'exécuter
+        futility_pruning_active && is_quiet_move(&ordered_moves.moves[i]) &&
+        abs(alpha) < MATE_SCORE - 100) { // Ne pas pruner près d'un mat
+
       int futility_margin = 200 * depth;
       if (static_eval_for_futility + futility_margin < alpha) {
         continue; // Prune ce coup
