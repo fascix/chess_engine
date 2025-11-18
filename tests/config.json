@@ -32,7 +32,7 @@
         "additional_lines_rgx": [],
         "event_name": "Fastchess Tournament",
         "site": "?",
-        "file": "../fastchess-mac-arm64/pgn_results/resultats26.pgn",
+        "file": "../fastchess-mac-arm64/pgn_results/resultats30.pgn",
         "notation": 2,
         "track_nodes": false,
         "track_seldepth": false,
@@ -58,7 +58,7 @@
     },
     "config_name": "config.json",
     "output": 1,
-    "seed": 17080700960309371317,
+    "seed": 5737009236528235891,
     "variant": 0,
     "type": 0,
     "gauntlet_seeds": 1,
@@ -67,7 +67,7 @@
     "wait": 0,
     "autosaveinterval": 20,
     "games": 1,
-    "rounds": 20,
+    "rounds": 10,
     "concurrency": 8,
     "force_concurrency": false,
     "recover": true,
@@ -77,7 +77,7 @@
     "affinity": false,
     "show_latency": false,
     "log": {
-        "file": "../fastchess-mac-arm64/logs/parties26.log",
+        "file": "../fastchess-mac-arm64/logs/parties30.log",
         "level": 2,
         "compress": false,
         "realtime": true,
@@ -105,9 +105,9 @@
             "variant": 0
         },
         {
-            "name": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v8/stash-bot",
+            "name": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/Testing/chess_engine_V1",
             "dir": "",
-            "cmd": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v8/stash-bot",
+            "cmd": "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/Testing/chess_engine_V1",
             "args": "",
             "restart": false,
             "options": [],
@@ -126,10 +126,10 @@
         }
     ],
     "stats": {
-        "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v8/stash-bot vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10": {
-            "wins": 4,
-            "losses": 0,
-            "draws": 6,
+        "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/Testing/chess_engine_V1 vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10": {
+            "wins": 0,
+            "losses": 5,
+            "draws": 0,
             "penta_WW": 0,
             "penta_WD": 0,
             "penta_WL": 0,
@@ -137,10 +137,10 @@
             "penta_LD": 0,
             "penta_LL": 0
         },
-        "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10 vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/fastchess-mac-arm64/stash-bot-v8/stash-bot": {
+        "/Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/chess_engine/versions/v10_build/chess_engine_v10 vs /Users/lucaspavone/Desktop/_Bureau_/Univ/L3/Projets/Testing/chess_engine_V1": {
             "wins": 5,
-            "losses": 2,
-            "draws": 3,
+            "losses": 0,
+            "draws": 0,
             "penta_WW": 0,
             "penta_WD": 0,
             "penta_WL": 0,
