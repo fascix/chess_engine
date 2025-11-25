@@ -22,6 +22,9 @@ logs/
 openings/
 pgn_results/
 
+# MMD 
+/docs/*.mmd
+
 
 # cache python
 python_gui/__pycache__/
