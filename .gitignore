@@ -33,4 +33,5 @@ python_gui/__pycache__/
 _codeql_detected_source_root
 tests/config.json
 
-/lichess-bot/
+/lichess-bot/config.yml
+/lichess-bot/venv/
