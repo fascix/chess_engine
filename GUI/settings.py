@@ -1,6 +1,6 @@
 import pygame
 
-WINDOW_SIZE = 800
+WINDOW_SIZE = 1000
 TILE_SIZE = WINDOW_SIZE // 8
 
 WHITE = (238, 238, 210)
