@@ -15,49 +15,66 @@ def draw_timer(screen, white_timer, black_timer, font, player_is_white=True):
     white_time_text = font.render(f"{int(white_timer // 60)}:{int(white_timer % 60):02d}", True, (255, 255, 255))
     black_time_text = font.render(f"{int(black_timer // 60)}:{int(black_timer % 60):02d}", True, (255, 255, 255))
 
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    panel_width = screen_width * 0.35
+    panel_height = screen_height * 0.5
+    # Place timers in the right panel region
+    timer_panel_x = int(WINDOW_SIZE + (screen_width - WINDOW_SIZE) * 0.12)
+    timer_panel_w = int(panel_width * 0.7)
+    timer_panel_h = max(int(panel_height * 0.13), 44)
+    timer_top_y = int(screen_height * 0.07)
+    timer_bot_y = int(screen_height * 0.85) - timer_panel_h
     if player_is_white:
         # Blancs en bas, noirs en haut
-        pygame.draw.rect(screen, (0, 0, 0), (WINDOW_SIZE+60, WINDOW_SIZE-150, 200, 50))  # Timer blanc
-        pygame.draw.rect(screen, (0, 0, 0), (WINDOW_SIZE + 60, 50, 200, 50))  # Timer noir
-        screen.blit(white_time_text, (WINDOW_SIZE+ 60, WINDOW_SIZE-150))  # Timer blanc en bas
-        screen.blit(black_time_text, (WINDOW_SIZE+ 60, 50))  # Timer noir en haut
+        pygame.draw.rect(screen, (0, 0, 0), (timer_panel_x, timer_bot_y, timer_panel_w, timer_panel_h))
+        pygame.draw.rect(screen, (0, 0, 0), (timer_panel_x, timer_top_y, timer_panel_w, timer_panel_h))
+        screen.blit(white_time_text, (timer_panel_x + 10, timer_bot_y + 8))
+        screen.blit(black_time_text, (timer_panel_x + 10, timer_top_y + 8))
     else:
         # Noirs en bas, blancs en haut (timers inversés)
-        pygame.draw.rect(screen, (0, 0, 0), (WINDOW_SIZE+60, WINDOW_SIZE-150, 200, 50))  # Timer noir
-        pygame.draw.rect(screen, (0, 0, 0), (WINDOW_SIZE + 60, 50, 200, 50))  # Timer blanc
-        screen.blit(black_time_text, (WINDOW_SIZE+ 60, WINDOW_SIZE-150))  # Timer noir en bas
-        screen.blit(white_time_text, (WINDOW_SIZE+ 60, 50))  # Timer blanc en haut
+        pygame.draw.rect(screen, (0, 0, 0), (timer_panel_x, timer_bot_y, timer_panel_w, timer_panel_h))
+        pygame.draw.rect(screen, (0, 0, 0), (timer_panel_x, timer_top_y, timer_panel_w, timer_panel_h))
+        screen.blit(black_time_text, (timer_panel_x + 10, timer_bot_y + 8))
+        screen.blit(white_time_text, (timer_panel_x + 10, timer_top_y + 8))
 
 def draw_engine_status(screen, font):
     """Affiche le statut du moteur quand il réfléchit."""
     # Import local pour éviter les imports circulaires
     import game_logic
     
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    panel_width = screen_width * 0.35
+    panel_height = screen_height * 0.5
+    status_x = int(WINDOW_SIZE + (screen_width - WINDOW_SIZE) * 0.12)
+    status_w = int(panel_width * 0.7)
+    status_h = max(int(panel_height * 0.13), 44)
+    status_y = screen_height // 2 - status_h // 2
     # Effacer d'abord la zone du statut (plus grande pour couvrir les 2 lignes)
-    pygame.draw.rect(screen, (0, 0, 0), (WINDOW_SIZE + 60, WINDOW_SIZE//2 - 30, 200, 80))
-    
+    pygame.draw.rect(screen, (0, 0, 0), (status_x, status_y, status_w, status_h * 2))
     if game_logic.engine_thinking:
         status_text = font.render("L'ordinateur", True, (255, 255, 0))
         status_text2 = font.render("réfléchit...", True, (255, 255, 0))
-        screen.blit(status_text, (WINDOW_SIZE + 60, WINDOW_SIZE//2 - 15))
-        screen.blit(status_text2, (WINDOW_SIZE + 60, WINDOW_SIZE//2 + 15))
+        screen.blit(status_text, (status_x + 10, status_y + 5))
+        screen.blit(status_text2, (status_x + 10, status_y + status_h))
     elif game_logic.game_paused:
         status_text = font.render("PAUSE", True, (255, 0, 0))
-        screen.blit(status_text, (WINDOW_SIZE + 60, WINDOW_SIZE//2))
+        screen.blit(status_text, (status_x + 10, status_y + status_h // 2))
 
 def draw_captured_pieces(screen, player_is_white=True):
     """Affiche les pièces capturées avec un système de grille selon l'orientation."""
     # Import local pour éviter les imports circulaires
     import game_logic
     
-    piece_size = 25  # Taille réduite des pièces
-    pieces_per_row = 6  # Nombre de pièces par ligne
-    spacing = 5  # Espacement entre les pièces
-    start_x = WINDOW_SIZE + 60
-    
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    panel_width = screen_width * 0.35
+    panel_height = screen_height * 0.5
+    piece_size = max(int(panel_height * 0.09), 22)
+    pieces_per_row = 6
+    spacing = max(int(piece_size * 0.2), 3)
+    start_x = int(WINDOW_SIZE + (screen_width - WINDOW_SIZE) * 0.12)
     if player_is_white:
         # Pièces capturées par les blancs (noires) = en bas
-        start_y = WINDOW_SIZE - 100
+        start_y = int(screen_height * 0.89)
         for i, piece in enumerate(game_logic.captured_pieces['black']):
             row = i // pieces_per_row
             col = i % pieces_per_row
@@ -67,9 +84,8 @@ def draw_captured_pieces(screen, player_is_white=True):
             piece_type = piece.symbol().lower()
             mini_piece = pygame.transform.scale(images[piece_color + piece_type], (piece_size, piece_size))
             screen.blit(mini_piece, (x_pos, y_pos))
-
         # Pièces capturées par les noirs (blanches) = en haut
-        start_y = 110
+        start_y = int(screen_height * 0.13)
         for i, piece in enumerate(game_logic.captured_pieces['white']):
             row = i // pieces_per_row
             col = i % pieces_per_row
@@ -82,7 +98,7 @@ def draw_captured_pieces(screen, player_is_white=True):
     else:
         # Inversion pour quand le joueur joue les noirs
         # Pièces capturées par les noirs (blanches) = en bas
-        start_y = WINDOW_SIZE - 100
+        start_y = int(screen_height * 0.89)
         for i, piece in enumerate(game_logic.captured_pieces['white']):
             row = i // pieces_per_row
             col = i % pieces_per_row
@@ -92,9 +108,8 @@ def draw_captured_pieces(screen, player_is_white=True):
             piece_type = piece.symbol().lower()
             mini_piece = pygame.transform.scale(images[piece_color + piece_type], (piece_size, piece_size))
             screen.blit(mini_piece, (x_pos, y_pos))
-
         # Pièces capturées par les blancs (noires) = en haut
-        start_y = 110
+        start_y = int(screen_height * 0.13)
         for i, piece in enumerate(game_logic.captured_pieces['black']):
             row = i // pieces_per_row
             col = i % pieces_per_row
@@ -147,7 +162,8 @@ def highlight_last_move(screen, last_move, player_is_white=True):
 def display_draw(screen, reason):
     """Affiche un message de partie nulle."""
     font = pygame.font.Font(None, 64)
-    overlay = pygame.Surface((WINDOW_SIZE + 300, WINDOW_SIZE))
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    overlay = pygame.Surface((screen_width, screen_height))
     overlay.set_alpha(200)
     overlay.fill((0, 0, 0))
 
@@ -156,9 +172,8 @@ def display_draw(screen, reason):
 
     text_surface = font.render(message, True, (255, 165, 0))  # Orange
     reason_surface = pygame.font.Font(None, 36).render(reason_text, True, (200, 200, 200))
-    
-    text_rect = text_surface.get_rect(center=(WINDOW_SIZE // 2 + 150, WINDOW_SIZE // 2 - 30))
-    reason_rect = reason_surface.get_rect(center=(WINDOW_SIZE // 2 + 150, WINDOW_SIZE // 2 + 20))
+    text_rect = text_surface.get_rect(center=(screen_width // 2, screen_height // 2 - 30))
+    reason_rect = reason_surface.get_rect(center=(screen_width // 2, screen_height // 2 + 20))
 
     screen.blit(overlay, (0, 0))
     screen.blit(text_surface, text_rect)
@@ -173,7 +188,8 @@ def display_draw(screen, reason):
 def display_checkmate(screen, loser_color):
     """Affiche le message d'échec et mat."""
     font = pygame.font.Font(None, 64)
-    overlay = pygame.Surface((WINDOW_SIZE + 300, WINDOW_SIZE))
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    overlay = pygame.Surface((screen_width, screen_height))
     overlay.set_alpha(200)
     overlay.fill((0, 0, 0))
 
@@ -181,7 +197,7 @@ def display_checkmate(screen, loser_color):
     message = f"Échec et mat ! {winner} gagnent."
 
     text_surface = font.render(message, True, (255, 0, 0))
-    text_rect = text_surface.get_rect(center=(WINDOW_SIZE // 2 + 150, WINDOW_SIZE // 2))
+    text_rect = text_surface.get_rect(center=(screen_width // 2, screen_height // 2))
 
     screen.blit(overlay, (0, 0))
     screen.blit(text_surface, text_rect)

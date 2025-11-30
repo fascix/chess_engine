@@ -10,11 +10,17 @@ def load_main_menu_background():
     """Charge l'image de fond principale avec fallback sur un fond uni."""
     try:
         bg = pygame.image.load('./assets/background6.png').convert()
-        bg = pygame.transform.scale(bg, (WINDOW_SIZE, WINDOW_SIZE))
+        screen = pygame.display.get_surface()
+        if screen:
+            bg = pygame.transform.smoothscale(bg, (screen.get_width(), screen.get_height()))
         return bg
     except Exception:
         # Fallback : dégradé simple sombre si l'image n'est pas trouvée
-        surface = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE))
+        screen = pygame.display.get_surface()
+        if screen:
+            surface = pygame.Surface((screen.get_width(), screen.get_height()))
+        else:
+            surface = pygame.Surface((800, 800))
         surface.fill(UI_BG_COLOR)
         return surface
 
@@ -32,22 +38,66 @@ def pause_menu():
     menu_options = ["Reprendre", "Retour au menu principal", "Quitter le jeu"]
     selected_index = 0
 
-    overlay = pygame.Surface((WINDOW_SIZE + 300, WINDOW_SIZE), pygame.SRCALPHA)
+    screen_width, screen_height = screen.get_width(), screen.get_height()
+    overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
     overlay.fill(UI_OVERLAY_BG)
 
     running = True
     while running:
         screen.blit(overlay, (0, 0))
-        
-        title_text = font.render("PAUSE", True, UI_TEXT_PRIMARY)
-        screen.blit(title_text, (WINDOW_SIZE // 2 - 50, 100))
-        
+
+        # Panel for pause menu
+        panel_width = screen.get_width() // 3
+        panel_height = screen.get_height() // 2
+        panel_x = (screen.get_width() - panel_width) // 2
+        panel_y = (screen.get_height() - panel_height) // 2
+
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        # Semi-transparent dark panel
+        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surf.fill((30, 24, 38, 220))
+        screen.blit(panel_surf, (panel_x, panel_y))
+        # Outer border
+        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
+        # Inner thin border
+        inner_rect = panel_rect.inflate(-12, -12)
+        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
+
+        # Title
+        paused_font = pygame.font.Font(None, 84)
+        title_text = paused_font.render("PAUSED", True, UI_ACCENT)
+        title_shadow = paused_font.render("PAUSED", True, (0,0,0))
+        title_rect = title_text.get_rect(center=(screen.get_width() // 2, panel_y + 60))
+        screen.blit(title_shadow, title_rect.move(3, 3))
+        screen.blit(title_text, title_rect)
+
+        # Buttons as outlined boxes with corner ornaments
+        box_w = panel_width - 80
+        box_h = 56
+        box_x = panel_x + 40
         for i, option in enumerate(menu_options):
+            box_y = panel_y + 120 + i * (box_h + 18)
+            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+            # light inner fill for hover
             if i == selected_index:
-                text = font.render(f"> {option}", True, UI_ACCENT)
+                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
+                screen.blit(hover_s, (box_x, box_y))
+            # outline
+            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
+            # corner ornaments (small squares)
+            corner_size = 8
+            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+
+            # Text
+            opt_font = pygame.font.Font(None, 36)
+            if i == selected_index:
+                text = opt_font.render(option, True, UI_ACCENT)
             else:
-                text = font.render(option, True, UI_TEXT_SECONDARY)
-            screen.blit(text, (WINDOW_SIZE // 4, 200 + i * 60))
+                text = opt_font.render(option, True, UI_TEXT_SECONDARY)
+            text_rect = text.get_rect(center=box_rect.center)
+            screen.blit(text, text_rect)
 
         pygame.display.flip()
 
@@ -88,7 +138,13 @@ def main_menu():
 
     background_image = load_main_menu_background()
 
+    # Fonts
     title_font = pygame.font.Font(None, 96)
+    # Main title text — use explicit string "Chess Engine"
+    title_text = "Chess Engine"
+    # Render title with shadow and accent
+    title_shadow = title_font.render(title_text, True, (0, 0, 0))
+    title_surface = title_font.render(title_text, True, UI_ACCENT)
     font = pygame.font.Font(None, 48)
     small_font = pygame.font.Font(None, 28)
 
@@ -102,30 +158,43 @@ def main_menu():
 
         # Fond
         screen.blit(background_image, (0, 0))
+        # Draw main title with shadow and subtle panel
+        screen = pygame.display.get_surface()
+        screen_width, screen_height = screen.get_width(), screen.get_height()
+        base_y = screen_height // 2
+        base_x = screen_width // 2
+        title_shadow_rect = title_shadow.get_rect(center=(base_x + 3, int(base_y - screen_height * 0.25) + 3))
+        title_rect = title_surface.get_rect(center=(base_x, int(base_y - screen_height * 0.25)))
 
-        # Légère vignette sombre autour des bords
-        vignette = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE), pygame.SRCALPHA)
-        vignette.fill((0, 0, 0, 80))
-        screen.blit(vignette, (0, 0))
+        # subtle glowing panel behind title
+        panel_w = int(screen_width * 0.6)
+        panel_h = title_rect.height + 30
+        panel_x = (screen_width - panel_w) // 2
+        panel_y = title_rect.top - 15
+        glow_rect = pygame.Rect(panel_x, panel_y, panel_w, panel_h)
+        s = pygame.Surface((glow_rect.width, glow_rect.height), pygame.SRCALPHA)
+        s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 30))
+        screen.blit(s, (glow_rect.x, glow_rect.y))
 
-        # Menu options (boutons minimalistes)
-        base_y = WINDOW_SIZE // 2
-        spacing = 70
+        # shadow then title
+        screen.blit(title_shadow, title_shadow_rect)
+        screen.blit(title_surface, title_rect)
+
+        # Menu options (boutons centrés)
+        spacing = int(screen_height * 0.09)
+        panel_width = screen_width * 0.35
+        panel_height = screen_height * 0.5
+        btn_width = int(panel_width * 0.8)
+        btn_height = max(int(panel_height * 0.08), 44)
         for i, option in enumerate(menu_options):
             is_selected = (i == selected_index)
-
-            # Arrière-plan de bouton
-            btn_width, btn_height = 320, 50
-            btn_x = (WINDOW_SIZE - btn_width) // 2
+            btn_x = base_x - (btn_width // 2)
             btn_y = base_y + i * spacing
-
             rect = pygame.Rect(btn_x, btn_y, btn_width, btn_height)
             bg_color = UI_BUTTON_HOVER_BG if is_selected else UI_BUTTON_BG
             pygame.draw.rect(screen, bg_color, rect, border_radius=10)
-
             border_color = UI_ACCENT if is_selected else UI_BUTTON_BORDER
             pygame.draw.rect(screen, border_color, rect, width=2, border_radius=10)
-
             # Texte
             color = UI_ACCENT if is_selected else UI_TEXT_PRIMARY
             label = font.render(option, True, color)
@@ -153,32 +222,68 @@ def main_menu():
                         exit()
 
 def game_mode_menu():
-    """Menu de sélection du mode de jeu."""
+    """Menu de sélection du mode de jeu (DA pause_menu)."""
     screen = pygame.display.get_surface()
     pygame.display.set_caption("Sélection du mode de jeu")
-
     font = pygame.font.Font(None, 48)
-    menu_options = ["Mode 2 joueurs", "Mode Chess Engine (bot)", "Mode Bot vs Bot", "Retour"]    
+    menu_options = ["Mode 2 joueurs", "Mode Chess Engine (bot)", "Mode Bot vs Bot", "Retour"]
     selected_index = 0
-
-    running = True
     clock = pygame.time.Clock()
+    running = True
     while running:
         clock.tick(60)
-        screen.fill(UI_BG_COLOR)
+        # Overlay
+        screen_width, screen_height = screen.get_width(), screen.get_height()
+        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+        overlay.fill(UI_OVERLAY_BG)
+        screen.blit(overlay, (0, 0))
 
-        title = font.render("Modes de jeu", True, UI_TEXT_PRIMARY)
-        title_rect = title.get_rect(center=(WINDOW_SIZE // 2, 120))
-        screen.blit(title, title_rect)
+        # Panel
+        panel_width = int(screen_width * 0.35)
+        panel_height = int(screen_height * 0.5)
+        panel_x = (screen_width - panel_width) // 2
+        panel_y = (screen_height - panel_height) // 2
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surf.fill((30, 24, 38, 220))
+        screen.blit(panel_surf, (panel_x, panel_y))
+        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
+        inner_rect = panel_rect.inflate(-12, -12)
+        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
 
+        # Title with shadow
+        title_font = pygame.font.Font(None, 72)
+        title_text = "Modes de jeu"
+        title_shadow = title_font.render(title_text, True, (0,0,0))
+        title_render = title_font.render(title_text, True, UI_ACCENT)
+        title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 60))
+        screen.blit(title_shadow, title_rect.move(3, 3))
+        screen.blit(title_render, title_rect)
+
+        # Buttons
+        box_w = int(panel_width * 0.8)
+        box_h = max(int(panel_height * 0.08), 44)
+        box_x = panel_x + int(panel_width * 0.1)
         for i, option in enumerate(menu_options):
-            is_selected = (i == selected_index)
-            color = UI_ACCENT if is_selected else UI_TEXT_PRIMARY
-            text = font.render(option if not is_selected else f"> {option}", True, color)
-            screen.blit(text, (WINDOW_SIZE // 4, 200 + i * 60))
+            box_y = panel_y + 120 + i * (box_h + 18)
+            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+            if i == selected_index:
+                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
+                screen.blit(hover_s, (box_x, box_y))
+            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
+            corner_size = 8
+            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            opt_font = pygame.font.Font(None, 36)
+            if i == selected_index:
+                text = opt_font.render(option, True, UI_ACCENT)
+            else:
+                text = opt_font.render(option, True, UI_TEXT_SECONDARY)
+            text_rect = text.get_rect(center=box_rect.center)
+            screen.blit(text, text_rect)
 
         pygame.display.flip()
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -189,87 +294,162 @@ def game_mode_menu():
                 elif event.key == pygame.K_DOWN:
                     selected_index = (selected_index + 1) % len(menu_options)
                 elif event.key == pygame.K_RETURN:
-                    if selected_index == 0:  # Solo
+                    if selected_index == 0:
                         timer_menu("solo")
-                    elif selected_index == 1:  # Bot
+                        return
+                    elif selected_index == 1:
                         timer_menu("bot")
-                    elif selected_index == 2:  # Bot vs Bot
+                        return
+                    elif selected_index == 2:
                         timer_menu("bot_vs_bot")
-                    elif selected_index == 3:  # Retour
+                        return
+                    elif selected_index == 3:
                         main_menu()
+                        return
 
 def timer_menu(mode):
-    """Choix du timer avant de commencer le jeu."""
+    """Choix du timer avant de commencer le jeu (DA pause_menu)."""
     pygame.display.set_caption("Sélection du timer")
     screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
     options = ["10 min", "5 min"]
     selected_index = 0
-
-    running = True
     clock = pygame.time.Clock()
+    running = True
     while running:
         clock.tick(60)
-        screen.fill(UI_BG_COLOR)
+        screen_width, screen_height = screen.get_width(), screen.get_height()
+        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+        overlay.fill(UI_OVERLAY_BG)
+        screen.blit(overlay, (0, 0))
 
-        title = font.render("Durée de la partie", True, UI_TEXT_PRIMARY)
-        title_rect = title.get_rect(center=(WINDOW_SIZE // 2, 120))
-        screen.blit(title, title_rect)
+        panel_width = int(screen_width * 0.35)
+        panel_height = int(screen_height * 0.5)
+        panel_x = (screen_width - panel_width) // 2
+        panel_y = (screen_height - panel_height) // 2
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surf.fill((30, 24, 38, 220))
+        screen.blit(panel_surf, (panel_x, panel_y))
+        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
+        inner_rect = panel_rect.inflate(-12, -12)
+        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
 
+        # Title with shadow
+        title_font = pygame.font.Font(None, 72)
+        title_text = "Durée de la partie"
+        title_shadow = title_font.render(title_text, True, (0,0,0))
+        title_render = title_font.render(title_text, True, UI_ACCENT)
+        title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 60))
+        screen.blit(title_shadow, title_rect.move(3, 3))
+        screen.blit(title_render, title_rect)
+
+        # Buttons
+        box_w = int(panel_width * 0.8)
+        box_h = max(int(panel_height * 0.08), 44)
+        box_x = panel_x + int(panel_width * 0.1)
         for i, option in enumerate(options):
-            is_selected = (i == selected_index)
-            color = UI_ACCENT if is_selected else UI_TEXT_PRIMARY
-            text = font.render(option if not is_selected else f"> {option}", True, color)
-            screen.blit(text, (WINDOW_SIZE // 3, 200 + i * 60))
+            box_y = panel_y + 120 + i * (box_h + 18)
+            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+            if i == selected_index:
+                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
+                screen.blit(hover_s, (box_x, box_y))
+            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
+            corner_size = 8
+            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            opt_font = pygame.font.Font(None, 36)
+            if i == selected_index:
+                text = opt_font.render(option, True, UI_ACCENT)
+            else:
+                text = opt_font.render(option, True, UI_TEXT_SECONDARY)
+            text_rect = text.get_rect(center=box_rect.center)
+            screen.blit(text, text_rect)
 
         pygame.display.flip()
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
-                    selected_index = 1 - selected_index  # Alterner entre 5 et 10 min
+                    selected_index = 1 - selected_index
                 elif event.key == pygame.K_RETURN:
                     timer = 600 if selected_index == 0 else 300
                     if mode == "solo":
                         from game_modes import solo_game
                         solo_game(timer, True)
+                        return
                     elif mode == "bot_vs_bot":
                         from game_modes import bot_vs_bot
                         bot_vs_bot(timer)
+                        return
                     else:
                         color_choice_menu("bot", timer)
-                    return
+                        return
 
 def color_choice_menu(mode, timer):
-    """Menu pour choisir la couleur des pièces (uniquement pour le mode bot)."""
+    """Menu pour choisir la couleur des pièces (DA pause_menu)."""
     pygame.display.set_caption("Sélection des couleurs")
     screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
-    
     options = ["Jouer Blancs", "Jouer Noirs", "Aléatoire"]
-    
     selected_index = 0
     clock = pygame.time.Clock()
-
     running = True
     while running:
         clock.tick(60)
-        screen.fill(UI_BG_COLOR)
+        screen_width, screen_height = screen.get_width(), screen.get_height()
+        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+        overlay.fill(UI_OVERLAY_BG)
+        screen.blit(overlay, (0, 0))
 
-        title_text = font.render("Choisissez votre couleur:", True, UI_TEXT_PRIMARY)
-        screen.blit(title_text, (WINDOW_SIZE // 4, 100))
+        panel_width = int(screen_width * 0.35)
+        panel_height = int(screen_height * 0.5)
+        panel_x = (screen_width - panel_width) // 2
+        panel_y = (screen_height - panel_height) // 2
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surf.fill((30, 24, 38, 220))
+        screen.blit(panel_surf, (panel_x, panel_y))
+        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
+        inner_rect = panel_rect.inflate(-12, -12)
+        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
 
+        # Title with shadow
+        title_font = pygame.font.Font(None, 64)
+        title_text = "Choisissez votre couleur"
+        title_shadow = title_font.render(title_text, True, (0,0,0))
+        title_render = title_font.render(title_text, True, UI_ACCENT)
+        title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 60))
+        screen.blit(title_shadow, title_rect.move(3, 3))
+        screen.blit(title_render, title_rect)
+
+        # Buttons
+        box_w = int(panel_width * 0.8)
+        box_h = max(int(panel_height * 0.08), 44)
+        box_x = panel_x + int(panel_width * 0.1)
         for i, option in enumerate(options):
-            is_selected = (i == selected_index)
-            color = UI_ACCENT if is_selected else UI_TEXT_PRIMARY
-            text = font.render(option if not is_selected else f"> {option}", True, color)
-            screen.blit(text, (WINDOW_SIZE // 4, 200 + i * 60))
+            box_y = panel_y + 120 + i * (box_h + 18)
+            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+            if i == selected_index:
+                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
+                screen.blit(hover_s, (box_x, box_y))
+            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
+            corner_size = 8
+            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            opt_font = pygame.font.Font(None, 36)
+            if i == selected_index:
+                text = opt_font.render(option, True, UI_ACCENT)
+            else:
+                text = opt_font.render(option, True, UI_TEXT_SECONDARY)
+            text_rect = text.get_rect(center=box_rect.center)
+            screen.blit(text, text_rect)
 
         pygame.display.flip()
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -280,11 +460,10 @@ def color_choice_menu(mode, timer):
                 elif event.key == pygame.K_DOWN:
                     selected_index = (selected_index + 1) % len(options)
                 elif event.key == pygame.K_RETURN:
-                    if selected_index == 2:  # Aléatoire
+                    if selected_index == 2:
                         player_is_white = random.choice([True, False])
                     else:
                         player_is_white = (selected_index == 0)
-                    
                     from game_modes import chess_engine
                     chess_engine(timer, player_is_white)
                     return
@@ -293,23 +472,41 @@ def color_choice_menu(mode, timer):
                     return
 
 def settings_menu():
-    """Affiche le menu des réglages (choix entre clic et drag & drop + bots)."""
+    """Affiche le menu des réglages (DA pause_menu)."""
     pygame.display.set_caption("Paramètres")
     screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
-    
     import game_logic
     selected_index = 0
     clock = pygame.time.Clock()
-
     running = True
     while running:
         clock.tick(60)
-        screen.fill(UI_BG_COLOR)
+        screen_width, screen_height = screen.get_width(), screen.get_height()
+        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+        overlay.fill(UI_OVERLAY_BG)
+        screen.blit(overlay, (0, 0))
 
-        title = font.render("Paramètres", True, UI_TEXT_PRIMARY)
-        title_rect = title.get_rect(center=(WINDOW_SIZE // 2, 120))
-        screen.blit(title, title_rect)
+        panel_width = int(screen_width * 0.35)
+        panel_height = int(screen_height * 0.5 + 40)
+        panel_x = (screen_width - panel_width) // 2
+        panel_y = (screen_height - panel_height) // 2
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surf.fill((30, 24, 38, 220))
+        screen.blit(panel_surf, (panel_x, panel_y))
+        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
+        inner_rect = panel_rect.inflate(-12, -12)
+        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
+
+        # Title with shadow
+        title_font = pygame.font.Font(None, 72)
+        title_text = "Paramètres"
+        title_shadow = title_font.render(title_text, True, (0,0,0))
+        title_render = title_font.render(title_text, True, UI_ACCENT)
+        title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 60))
+        screen.blit(title_shadow, title_rect.move(3, 3))
+        screen.blit(title_render, title_rect)
 
         options = [
             f"Drag & Drop {'(actif)' if game_logic.drag_mode else ''}",
@@ -318,15 +515,30 @@ def settings_menu():
             "Choisir Bot 2 vs Bot",
             "Retour"
         ]
-
+        # Buttons
+        box_w = int(panel_width * 0.8)
+        box_h = max(int(panel_height * 0.08), 44)
+        box_x = panel_x + int(panel_width * 0.1)
         for i, option in enumerate(options):
-            is_selected = (i == selected_index)
-            color = UI_ACCENT if is_selected else UI_TEXT_PRIMARY
-            text = font.render(option if not is_selected else f"> {option}", True, color)
-            screen.blit(text, (WINDOW_SIZE // 4, 200 + i * 60))
+            box_y = panel_y + 120 + i * (box_h + 18)
+            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+            if i == selected_index:
+                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
+                screen.blit(hover_s, (box_x, box_y))
+            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
+            corner_size = 8
+            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            opt_font = pygame.font.Font(None, 36)
+            if i == selected_index:
+                text = opt_font.render(option, True, UI_ACCENT)
+            else:
+                text = opt_font.render(option, True, UI_TEXT_SECONDARY)
+            text_rect = text.get_rect(center=box_rect.center)
+            screen.blit(text, text_rect)
 
         pygame.display.flip()
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -343,53 +555,82 @@ def settings_menu():
                         game_logic.drag_mode = False
                     elif selected_index == 2:
                         bot_selection_menu(1)
+                        return
                     elif selected_index == 3:
                         bot_selection_menu(2)
+                        return
                     elif selected_index == 4:
                         main_menu()
                         return
 
 def bot_selection_menu(bot_number):
-    """Menu pour choisir le bot (1 ou 2)."""
+    """Menu pour choisir le bot (DA pause_menu)."""
     import config
-    
     pygame.display.set_caption(f"Sélection Bot {bot_number}")
     screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
     small_font = pygame.font.Font(None, 32)
-    
     bot_list = list(config.bot_engines.keys())
     selected_index = 0
-    
     current_bot = config.selected_bot1 if bot_number == 1 else config.selected_bot2
     if current_bot in bot_list:
         selected_index = bot_list.index(current_bot)
-
-    running = True
     clock = pygame.time.Clock()
+    running = True
     while running:
         clock.tick(60)
-        screen.fill(UI_BG_COLOR)
+        screen_width, screen_height = screen.get_width(), screen.get_height()
+        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+        overlay.fill(UI_OVERLAY_BG)
+        screen.blit(overlay, (0, 0))
 
-        title_text = font.render(f"Choisir Bot {bot_number}:", True, UI_TEXT_PRIMARY)
-        screen.blit(title_text, (WINDOW_SIZE // 4, 100))
+        # Panel
+        panel_width = int(screen_width * 0.5)
+        panel_height = min(screen_height - 120, 120 + len(bot_list) * 90 + 40)
+        panel_x = (screen_width - panel_width) // 2
+        panel_y = (screen_height - panel_height) // 2
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surf.fill((30, 24, 38, 220))
+        screen.blit(panel_surf, (panel_x, panel_y))
+        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
+        inner_rect = panel_rect.inflate(-12, -12)
+        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
 
+        # Title with shadow
+        title_font = pygame.font.Font(None, 64)
+        title_text = f"Choisir Bot {bot_number}"
+        title_shadow = title_font.render(title_text, True, (0,0,0))
+        title_render = title_font.render(title_text, True, UI_ACCENT)
+        title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 50))
+        screen.blit(title_shadow, title_rect.move(3, 3))
+        screen.blit(title_render, title_rect)
+
+        # Buttons (bot names)
+        box_w = int(panel_width * 0.8)
+        box_h = max(int(panel_height * 0.08), 44)
+        box_x = panel_x + int(panel_width * 0.1)
         for i, bot_name in enumerate(bot_list):
-            bot_path = config.bot_engines[bot_name]
-            display_path = bot_path if bot_path else "(vide)"
-            
-            is_selected = (i == selected_index)
-            color = UI_ACCENT if is_selected else UI_TEXT_PRIMARY
-            path_color = UI_TEXT_SECONDARY
-
-            text = font.render(bot_name if not is_selected else f"> {bot_name}", True, color)
-            path_text = small_font.render(display_path, True, path_color)
-
-            screen.blit(text, (WINDOW_SIZE // 4, 200 + i * 80))
-            screen.blit(path_text, (WINDOW_SIZE // 4 + 20, 230 + i * 80))
+            box_y = panel_y + 100 + i * 90
+            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+            if i == selected_index:
+                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
+                screen.blit(hover_s, (box_x, box_y))
+            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
+            corner_size = 8
+            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            # Bot name
+            opt_font = pygame.font.Font(None, 36)
+            if i == selected_index:
+                text = opt_font.render(bot_name, True, UI_ACCENT)
+            else:
+                text = opt_font.render(bot_name, True, UI_TEXT_SECONDARY)
+            text_rect = text.get_rect(midleft=(box_x + 18, box_y + box_h // 2))
+            screen.blit(text, text_rect)
 
         pygame.display.flip()
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
