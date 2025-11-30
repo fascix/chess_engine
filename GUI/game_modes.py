@@ -20,7 +20,7 @@ def solo_game(timer, player_is_white=True):
     game_logic.current_turn_start_time = time.time()
     game_logic.white_timer = game_logic.black_timer = timer
 
-    screen = pygame.display.set_mode((WINDOW_SIZE + 300, WINDOW_SIZE))
+    screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
 
     running = True
@@ -82,7 +82,7 @@ def chess_engine(timer, player_is_white=True):
     game_logic.current_turn_start_time = time.time()
     game_logic.white_timer = game_logic.black_timer = timer
 
-    screen = pygame.display.set_mode((WINDOW_SIZE + 300, WINDOW_SIZE))
+    screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
     
     # Si le joueur joue les noirs et c'est le tour des blancs, démarrer le calcul du bot
@@ -165,7 +165,7 @@ def bot_vs_bot(timer):
     game_logic.current_turn_start_time = time.time()
     game_logic.white_timer = game_logic.black_timer = timer
 
-    screen = pygame.display.set_mode((WINDOW_SIZE + 300, WINDOW_SIZE))
+    screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
     
     # Démarrer le calcul du premier bot (blancs)
