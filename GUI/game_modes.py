@@ -38,9 +38,13 @@ def solo_game(timer, player_is_white=True):
                         return
 
             elif event.type == pygame.MOUSEBUTTONDOWN and not game_logic.game_paused:
-                result = game_logic.handle_mouse_click(event)
-                if result == "menu":
+                # Gestion de l'UI (Navbar)
+                if game_logic.handle_ui_click(event) == "menu":
                     return
+                
+                # Gestion du jeu
+                game_logic.handle_click(event, game_logic.board)
+
             elif event.type == pygame.MOUSEMOTION and not game_logic.game_paused:
                 game_logic.handle_drag(event, game_logic.board)
 
@@ -117,9 +121,13 @@ def chess_engine(timer, player_is_white=True):
                             return
 
                 elif event.type == pygame.MOUSEBUTTONDOWN and not game_logic.game_paused and not game_logic.engine_thinking:
-                    result = game_logic.handle_mouse_click(event)
-                    if result == "menu":
+                    # Gestion de l'UI (Navbar)
+                    if game_logic.handle_ui_click(event) == "menu":
                         return
+                    
+                    # Le joueur peut seulement jouer si c'est son tour
+                    if (player_is_white and game_logic.board.turn == chess.WHITE) or (not player_is_white and game_logic.board.turn == chess.BLACK):
+                        game_logic.handle_click(event, game_logic.board)
 
                 elif event.type == pygame.MOUSEMOTION and not game_logic.game_paused and not game_logic.engine_thinking:
                     game_logic.handle_drag(event, game_logic.board)
@@ -216,8 +224,8 @@ def bot_vs_bot(timer):
                             return
                 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    result = game_logic.handle_mouse_click(event)
-                    if result == "menu":
+                    # Gestion de l'UI (Navbar)
+                    if game_logic.handle_ui_click(event) == "menu":
                         return
 
             # Mise à jour du timer

@@ -167,15 +167,14 @@ def check_engine2_result():
     except queue.Empty:
         return False
 
-def handle_mouse_click(event):
-    """Gestion centralisée des clics de souris."""
-    global selected_piece, legal_moves, dragged_pos, dragging, current_turn_start_time
-    from gui import get_square_from_mouse_centered, check_navbar_clicks
+def handle_ui_click(event):
+    """Gestion des clics de souris pour l'interface utilisateur (Navbar, etc.)."""
+    from gui import check_navbar_clicks
     from menu import main_menu
 
     mouse_x, mouse_y = event.pos
     
-    # 1. Vérifier la navbar
+    # Vérifier la navbar
     if navbar_buttons[0] and navbar_buttons[1] and mouse_y < NAVBAR_HEIGHT:
         navbar_action = check_navbar_clicks(event.pos, *navbar_buttons)
         if navbar_action == "new_game":
@@ -184,23 +183,19 @@ def handle_mouse_click(event):
         elif navbar_action == "resign":
             main_menu()
             return "menu"
-        return None
+            
+    return None
 
-    # 2. Si le jeu est en pause ou moteur réfléchit, on ignore le reste
-    if game_paused or engine_thinking or engine2_thinking:
-        return None
+def handle_click(event, board):
+    """Gère les clics de souris pour sélectionner et déplacer les pièces."""
+    global selected_piece, legal_moves, dragged_pos, dragging, current_turn_start_time
+    from gui import get_square_from_mouse_centered
 
-    # 3. Gestion du jeu (échiquier)
-    # Le joueur peut seulement jouer si c'est son tour
-    is_player_turn = (player_is_white and board.turn == chess.WHITE) or \
-                     (not player_is_white and board.turn == chess.BLACK)
-                     
-    if not is_player_turn:
-        return None
-        
+    mouse_x, mouse_y = event.pos
+    
     # Récupérer les infos de rendu de l'échiquier
     if not board_render_info:
-        return None
+        return
     
     tile_size = board_render_info['tile_size']
     board_offset_x = board_render_info['board_offset_x']
@@ -214,7 +209,7 @@ def handle_mouse_click(event):
         if not drag_mode:
             selected_piece = None
             legal_moves = []
-        return None
+        return
 
     if selected_piece is None:
         piece = board.piece_at(square)
@@ -235,7 +230,6 @@ def handle_mouse_click(event):
             selected_piece = None
             legal_moves = []
             dragging = False
-    return None
 
 def handle_drag(event, board):
     """Gère le drag des pièces."""

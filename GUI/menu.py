@@ -306,6 +306,9 @@ def game_mode_menu():
                     elif selected_index == 3:
                         main_menu()
                         return
+                elif event.key == pygame.K_ESCAPE:
+                    main_menu()
+                    return
 
 def timer_menu(mode):
     """Choix du timer avant de commencer le jeu (DA pause_menu)."""
@@ -388,6 +391,9 @@ def timer_menu(mode):
                     else:
                         color_choice_menu("bot", timer)
                         return
+                elif event.key == pygame.K_ESCAPE:
+                    game_mode_menu()
+                    return
 
 def color_choice_menu(mode, timer):
     """Menu pour choisir la couleur des pièces (DA pause_menu)."""
@@ -567,6 +573,9 @@ def settings_menu():
                     elif selected_index == 5:
                         main_menu()
                         return
+                elif event.key == pygame.K_ESCAPE:
+                    main_menu()
+                    return
 
 def board_color_menu():
     """Menu pour choisir la couleur de l'échiquier (DA pause_menu)."""
