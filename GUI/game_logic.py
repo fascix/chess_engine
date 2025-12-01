@@ -46,6 +46,14 @@ player_is_white = True
 # Variable pour le dernier coup joué
 last_move = None
 
+# Variables pour les infos du moteur
+engine_info = {'depth': 0, 'nodes': 0, 'score': 0, 'pv': ''}
+
+# Variables pour le render (stockage des infos de positionnement)
+board_render_info = {}
+navbar_buttons = (None, None)
+undo_button = None
+
 def reset_game():
     """Remet à zéro toutes les variables de jeu."""
     global board, selected_piece, legal_moves, dragging, captured_pieces
@@ -67,13 +75,36 @@ def reset_game():
 
 def engine_worker(board_copy, result_queue, engine_path=None):
     """Worker thread pour calculer le coup du moteur sans bloquer l'interface."""
+    global engine_info
     engine = None
+    
+    def info_handler(info):
+        """Handler pour récupérer les infos du moteur pendant la recherche."""
+        global engine_info
+        try:
+            engine_info = {
+                'depth': info.get('depth', engine_info.get('depth', 0)),
+                'nodes': info.get('nodes', engine_info.get('nodes', 0)),
+                'score': str(info.get('score', engine_info.get('score', 'N/A'))),
+                'pv': ' '.join([str(move) for move in info.get('pv', [])[:3]]) if 'pv' in info else engine_info.get('pv', '')
+            }
+        except Exception:
+            pass
+    
     try:
         if engine_path is None:
             engine_path = config.get_bot1_path()
         engine = chess.engine.SimpleEngine.popen_uci(engine_path)
-        result = engine.play(board_copy, chess.engine.Limit(time=1.0))
-        result_queue.put(result.move)
+        
+        # Utiliser analyse + stop pour avoir les infos en temps réel
+        with engine.analysis(board_copy, chess.engine.Limit(time=1.0), info=chess.engine.INFO_ALL) as analysis:
+            for info in analysis:
+                info_handler(info)
+            
+            # Récupérer le meilleur coup
+            best_move = analysis.info.get('pv', [None])[0] if 'pv' in analysis.info else None
+            
+        result_queue.put(best_move)
     except Exception as e:
         print(f"Erreur dans le moteur: {e}")
         result_queue.put(None)
@@ -136,18 +167,54 @@ def check_engine2_result():
     except queue.Empty:
         return False
 
-def handle_click(event, board):
-    """Gère les clics de souris pour sélectionner et déplacer les pièces."""
+def handle_mouse_click(event):
+    """Gestion centralisée des clics de souris."""
     global selected_piece, legal_moves, dragged_pos, dragging, current_turn_start_time
-    from support import get_square_from_pos
+    from gui import get_square_from_mouse_centered, check_navbar_clicks
+    from menu import main_menu
 
     mouse_x, mouse_y = event.pos
     
-    # Vérifier que le clic est bien dans les limites de l'échiquier
-    if not (0 <= mouse_x < WINDOW_SIZE and 0 <= mouse_y < WINDOW_SIZE):
-        return
+    # 1. Vérifier la navbar
+    if navbar_buttons[0] and navbar_buttons[1] and mouse_y < NAVBAR_HEIGHT:
+        navbar_action = check_navbar_clicks(event.pos, *navbar_buttons)
+        if navbar_action == "new_game":
+            main_menu()
+            return "menu"
+        elif navbar_action == "resign":
+            main_menu()
+            return "menu"
+        return None
+
+    # 2. Si le jeu est en pause ou moteur réfléchit, on ignore le reste
+    if game_paused or engine_thinking or engine2_thinking:
+        return None
+
+    # 3. Gestion du jeu (échiquier)
+    # Le joueur peut seulement jouer si c'est son tour
+    is_player_turn = (player_is_white and board.turn == chess.WHITE) or \
+                     (not player_is_white and board.turn == chess.BLACK)
+                     
+    if not is_player_turn:
+        return None
+        
+    # Récupérer les infos de rendu de l'échiquier
+    if not board_render_info:
+        return None
     
-    square = get_square_from_pos(mouse_x, mouse_y, player_is_white)
+    tile_size = board_render_info['tile_size']
+    board_offset_x = board_render_info['board_offset_x']
+    board_offset_y = board_render_info['board_offset_y']
+    
+    square = get_square_from_mouse_centered(mouse_x, mouse_y, player_is_white, tile_size, board_offset_x, board_offset_y)
+    
+    # Si le clic est hors de l'échiquier
+    if square is None:
+        # Si on clique ailleurs et qu'on n'est pas en drag mode, on désélectionne
+        if not drag_mode:
+            selected_piece = None
+            legal_moves = []
+        return None
 
     if selected_piece is None:
         piece = board.piece_at(square)
@@ -156,7 +223,7 @@ def handle_click(event, board):
             legal_moves = [move for move in board.legal_moves if move.from_square == square]
             # En mode drag, on active le dragging. En mode click, non.
             dragging = drag_mode
-            dragged_pos = (mouse_x - TILE_SIZE // 2, mouse_y - TILE_SIZE // 2)
+            dragged_pos = (mouse_x - tile_size // 2, mouse_y - tile_size // 2)
     else:
         # En mode drag, on ne gère PAS la désélection ici (c'est handle_drop qui s'en charge)
         # En mode click, on gère le deuxième clic pour déplacer la pièce
@@ -168,28 +235,31 @@ def handle_click(event, board):
             selected_piece = None
             legal_moves = []
             dragging = False
+    return None
 
 def handle_drag(event, board):
     """Gère le drag des pièces."""
     global dragged_pos, dragging
 
-    if drag_mode and selected_piece is not None and dragging:
+    if drag_mode and selected_piece is not None and dragging and board_render_info:
+        tile_size = board_render_info['tile_size']
+        screen_width, screen_height = pygame.display.get_surface().get_size()
+        
         mouse_x, mouse_y = event.pos
         # Calculer la position de la pièce draggée (centrée sur la souris)
-        drag_x = mouse_x - TILE_SIZE // 2
-        drag_y = mouse_y - TILE_SIZE // 2
+        drag_x = mouse_x - tile_size // 2
+        drag_y = mouse_y - tile_size // 2
         
         # Limiter la position pour que la pièce reste visible à l'écran
-        # (éviter qu'elle ne sorte complètement de l'échiquier)
-        drag_x = max(-TILE_SIZE // 2, min(drag_x, WINDOW_SIZE - TILE_SIZE // 2))
-        drag_y = max(-TILE_SIZE // 2, min(drag_y, WINDOW_SIZE - TILE_SIZE // 2))
+        drag_x = max(-tile_size // 2, min(drag_x, screen_width - tile_size // 2))
+        drag_y = max(-tile_size // 2, min(drag_y, screen_height - tile_size // 2))
         
         dragged_pos = (drag_x, drag_y)
 
 def handle_drop(event, board):
     """Gère le drop des pièces."""
     global selected_piece, legal_moves, dragging
-    from support import get_square_from_pos
+    from gui import get_square_from_mouse_centered
     
     # Si on n'est pas en mode drag OU si aucune pièce n'est sélectionnée OU si dragging est False, on ignore
     if not drag_mode:
@@ -198,7 +268,7 @@ def handle_drop(event, board):
     if not dragging:
         return
         
-    if selected_piece is None:  # Utiliser is None au lieu de not
+    if selected_piece is None:
         # Réinitialiser dragging au cas où
         dragging = False
         return
@@ -206,15 +276,25 @@ def handle_drop(event, board):
     # À ce stade, on a drag_mode=True, dragging=True et selected_piece est défini
     mouse_x, mouse_y = event.pos
     
-    # Vérifier que le drop est dans les limites de l'échiquier
-    # Si on drop en dehors, on annule simplement la sélection
-    if not (0 <= mouse_x < WINDOW_SIZE and 0 <= mouse_y < WINDOW_SIZE):
+    # Récupérer les infos de rendu de l'échiquier
+    if not board_render_info:
         selected_piece = None
         legal_moves = []
         dragging = False
         return
     
-    square = get_square_from_pos(mouse_x, mouse_y, player_is_white)
+    tile_size = board_render_info['tile_size']
+    board_offset_x = board_render_info['board_offset_x']
+    board_offset_y = board_render_info['board_offset_y']
+    
+    square = get_square_from_mouse_centered(mouse_x, mouse_y, player_is_white, tile_size, board_offset_x, board_offset_y)
+    
+    # Si on drop en dehors de l'échiquier, on annule simplement la sélection
+    if square is None:
+        selected_piece = None
+        legal_moves = []
+        dragging = False
+        return
 
     if square in [move.to_square for move in legal_moves]:
         move = chess.Move(selected_piece, square)

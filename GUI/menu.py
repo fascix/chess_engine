@@ -508,9 +508,11 @@ def settings_menu():
         screen.blit(title_shadow, title_rect.move(3, 3))
         screen.blit(title_render, title_rect)
 
+        from settings import current_board_theme
         options = [
             f"Drag & Drop {'(actif)' if game_logic.drag_mode else ''}",
             f"Mode Clic {'(actif)' if not game_logic.drag_mode else ''}",
+            f"Couleur échiquier: {current_board_theme}",
             "Choisir Bot 1 vs Player",
             "Choisir Bot 2 vs Bot",
             "Retour"
@@ -554,14 +556,189 @@ def settings_menu():
                     elif selected_index == 1:
                         game_logic.drag_mode = False
                     elif selected_index == 2:
-                        bot_selection_menu(1)
+                        board_color_menu()
                         return
                     elif selected_index == 3:
-                        bot_selection_menu(2)
+                        bot_selection_menu(1)
                         return
                     elif selected_index == 4:
+                        bot_selection_menu(2)
+                        return
+                    elif selected_index == 5:
                         main_menu()
                         return
+
+def board_color_menu():
+    """Menu pour choisir la couleur de l'échiquier (DA pause_menu)."""
+    import settings
+    pygame.display.set_caption("Couleur de l'échiquier")
+    screen = pygame.display.get_surface()
+    font = pygame.font.Font(None, 48)
+    theme_list = list(settings.BOARD_COLORS.keys())
+    selected_index = 0
+    
+    # Trouver l'index du thème actuel
+    if settings.current_board_theme in theme_list:
+        selected_index = theme_list.index(settings.current_board_theme)
+    
+    clock = pygame.time.Clock()
+    running = True
+    while running:
+        clock.tick(60)
+        screen_width, screen_height = screen.get_width(), screen.get_height()
+        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+        overlay.fill(UI_OVERLAY_BG)
+        screen.blit(overlay, (0, 0))
+
+        # Panel
+        panel_width = int(screen_width * 0.5)
+        panel_height = min(screen_height - 120, 120 + len(theme_list) * 90 + 40)
+        panel_x = (screen_width - panel_width) // 2
+        panel_y = (screen_height - panel_height) // 2
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surf.fill((30, 24, 38, 220))
+        screen.blit(panel_surf, (panel_x, panel_y))
+        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
+        inner_rect = panel_rect.inflate(-12, -12)
+        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
+
+        # Title with shadow
+        title_font = pygame.font.Font(None, 64)
+        title_text = "Couleur de l'échiquier"
+        title_shadow = title_font.render(title_text, True, (0,0,0))
+        title_render = title_font.render(title_text, True, UI_ACCENT)
+        title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 50))
+        screen.blit(title_shadow, title_rect.move(3, 3))
+        screen.blit(title_render, title_rect)
+
+        # Buttons (theme names)
+        box_w = int(panel_width * 0.8)
+        box_h = max(int(panel_height * 0.08), 44)
+        box_x = panel_x + int(panel_width * 0.1)
+        for i, theme_name in enumerate(theme_list):
+            box_y = panel_y + 100 + i * 90
+            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+            if i == selected_index:
+                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
+                screen.blit(hover_s, (box_x, box_y))
+            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
+            corner_size = 8
+            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            
+            # Theme name
+            opt_font = pygame.font.Font(None, 36)
+            if i == selected_index:
+                text = opt_font.render(theme_name.capitalize(), True, UI_ACCENT)
+            else:
+                text = opt_font.render(theme_name.capitalize(), True, UI_TEXT_SECONDARY)
+            text_rect = text.get_rect(midleft=(box_x + 18, box_y + box_h // 2))
+            screen.blit(text, text_rect)
+
+        pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_index = (selected_index - 1) % len(theme_list)
+                elif event.key == pygame.K_DOWN:
+                    selected_index = (selected_index + 1) % len(theme_list)
+                elif event.key == pygame.K_RETURN:
+                    settings.current_board_theme = theme_list[selected_index]
+                    settings_menu()
+                    return
+                elif event.key == pygame.K_ESCAPE:
+                    settings_menu()
+                    return
+
+def bot_selection_menu(bot_number):
+    """Menu pour choisir le bot (DA pause_menu)."""
+    import config
+    pygame.display.set_caption(f"Sélection Bot {bot_number}")
+    screen = pygame.display.get_surface()
+    font = pygame.font.Font(None, 48)
+    small_font = pygame.font.Font(None, 32)
+    bot_list = list(config.bot_engines.keys())
+    selected_index = 0
+    current_bot = config.selected_bot1 if bot_number == 1 else config.selected_bot2
+    if current_bot in bot_list:
+        selected_index = bot_list.index(current_bot)
+    clock = pygame.time.Clock()
+    running = True
+    while running:
+        clock.tick(60)
+        screen_width, screen_height = screen.get_width(), screen.get_height()
+        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+        overlay.fill(UI_OVERLAY_BG)
+        screen.blit(overlay, (0, 0))
+
+        # Panel
+        panel_width = int(screen_width * 0.5)
+        panel_height = min(screen_height - 120, 120 + len(bot_list) * 90 + 40)
+        panel_x = (screen_width - panel_width) // 2
+        panel_y = (screen_height - panel_height) // 2
+        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
+        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surf.fill((30, 24, 38, 220))
+        screen.blit(panel_surf, (panel_x, panel_y))
+        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
+        inner_rect = panel_rect.inflate(-12, -12)
+        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
+
+        # Title with shadow
+        title_font = pygame.font.Font(None, 64)
+        title_text = f"Choisir Bot {bot_number}"
+        title_shadow = title_font.render(title_text, True, (0,0,0))
+        title_render = title_font.render(title_text, True, UI_ACCENT)
+        title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 50))
+        screen.blit(title_shadow, title_rect.move(3, 3))
+        screen.blit(title_render, title_rect)
+
+        # Buttons (bot names)
+        box_w = int(panel_width * 0.8)
+        box_h = max(int(panel_height * 0.08), 44)
+        box_x = panel_x + int(panel_width * 0.1)
+        for i, bot_name in enumerate(bot_list):
+            box_y = panel_y + 100 + i * 90
+            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+            if i == selected_index:
+                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
+                screen.blit(hover_s, (box_x, box_y))
+            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
+            corner_size = 8
+            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
+            # Bot name
+            opt_font = pygame.font.Font(None, 36)
+            if i == selected_index:
+                text = opt_font.render(bot_name, True, UI_ACCENT)
+            else:
+                text = opt_font.render(bot_name, True, UI_TEXT_SECONDARY)
+            text_rect = text.get_rect(midleft=(box_x + 18, box_y + box_h // 2))
+            screen.blit(text, text_rect)
+
+        pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_index = (selected_index - 1) % len(theme_list)
+                elif event.key == pygame.K_DOWN:
+                    selected_index = (selected_index + 1) % len(theme_list)
+                elif event.key == pygame.K_RETURN:
+                    settings.current_board_theme = theme_list[selected_index]
+                    settings_menu()
+                    return
+                elif event.key == pygame.K_ESCAPE:
+                    settings_menu()
+                    return
 
 def bot_selection_menu(bot_number):
     """Menu pour choisir le bot (DA pause_menu)."""

@@ -38,9 +38,9 @@ def solo_game(timer, player_is_white=True):
                         return
 
             elif event.type == pygame.MOUSEBUTTONDOWN and not game_logic.game_paused:
-                print(f"\n===== EVENT: MOUSEBUTTONDOWN at {event.pos} =====")
-                game_logic.handle_click(event, game_logic.board)
-
+                result = game_logic.handle_mouse_click(event)
+                if result == "menu":
+                    return
             elif event.type == pygame.MOUSEMOTION and not game_logic.game_paused:
                 game_logic.handle_drag(event, game_logic.board)
 
@@ -117,9 +117,9 @@ def chess_engine(timer, player_is_white=True):
                             return
 
                 elif event.type == pygame.MOUSEBUTTONDOWN and not game_logic.game_paused and not game_logic.engine_thinking:
-                    # Le joueur peut seulement jouer si c'est son tour
-                    if (player_is_white and game_logic.board.turn == chess.WHITE) or (not player_is_white and game_logic.board.turn == chess.BLACK):
-                        game_logic.handle_click(event, game_logic.board)
+                    result = game_logic.handle_mouse_click(event)
+                    if result == "menu":
+                        return
 
                 elif event.type == pygame.MOUSEMOTION and not game_logic.game_paused and not game_logic.engine_thinking:
                     game_logic.handle_drag(event, game_logic.board)
@@ -131,7 +131,6 @@ def chess_engine(timer, player_is_white=True):
                         if (player_is_white and game_logic.board.turn == chess.BLACK) or (not player_is_white and game_logic.board.turn == chess.WHITE):
                             if not game_logic.board.is_game_over():
                                 game_logic.start_engine_calculation(game_logic.board)
-
             # Mise à jour du timer
             game_logic.update_timers()
 
@@ -215,6 +214,11 @@ def bot_vs_bot(timer):
                         if result == "main_menu":
                             main_menu()
                             return
+                
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    result = game_logic.handle_mouse_click(event)
+                    if result == "menu":
+                        return
 
             # Mise à jour du timer
             game_logic.update_timers()
