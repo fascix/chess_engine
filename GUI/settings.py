@@ -57,3 +57,10 @@ UI_DANGER = (215, 38, 61)        # #D7263D
 # Panel background
 UI_PANEL_BG = (20, 20, 30)        # fond des panneaux
 UI_PANEL_BORDER = (50, 50, 60)    # bordure des panneaux
+
+# --- Menu constants (DRY principle) ---
+MENU_PANEL_BG_COLOR = (30, 24, 38, 220)  # Standard panel background with alpha
+MENU_CORNER_SIZE = 8  # Size of corner ornaments on menu boxes
+MENU_BOX_SPACING = 18  # Spacing between menu options
+MENU_TITLE_Y_OFFSET = 60  # Default Y offset for menu titles
+MENU_OPTIONS_START_Y = 120  # Default Y position for first option

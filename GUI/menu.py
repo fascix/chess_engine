@@ -28,6 +28,7 @@ def pause_menu():
     """Affiche le menu de pause pendant le jeu."""
     from game_logic import game_paused, current_turn_start_time
     from game_logic import game_paused as gp
+    from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
     
     # Utilisation d'une variable locale pour éviter les conflits
     game_paused_state = True
@@ -38,66 +39,31 @@ def pause_menu():
     menu_options = ["Reprendre", "Retour au menu principal", "Quitter le jeu"]
     selected_index = 0
 
-    screen_width, screen_height = screen.get_width(), screen.get_height()
-    overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
-    overlay.fill(UI_OVERLAY_BG)
-
     running = True
     while running:
-        screen.blit(overlay, (0, 0))
-
-        # Panel for pause menu
-        panel_width = screen.get_width() // 3
-        panel_height = screen.get_height() // 2
-        panel_x = (screen.get_width() - panel_width) // 2
-        panel_y = (screen.get_height() - panel_height) // 2
-
-        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
-        # Semi-transparent dark panel
-        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
-        panel_surf.fill((30, 24, 38, 220))
-        screen.blit(panel_surf, (panel_x, panel_y))
-        # Outer border
-        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
-        # Inner thin border
-        inner_rect = panel_rect.inflate(-12, -12)
-        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
-
-        # Title
+        # Draw panel
+        panel_x, panel_y, panel_width, panel_height = draw_menu_panel(screen, 0.33, 0.5)
+        
+        # Title (with custom font size for PAUSED)
         paused_font = pygame.font.Font(None, 84)
         title_text = paused_font.render("PAUSED", True, UI_ACCENT)
-        title_shadow = paused_font.render("PAUSED", True, (0,0,0))
+        title_shadow = paused_font.render("PAUSED", True, (0, 0, 0))
         title_rect = title_text.get_rect(center=(screen.get_width() // 2, panel_y + 60))
         screen.blit(title_shadow, title_rect.move(3, 3))
         screen.blit(title_text, title_rect)
 
-        # Buttons as outlined boxes with corner ornaments
+        # Calculate layout
+        box_w, box_h, box_x, start_y = calculate_menu_layout(
+            panel_x, panel_y, panel_width, panel_height, len(menu_options)
+        )
+        box_h = 56  # Custom height for pause menu
         box_w = panel_width - 80
-        box_h = 56
         box_x = panel_x + 40
+        
+        # Draw options
         for i, option in enumerate(menu_options):
-            box_y = panel_y + 120 + i * (box_h + 18)
-            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
-            # light inner fill for hover
-            if i == selected_index:
-                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
-                screen.blit(hover_s, (box_x, box_y))
-            # outline
-            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
-            # corner ornaments (small squares)
-            corner_size = 8
-            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
-            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
-
-            # Text
-            opt_font = pygame.font.Font(None, 36)
-            if i == selected_index:
-                text = opt_font.render(option, True, UI_ACCENT)
-            else:
-                text = opt_font.render(option, True, UI_TEXT_SECONDARY)
-            text_rect = text.get_rect(center=box_rect.center)
-            screen.blit(text, text_rect)
+            box_y = start_y + i * (box_h + 18)
+            draw_menu_option_box(screen, box_x, box_y, box_w, box_h, option, i == selected_index)
 
         pygame.display.flip()
 
@@ -226,6 +192,8 @@ def main_menu():
 
 def game_mode_menu():
     """Menu de sélection du mode de jeu (DA pause_menu)."""
+    from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
+    
     screen = pygame.display.get_surface()
     pygame.display.set_caption("Sélection du mode de jeu")
     font = pygame.font.Font(None, 48)
@@ -233,60 +201,28 @@ def game_mode_menu():
     selected_index = 0
     clock = pygame.time.Clock()
     running = True
+    
     while running:
         clock.tick(60)
-        # Overlay
-        screen_width, screen_height = screen.get_width(), screen.get_height()
-        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
-        overlay.fill(UI_OVERLAY_BG)
-        screen.blit(overlay, (0, 0))
-
-        # Panel
-        panel_width = int(screen_width * 0.35)
-        panel_height = int(screen_height * 0.5)
-        panel_x = (screen_width - panel_width) // 2
-        panel_y = (screen_height - panel_height) // 2
-        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
-        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
-        panel_surf.fill((30, 24, 38, 220))
-        screen.blit(panel_surf, (panel_x, panel_y))
-        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
-        inner_rect = panel_rect.inflate(-12, -12)
-        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
-
-        # Title with shadow
-        title_font = pygame.font.Font(None, 72)
-        title_text = "Modes de jeu"
-        title_shadow = title_font.render(title_text, True, (0,0,0))
-        title_render = title_font.render(title_text, True, UI_ACCENT)
-        title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 60))
-        screen.blit(title_shadow, title_rect.move(3, 3))
-        screen.blit(title_render, title_rect)
-
-        # Buttons
-        box_w = int(panel_width * 0.8)
-        box_h = max(int(panel_height * 0.08), 44)
-        box_x = panel_x + int(panel_width * 0.1)
+        
+        # Draw panel
+        panel_x, panel_y, panel_width, panel_height = draw_menu_panel(screen, 0.35, 0.5)
+        
+        # Draw title
+        draw_menu_title(screen, "Modes de jeu", panel_y, 60)
+        
+        # Calculate layout
+        box_w, box_h, box_x, start_y = calculate_menu_layout(
+            panel_x, panel_y, panel_width, panel_height, len(menu_options)
+        )
+        
+        # Draw options
         for i, option in enumerate(menu_options):
-            box_y = panel_y + 120 + i * (box_h + 18)
-            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
-            if i == selected_index:
-                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
-                screen.blit(hover_s, (box_x, box_y))
-            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
-            corner_size = 8
-            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
-            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
-            opt_font = pygame.font.Font(None, 36)
-            if i == selected_index:
-                text = opt_font.render(option, True, UI_ACCENT)
-            else:
-                text = opt_font.render(option, True, UI_TEXT_SECONDARY)
-            text_rect = text.get_rect(center=box_rect.center)
-            screen.blit(text, text_rect)
+            box_y = start_y + i * (box_h + 18)
+            draw_menu_option_box(screen, box_x, box_y, box_w, box_h, option, i == selected_index)
 
         pygame.display.flip()
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -315,6 +251,8 @@ def game_mode_menu():
 
 def timer_menu(mode):
     """Choix du timer avant de commencer le jeu (DA pause_menu)."""
+    from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
+    
     pygame.display.set_caption("Sélection du timer")
     screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
@@ -322,58 +260,28 @@ def timer_menu(mode):
     selected_index = 0
     clock = pygame.time.Clock()
     running = True
+    
     while running:
         clock.tick(60)
-        screen_width, screen_height = screen.get_width(), screen.get_height()
-        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
-        overlay.fill(UI_OVERLAY_BG)
-        screen.blit(overlay, (0, 0))
-
-        panel_width = int(screen_width * 0.35)
-        panel_height = int(screen_height * 0.5)
-        panel_x = (screen_width - panel_width) // 2
-        panel_y = (screen_height - panel_height) // 2
-        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
-        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
-        panel_surf.fill((30, 24, 38, 220))
-        screen.blit(panel_surf, (panel_x, panel_y))
-        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
-        inner_rect = panel_rect.inflate(-12, -12)
-        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
-
-        # Title with shadow
-        title_font = pygame.font.Font(None, 72)
-        title_text = "Durée de la partie"
-        title_shadow = title_font.render(title_text, True, (0,0,0))
-        title_render = title_font.render(title_text, True, UI_ACCENT)
-        title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 60))
-        screen.blit(title_shadow, title_rect.move(3, 3))
-        screen.blit(title_render, title_rect)
-
-        # Buttons
-        box_w = int(panel_width * 0.8)
-        box_h = max(int(panel_height * 0.08), 44)
-        box_x = panel_x + int(panel_width * 0.1)
+        
+        # Draw panel
+        panel_x, panel_y, panel_width, panel_height = draw_menu_panel(screen, 0.35, 0.5)
+        
+        # Draw title
+        draw_menu_title(screen, "Durée de la partie", panel_y, 60)
+        
+        # Calculate layout
+        box_w, box_h, box_x, start_y = calculate_menu_layout(
+            panel_x, panel_y, panel_width, panel_height, len(options)
+        )
+        
+        # Draw options
         for i, option in enumerate(options):
-            box_y = panel_y + 120 + i * (box_h + 18)
-            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
-            if i == selected_index:
-                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
-                screen.blit(hover_s, (box_x, box_y))
-            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
-            corner_size = 8
-            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
-            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
-            opt_font = pygame.font.Font(None, 36)
-            if i == selected_index:
-                text = opt_font.render(option, True, UI_ACCENT)
-            else:
-                text = opt_font.render(option, True, UI_TEXT_SECONDARY)
-            text_rect = text.get_rect(center=box_rect.center)
-            screen.blit(text, text_rect)
+            box_y = start_y + i * (box_h + 18)
+            draw_menu_option_box(screen, box_x, box_y, box_w, box_h, option, i == selected_index)
 
         pygame.display.flip()
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -400,6 +308,8 @@ def timer_menu(mode):
 
 def color_choice_menu(mode, timer):
     """Menu pour choisir la couleur des pièces (DA pause_menu)."""
+    from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
+    
     pygame.display.set_caption("Sélection des couleurs")
     screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
@@ -407,58 +317,34 @@ def color_choice_menu(mode, timer):
     selected_index = 0
     clock = pygame.time.Clock()
     running = True
+    
     while running:
         clock.tick(60)
-        screen_width, screen_height = screen.get_width(), screen.get_height()
-        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
-        overlay.fill(UI_OVERLAY_BG)
-        screen.blit(overlay, (0, 0))
-
-        panel_width = int(screen_width * 0.35)
-        panel_height = int(screen_height * 0.5)
-        panel_x = (screen_width - panel_width) // 2
-        panel_y = (screen_height - panel_height) // 2
-        panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
-        panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
-        panel_surf.fill((30, 24, 38, 220))
-        screen.blit(panel_surf, (panel_x, panel_y))
-        pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
-        inner_rect = panel_rect.inflate(-12, -12)
-        pygame.draw.rect(screen, UI_ACCENT, inner_rect, width=2)
-
-        # Title with shadow
+        
+        # Draw panel
+        panel_x, panel_y, panel_width, panel_height = draw_menu_panel(screen, 0.35, 0.5)
+        
+        # Draw title (custom font size)
         title_font = pygame.font.Font(None, 64)
         title_text = "Choisissez votre couleur"
-        title_shadow = title_font.render(title_text, True, (0,0,0))
+        title_shadow = title_font.render(title_text, True, (0, 0, 0))
         title_render = title_font.render(title_text, True, UI_ACCENT)
         title_rect = title_render.get_rect(center=(screen.get_width() // 2, panel_y + 60))
         screen.blit(title_shadow, title_rect.move(3, 3))
         screen.blit(title_render, title_rect)
-
-        # Buttons
-        box_w = int(panel_width * 0.8)
-        box_h = max(int(panel_height * 0.08), 44)
-        box_x = panel_x + int(panel_width * 0.1)
+        
+        # Calculate layout
+        box_w, box_h, box_x, start_y = calculate_menu_layout(
+            panel_x, panel_y, panel_width, panel_height, len(options)
+        )
+        
+        # Draw options
         for i, option in enumerate(options):
-            box_y = panel_y + 120 + i * (box_h + 18)
-            box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
-            if i == selected_index:
-                hover_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-                hover_s.fill((UI_ACCENT[0], UI_ACCENT[1], UI_ACCENT[2], 35))
-                screen.blit(hover_s, (box_x, box_y))
-            pygame.draw.rect(screen, UI_ACCENT, box_rect, width=2)
-            corner_size = 8
-            pygame.draw.rect(screen, UI_ACCENT, (box_x - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
-            pygame.draw.rect(screen, UI_ACCENT, (box_x + box_w - corner_size // 2, box_y + box_h // 2 - corner_size // 2, corner_size, corner_size))
-            opt_font = pygame.font.Font(None, 36)
-            if i == selected_index:
-                text = opt_font.render(option, True, UI_ACCENT)
-            else:
-                text = opt_font.render(option, True, UI_TEXT_SECONDARY)
-            text_rect = text.get_rect(center=box_rect.center)
-            screen.blit(text, text_rect)
+            box_y = start_y + i * (box_h + 18)
+            draw_menu_option_box(screen, box_x, box_y, box_w, box_h, option, i == selected_index)
 
         pygame.display.flip()
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
