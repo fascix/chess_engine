@@ -181,6 +181,18 @@ def handle_ui_click(event):
             main_menu()
             return "menu"
         elif navbar_action == "resign":
+            # Sauvegarder la partie comme abandon (resign)
+            # Le joueur qui abandonne perd
+            if board.turn == chess.WHITE:
+                # C'est au tour des blancs, donc les blancs abandonnent
+                result = "0-1"  # Les noirs gagnent
+            else:
+                # C'est au tour des noirs, donc les noirs abandonnent
+                result = "1-0"  # Les blancs gagnent
+            
+            # Déterminer les noms des joueurs (on utilise des valeurs par défaut)
+            # Ces valeurs devraient idéalement être passées depuis game_modes
+            end_game_and_save(result, "Player 1", "Player 2")
             main_menu()
             return "menu"
             

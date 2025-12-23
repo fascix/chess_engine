@@ -155,3 +155,48 @@ def handle_menu_navigation(event, selected_index, num_options):
             return (selected_index + 1) % num_options
     
     return selected_index
+
+
+def check_menu_click(mouse_pos, box_x, box_y, box_w, box_h, num_options, spacing=None):
+    """
+    Vérifie si un clic de souris est sur une option de menu.
+    
+    Args:
+        mouse_pos: Position de la souris (x, y)
+        box_x, box_y: Position de la première option
+        box_w, box_h: Dimensions d'une option
+        num_options: Nombre d'options
+        spacing: Espacement entre les options (utilise MENU_BOX_SPACING par défaut)
+        
+    Returns:
+        int: Index de l'option cliquée, ou None si aucune option n'est cliquée
+    """
+    if spacing is None:
+        spacing = MENU_BOX_SPACING
+        
+    mouse_x, mouse_y = mouse_pos
+    
+    for i in range(num_options):
+        option_y = box_y + i * (box_h + spacing)
+        option_rect = pygame.Rect(box_x, option_y, box_w, box_h)
+        if option_rect.collidepoint(mouse_x, mouse_y):
+            return i
+    
+    return None
+
+
+def update_hover_selection(mouse_pos, box_x, box_y, box_w, box_h, num_options, spacing=None):
+    """
+    Met à jour la sélection basée sur la position de la souris (hover).
+    
+    Args:
+        mouse_pos: Position de la souris (x, y)
+        box_x, box_y: Position de la première option
+        box_w, box_h: Dimensions d'une option
+        num_options: Nombre d'options
+        spacing: Espacement entre les options (utilise MENU_BOX_SPACING par défaut)
+        
+    Returns:
+        int: Index de l'option survolée, ou None si aucune option n'est survolée
+    """
+    return check_menu_click(mouse_pos, box_x, box_y, box_w, box_h, num_options, spacing)

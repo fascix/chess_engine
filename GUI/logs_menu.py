@@ -134,6 +134,36 @@ def logs_menu():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.MOUSEMOTION and games:
+                # Mettre à jour la sélection basée sur le survol de la souris
+                mouse_pos = event.pos
+                for i, game_info in enumerate(games):
+                    box_w = int(panel_width * 0.85)
+                    box_h = 90
+                    box_x = panel_x + int(panel_width * 0.075)
+                    box_y = current_y + i * (box_h + 15)
+                    if box_y + box_h > panel_y + panel_height - 100:
+                        break
+                    box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+                    if box_rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        break
+            elif event.type == pygame.MOUSEBUTTONDOWN and games:
+                # Vérifier si un jeu a été cliqué
+                mouse_pos = event.pos
+                for i, game_info in enumerate(games):
+                    box_w = int(panel_width * 0.85)
+                    box_h = 90
+                    box_x = panel_x + int(panel_width * 0.075)
+                    box_y = current_y + i * (box_h + 15)
+                    if box_y + box_h > panel_y + panel_height - 100:
+                        break
+                    box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+                    if box_rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        # View game details
+                        view_game_details(games[selected_index])
+                        break
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False

@@ -5,7 +5,8 @@ import pygame
 import time
 import random
 from settings import *
-from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
+from menu_renderer import (draw_menu_panel, draw_menu_title, draw_menu_option_box, 
+                           calculate_menu_layout, check_menu_click, update_hover_selection)
 
 def load_main_menu_background():
     """Charge l'image de fond principale avec fallback sur un fond uni."""
@@ -71,6 +72,28 @@ def pause_menu():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.MOUSEMOTION:
+                # Mettre à jour la sélection basée sur le survol de la souris
+                hovered = update_hover_selection(event.pos, box_x, start_y, box_w, box_h, len(menu_options))
+                if hovered is not None:
+                    selected_index = hovered
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Vérifier si une option a été cliquée
+                clicked = check_menu_click(event.pos, box_x, start_y, box_w, box_h, len(menu_options))
+                if clicked is not None:
+                    selected_index = clicked
+                    if selected_index == 0:  # Reprendre
+                        pause_duration = time.time() - pause_start_time
+                        import game_logic
+                        if game_logic.current_turn_start_time:
+                            game_logic.current_turn_start_time += pause_duration
+                        game_logic.game_paused = False
+                        return "resume"
+                    elif selected_index == 1:  # Retour au menu principal
+                        return "main_menu"
+                    elif selected_index == 2:  # Quitter le jeu
+                        pygame.quit()
+                        exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_index = (selected_index - 1) % len(menu_options)
@@ -173,6 +196,37 @@ def main_menu():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.MOUSEMOTION:
+                # Mettre à jour la sélection basée sur le survol de la souris
+                mouse_pos = event.pos
+                for i, option in enumerate(menu_options):
+                    btn_x = base_x - (btn_width // 2)
+                    btn_y = base_y + i * spacing
+                    rect = pygame.Rect(btn_x, btn_y, btn_width, btn_height)
+                    if rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        break
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Vérifier si un bouton a été cliqué
+                mouse_pos = event.pos
+                for i, option in enumerate(menu_options):
+                    btn_x = base_x - (btn_width // 2)
+                    btn_y = base_y + i * spacing
+                    rect = pygame.Rect(btn_x, btn_y, btn_width, btn_height)
+                    if rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        # Exécuter l'action correspondante
+                        if selected_index == 0:  # Jouer
+                            game_mode_menu()
+                        elif selected_index == 1:  # Réglages
+                            settings_menu()
+                        elif selected_index == 2:  # Logs
+                            from logs_menu import logs_menu
+                            logs_menu()
+                        elif selected_index == 3:  # Quitter
+                            pygame.quit()
+                            exit()
+                        break
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_index = (selected_index - 1) % len(menu_options)
@@ -225,6 +279,29 @@ def game_mode_menu():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.MOUSEMOTION:
+                # Mettre à jour la sélection basée sur le survol de la souris
+                hovered = update_hover_selection(event.pos, box_x, start_y, box_w, box_h, len(menu_options))
+                if hovered is not None:
+                    selected_index = hovered
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Vérifier si une option a été cliquée
+                clicked = check_menu_click(event.pos, box_x, start_y, box_w, box_h, len(menu_options))
+                if clicked is not None:
+                    selected_index = clicked
+                    # Exécuter l'action correspondante
+                    if selected_index == 0:
+                        timer_menu("solo")
+                        return
+                    elif selected_index == 1:
+                        timer_menu("bot")
+                        return
+                    elif selected_index == 2:
+                        timer_menu("bot_vs_bot")
+                        return
+                    elif selected_index == 3:
+                        main_menu()
+                        return
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_index = (selected_index - 1) % len(menu_options)
@@ -282,6 +359,28 @@ def timer_menu(mode):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.MOUSEMOTION:
+                # Mettre à jour la sélection basée sur le survol de la souris
+                hovered = update_hover_selection(event.pos, box_x, start_y, box_w, box_h, len(options))
+                if hovered is not None:
+                    selected_index = hovered
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Vérifier si une option a été cliquée
+                clicked = check_menu_click(event.pos, box_x, start_y, box_w, box_h, len(options))
+                if clicked is not None:
+                    selected_index = clicked
+                    timer = 600 if selected_index == 0 else 300
+                    if mode == "solo":
+                        from game_modes import solo_game
+                        solo_game(timer, True)
+                        return
+                    elif mode == "bot_vs_bot":
+                        from game_modes import bot_vs_bot
+                        bot_vs_bot(timer)
+                        return
+                    else:
+                        color_choice_menu("bot", timer)
+                        return
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
                     selected_index = 1 - selected_index
@@ -343,6 +442,23 @@ def color_choice_menu(mode, timer):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.MOUSEMOTION:
+                # Mettre à jour la sélection basée sur le survol de la souris
+                hovered = update_hover_selection(event.pos, box_x, start_y, box_w, box_h, len(options))
+                if hovered is not None:
+                    selected_index = hovered
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Vérifier si une option a été cliquée
+                clicked = check_menu_click(event.pos, box_x, start_y, box_w, box_h, len(options))
+                if clicked is not None:
+                    selected_index = clicked
+                    if selected_index == 2:
+                        player_is_white = random.choice([True, False])
+                    else:
+                        player_is_white = (selected_index == 0)
+                    from game_modes import chess_engine
+                    chess_engine(timer, player_is_white)
+                    return
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_index = (selected_index - 1) % len(options)
@@ -434,6 +550,41 @@ def settings_menu():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.MOUSEMOTION:
+                # Mettre à jour la sélection basée sur le survol de la souris
+                mouse_pos = event.pos
+                for i, option in enumerate(options):
+                    box_y = panel_y + 120 + i * (box_h + 18)
+                    box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+                    if box_rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        break
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Vérifier si une option a été cliquée
+                mouse_pos = event.pos
+                for i, option in enumerate(options):
+                    box_y = panel_y + 120 + i * (box_h + 18)
+                    box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+                    if box_rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        # Exécuter l'action correspondante
+                        if selected_index == 0:
+                            game_logic.drag_mode = True
+                        elif selected_index == 1:
+                            game_logic.drag_mode = False
+                        elif selected_index == 2:
+                            board_color_menu()
+                            return
+                        elif selected_index == 3:
+                            bot_selection_menu(1)
+                            return
+                        elif selected_index == 4:
+                            bot_selection_menu(2)
+                            return
+                        elif selected_index == 5:
+                            main_menu()
+                            return
+                        break
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_index = (selected_index - 1) % len(options)
@@ -534,6 +685,26 @@ def board_color_menu():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.MOUSEMOTION:
+                # Mettre à jour la sélection basée sur le survol de la souris
+                mouse_pos = event.pos
+                for i, theme_name in enumerate(theme_list):
+                    box_y = panel_y + 100 + i * 90
+                    box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+                    if box_rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        break
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Vérifier si une option a été cliquée
+                mouse_pos = event.pos
+                for i, theme_name in enumerate(theme_list):
+                    box_y = panel_y + 100 + i * 90
+                    box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+                    if box_rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        settings.current_board_theme = theme_list[selected_index]
+                        settings_menu()
+                        return
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_index = (selected_index - 1) % len(theme_list)
@@ -619,6 +790,29 @@ def bot_selection_menu(bot_number):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            elif event.type == pygame.MOUSEMOTION:
+                # Mettre à jour la sélection basée sur le survol de la souris
+                mouse_pos = event.pos
+                for i, bot_name in enumerate(bot_list):
+                    box_y = panel_y + 100 + i * 90
+                    box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+                    if box_rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        break
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Vérifier si une option a été cliquée
+                mouse_pos = event.pos
+                for i, bot_name in enumerate(bot_list):
+                    box_y = panel_y + 100 + i * 90
+                    box_rect = pygame.Rect(box_x, box_y, box_w, box_h)
+                    if box_rect.collidepoint(mouse_pos):
+                        selected_index = i
+                        if bot_number == 1:
+                            config.set_bot1(bot_list[selected_index])
+                        else:
+                            config.set_bot2(bot_list[selected_index])
+                        settings_menu()
+                        return
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     selected_index = (selected_index - 1) % len(bot_list)
