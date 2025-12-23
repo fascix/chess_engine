@@ -114,7 +114,7 @@ def main_menu():
     font = pygame.font.Font(None, 48)
     small_font = pygame.font.Font(None, 28)
 
-    menu_options = ["Jouer", "Réglages", "Logs" ,"Quitter"]
+    menu_options = ["Jouer", "Réglages", "Logs", "Quitter"]
     selected_index = 0
 
     running = True
