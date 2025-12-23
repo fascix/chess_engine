@@ -425,6 +425,9 @@ def display_checkmate(screen, loser_color):
     winner = "Les Blancs" if loser_color == chess.BLACK else "Les Noirs"
     message = f"Échec et mat ! {winner} gagnent."
 
+    # Sauvegarder la partie
+    game_logic.end_game_and_save(result)
+
     text_surface = font.render(message, True, (255, 0, 0))
     text_rect = text_surface.get_rect(center=(screen_width // 2, screen_height // 2))
 

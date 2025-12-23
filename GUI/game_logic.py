@@ -375,3 +375,29 @@ def get_time_winner():
     elif black_timer <= 0:
         return "Les blancs gagnent !"
     return None
+
+import game_logger
+
+def end_game_and_save(result, white_player="Human", black_player="Engine"):
+    """
+    Termine la partie et sauvegarde au format PGN.
+    
+    Args:
+        result: "1-0" (blancs gagnent), "0-1" (noirs gagnent), "1/2-1/2" (nulle)
+        white_player: Nom du joueur blanc
+        black_player: Nom du joueur noir
+    """
+    global board, white_timer, black_timer
+    
+    # Déterminer le temps de contrôle
+    initial_time = max(white_timer, black_timer) / 60  # en minutes
+    time_control = f"{int(initial_time)}+0"
+    
+    # Sauvegarder la partie
+    game_logger.save_game_pgn(
+        board=board,
+        result=result,
+        white_player=white_player,
+        black_player=black_player,
+        time_control=time_control
+    )

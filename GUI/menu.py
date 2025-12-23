@@ -148,7 +148,7 @@ def main_menu():
     font = pygame.font.Font(None, 48)
     small_font = pygame.font.Font(None, 28)
 
-    menu_options = ["Jouer", "Réglages", "Quitter"]
+    menu_options = ["Jouer", "Réglages", "Logs" ,"Quitter"]
     selected_index = 0
 
     running = True
@@ -217,7 +217,10 @@ def main_menu():
                         game_mode_menu()
                     elif selected_index == 1:  # Réglages
                         settings_menu()
-                    elif selected_index == 2:  # Quitter
+                    elif selected_index == 2:  # Logs
+                        from logs_menu import logs_menu
+                        logs_menu()
+                    elif selected_index == 3:  # Quitter
                         pygame.quit()
                         exit()
 
@@ -836,3 +839,43 @@ def bot_selection_menu(bot_number):
                 elif event.key == pygame.K_ESCAPE:
                     settings_menu()
                     return
+
+import game_logger
+
+def game_history_menu():
+    """Affiche l'historique des 5 dernières parties."""
+    screen = pygame.display.get_surface()
+    font = pygame.font.Font(None, 36)
+    small_font = pygame.font.Font(None, 28)
+    
+    games = game_logger.get_recent_games()
+    
+    running = True
+    while running: 
+        screen.fill(UI_BG_COLOR)
+        
+        # Titre
+        title = font.render("Historique des parties", True, UI_ACCENT)
+        screen.blit(title, (50, 50))
+        
+        # Afficher les parties
+        y = 120
+        for i, game_info in enumerate(games, 1):
+            summary = game_logger.format_game_summary(game_info)
+            text = small_font.render(f"{i}. {summary}", True, UI_TEXT_PRIMARY)
+            screen.blit(text, (50, y))
+            y += 40
+        
+        # Instructions
+        instruction = small_font.render("Appuyez sur ESC pour revenir", True, UI_TEXT_SECONDARY)
+        screen.blit(instruction, (50, screen.get_height() - 60))
+        
+        pygame.display.flip()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
