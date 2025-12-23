@@ -391,6 +391,8 @@ def render_game(screen, board, font, player_is_white=True):
 
 def display_draw(screen, reason):
     """Affiche un message de partie nulle."""
+    import game_logic
+    
     font = pygame.font.Font(None, 64)
     screen_width, screen_height = screen.get_width(), screen.get_height()
     overlay = pygame.Surface((screen_width, screen_height))
@@ -399,6 +401,9 @@ def display_draw(screen, reason):
 
     message = "Partie nulle !"
     reason_text = f"({reason})"
+    
+    # Sauvegarder la partie comme nulle
+    game_logic.end_game_and_save("1/2-1/2")
 
     text_surface = font.render(message, True, (255, 165, 0))
     reason_surface = pygame.font.Font(None, 36).render(reason_text, True, (200, 200, 200))
@@ -414,8 +419,10 @@ def display_draw(screen, reason):
     from menu import main_menu
     main_menu()
 
-def display_checkmate(screen, loser_color):
+def display_checkmate(screen, loser_color, white_player="Human", black_player="Engine"):
     """Affiche le message d'échec et mat."""
+    import game_logic
+    
     font = pygame.font.Font(None, 64)
     screen_width, screen_height = screen.get_width(), screen.get_height()
     overlay = pygame.Surface((screen_width, screen_height))
@@ -424,9 +431,12 @@ def display_checkmate(screen, loser_color):
 
     winner = "Les Blancs" if loser_color == chess.BLACK else "Les Noirs"
     message = f"Échec et mat ! {winner} gagnent."
-
+    
+    # Determine result for PGN
+    result = "1-0" if loser_color == chess.BLACK else "0-1"
+    
     # Sauvegarder la partie
-    game_logic.end_game_and_save(result)
+    game_logic.end_game_and_save(result, white_player, black_player)
 
     text_surface = font.render(message, True, (255, 0, 0))
     text_rect = text_surface.get_rect(center=(screen_width // 2, screen_height // 2))
