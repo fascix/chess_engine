@@ -389,7 +389,7 @@ def render_game(screen, board, font, player_is_white=True):
     # Dessiner le panneau droit
     draw_right_panel(screen, board, font, player_is_white)
 
-def display_draw(screen, reason):
+def display_draw(screen, reason, white_player="Player 1", black_player="Player 2"):
     """Affiche un message de partie nulle."""
     import game_logic
     
@@ -403,7 +403,7 @@ def display_draw(screen, reason):
     reason_text = f"({reason})"
     
     # Sauvegarder la partie comme nulle
-    game_logic.end_game_and_save("1/2-1/2")
+    game_logic.end_game_and_save("1/2-1/2", white_player, black_player)
 
     text_surface = font.render(message, True, (255, 165, 0))
     reason_surface = pygame.font.Font(None, 36).render(reason_text, True, (200, 200, 200))

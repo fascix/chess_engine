@@ -5,6 +5,7 @@ import pygame
 import time
 import random
 from settings import *
+from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
 
 def load_main_menu_background():
     """Charge l'image de fond principale avec fallback sur un fond uni."""
@@ -28,7 +29,6 @@ def pause_menu():
     """Affiche le menu de pause pendant le jeu."""
     from game_logic import game_paused, current_turn_start_time
     from game_logic import game_paused as gp
-    from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
     
     # Utilisation d'une variable locale pour éviter les conflits
     game_paused_state = True
@@ -192,8 +192,6 @@ def main_menu():
 
 def game_mode_menu():
     """Menu de sélection du mode de jeu (DA pause_menu)."""
-    from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
-    
     screen = pygame.display.get_surface()
     pygame.display.set_caption("Sélection du mode de jeu")
     font = pygame.font.Font(None, 48)
@@ -251,8 +249,6 @@ def game_mode_menu():
 
 def timer_menu(mode):
     """Choix du timer avant de commencer le jeu (DA pause_menu)."""
-    from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
-    
     pygame.display.set_caption("Sélection du timer")
     screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)
@@ -308,8 +304,6 @@ def timer_menu(mode):
 
 def color_choice_menu(mode, timer):
     """Menu pour choisir la couleur des pièces (DA pause_menu)."""
-    from menu_renderer import draw_menu_panel, draw_menu_title, draw_menu_option_box, calculate_menu_layout
-    
     pygame.display.set_caption("Sélection des couleurs")
     screen = pygame.display.get_surface()
     font = pygame.font.Font(None, 48)

@@ -36,7 +36,7 @@ def logs_menu():
         # Panel background
         panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
         panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
-        panel_surf.fill((30, 24, 38, 220))
+        panel_surf.fill(MENU_PANEL_BG_COLOR)
         screen.blit(panel_surf, (panel_x, panel_y))
         
         # Panel borders
@@ -154,6 +154,17 @@ def view_game_details(game_info):
     # Load the game from file
     game = game_logger.load_game_pgn(game_info['filepath'])
     if not game:
+        # Display error message if game couldn't be loaded
+        error_font = pygame.font.Font(None, 36)
+        error_text = error_font.render("Erreur: Impossible de charger la partie", True, UI_DANGER)
+        error_rect = error_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
+        
+        overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
+        overlay.fill(UI_OVERLAY_BG)
+        screen.blit(overlay, (0, 0))
+        screen.blit(error_text, error_rect)
+        pygame.display.flip()
+        pygame.time.wait(2000)
         return
     
     # Get all moves
@@ -189,7 +200,7 @@ def view_game_details(game_info):
         
         panel_rect = pygame.Rect(panel_x, panel_y, panel_width, panel_height)
         panel_surf = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
-        panel_surf.fill((30, 24, 38, 220))
+        panel_surf.fill(MENU_PANEL_BG_COLOR)
         screen.blit(panel_surf, (panel_x, panel_y))
         
         pygame.draw.rect(screen, UI_ACCENT_DARK, panel_rect, width=6)
