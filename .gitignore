@@ -37,3 +37,7 @@ tests/config.json
 /lichess-bot/venv/
 
 /lichess-bot
+
+
+# VSCode settings
+.vscode/
