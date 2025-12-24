@@ -178,3 +178,41 @@ void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
     }
   }
 }
+
+// ========== MOVE PICKING (OPTIMISATION) ==========
+
+// Au lieu de trier tous les coups, on sélectionne le meilleur à chaque itération
+// Cela évite de trier les coups qui ne seront jamais explorés (coupure alpha-beta)
+Move pick_next_move(OrderedMoveList *list, int current_index) {
+  if (current_index >= list->count) {
+    // Coup invalide si on dépasse la liste
+    Move invalid = {.from = -1, .to = -1, .type = MOVE_NORMAL};
+    return invalid;
+  }
+
+  // Trouver le meilleur coup parmi ceux restants
+  int best_idx = current_index;
+  int best_score = list->scores[current_index];
+
+  for (int i = current_index + 1; i < list->count; i++) {
+    if (list->scores[i] > best_score) {
+      best_score = list->scores[i];
+      best_idx = i;
+    }
+  }
+
+  // Échanger le meilleur coup avec la position actuelle
+  if (best_idx != current_index) {
+    // Swap moves
+    Move temp_move = list->moves[current_index];
+    list->moves[current_index] = list->moves[best_idx];
+    list->moves[best_idx] = temp_move;
+
+    // Swap scores
+    int temp_score = list->scores[current_index];
+    list->scores[current_index] = list->scores[best_idx];
+    list->scores[best_idx] = temp_score;
+  }
+
+  return list->moves[current_index];
+}

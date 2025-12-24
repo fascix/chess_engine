@@ -1276,27 +1276,35 @@ int is_move_legal(const Board *board, const Move *move) {
   return legal;
 }
 
-// Filtre les mouvements illégaux d'une liste
+// Filtre les mouvements illégaux d'une liste (en place, sans copie)
 void filter_legal_moves(const Board *board, MoveList *moves) {
+  int write_idx = 0; // Index d'écriture pour les coups légaux
 
-  MoveList legal_moves;
-  movelist_init(&legal_moves);
-
-  int filtered_count = 0;
-  for (int i = 0; i < moves->count; i++) {
-    if (is_move_legal(board, &moves->moves[i])) {
-      movelist_add(&legal_moves, moves->moves[i]);
-    } else {
-      filtered_count++;
+  for (int read_idx = 0; read_idx < moves->count; read_idx++) {
+    if (is_move_legal(board, &moves->moves[read_idx])) {
+      // Si le coup est légal et qu'on n'est pas déjà au bon endroit, le déplacer
+      if (write_idx != read_idx) {
+        moves->moves[write_idx] = moves->moves[read_idx];
+      }
+      write_idx++;
     }
+#ifdef DEBUG
+    else {
+      // Pour le debug, compter les coups filtrés
+      static int total_filtered = 0;
+      total_filtered++;
+    }
+#endif
   }
 
 #ifdef DEBUG
+  int filtered_count = moves->count - write_idx;
   fprintf(stderr, "[DEBUG FILTER] Filtered %d illegal moves out of %d\n",
           filtered_count, moves->count);
 #endif
 
-  *moves = legal_moves;
+  // Mettre à jour le compte final
+  moves->count = write_idx;
 }
 
 // Génération de mouvements légaux uniquement

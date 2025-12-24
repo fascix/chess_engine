@@ -17,6 +17,10 @@ typedef struct {
 void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
                  Move hash_move, int ply);
 
+// Sélectionne le prochain meilleur coup sans trier toute la liste
+// (move picking pour éviter le tri complet)
+Move pick_next_move(OrderedMoveList *list, int current_index);
+
 // Initialise les tables de killer moves et history
 void init_killer_moves(void);
 
