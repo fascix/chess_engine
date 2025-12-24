@@ -114,6 +114,9 @@ typedef struct {
   // Compteur de demi-coups (1 action = 1 demi-coup)
   // Sert à la règle des 50 coups : remis à 0 après un pion joué ou une capture
   int move_number; // Numérote le nombre de coup de la partie
+  
+  // Hash Zobrist pour détection de répétition et table de transposition
+  uint64_t zobrist_key;
 } Board;
 
 // Fonctions de base à intégrer dans un bitboard

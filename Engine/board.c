@@ -1,5 +1,6 @@
 // board.c
 #include "board.h"
+#include "zobrist.h"
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -51,6 +52,9 @@ void board_init(Board *board) {
   board->en_passant = -1;
   board->halfmove_clock = 0;
   board->move_number = 1;
+  
+  // Initialiser le hash Zobrist
+  board->zobrist_key = zobrist_hash(board);
 }
 
 bool is_square_occupied(const Board *board, Square square) {
@@ -248,4 +252,7 @@ void board_from_fen(Board *board, const char *fen) {
     return;
 
   reset_move_counters(board);
+  
+  // Initialiser le hash Zobrist après avoir chargé la position
+  board->zobrist_key = zobrist_hash(board);
 }

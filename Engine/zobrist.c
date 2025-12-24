@@ -12,10 +12,11 @@
 #endif
 
 // ========== TABLES ZOBRIST GLOBALES ==========
-static uint64_t zobrist_pieces[2][6][64]; // [color][piece][square]
-static uint64_t zobrist_castling[16];     // [castle_rights]
-static uint64_t zobrist_en_passant[64];   // [square]
-static uint64_t zobrist_side_to_move;     // Joueur actuel
+// Exposées pour permettre la mise à jour incrémentale dans make_move_temp
+uint64_t zobrist_pieces[2][6][64]; // [color][piece][square]
+uint64_t zobrist_castling[16];     // [castle_rights]
+uint64_t zobrist_en_passant[64];   // [square]
+uint64_t zobrist_side_to_move;     // Joueur actuel
 
 // ========== GÉNÉRATEUR DE NOMBRES ALÉATOIRES ==========
 

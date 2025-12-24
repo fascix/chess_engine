@@ -1,4 +1,5 @@
 #include "movegen.h"
+#include "zobrist.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -851,13 +852,22 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
 
   // Sauvegarder l'état actuel
   *backup = *board;
+  
+  // ========== MISE À JOUR INCRÉMENTALE DU HASH ZOBRIST ==========
+  uint64_t hash = board->zobrist_key;
 
   // Effacer la pièce de la case de départ
   PieceType piece_type = get_piece_type(board, move->from);
   Couleur piece_color = get_piece_color(board, move->from);
+  
+  // 1. Retirer la pièce de sa case de départ du hash
+  hash ^= zobrist_pieces[piece_color][piece_type][move->from];
 
   board->pieces[piece_color][piece_type] &= ~(1ULL << move->from);
   board->occupied[piece_color] &= ~(1ULL << move->from);
+  
+  // 2. Mettre à jour les droits de roque dans le hash
+  hash ^= zobrist_castling[board->castle_rights]; // Retirer ancien état
 
   // Mettre à jour les droits de roque
   if (piece_type == KING) {
@@ -894,6 +904,9 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     }
 
     if (captured_piece_type != EMPTY) {
+      // 3. Retirer la pièce capturée du hash
+      hash ^= zobrist_pieces[opponent][captured_piece_type][captured_square];
+      
       board->pieces[opponent][captured_piece_type] &=
           ~(1ULL << captured_square);
       board->occupied[opponent] &= ~(1ULL << captured_square);
@@ -914,6 +927,10 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     }
   }
 
+  // 4. Ajouter la pièce (ou promotion) à sa nouvelle case dans le hash
+  PieceType arriving_piece = (move->type == MOVE_PROMOTION) ? move->promotion : piece_type;
+  hash ^= zobrist_pieces[piece_color][arriving_piece][move->to];
+
   // Placer la pièce sur la case d'arrivée
   if (move->type == MOVE_PROMOTION) {
     board->pieces[piece_color][move->promotion] |= (1ULL << move->to);
@@ -933,6 +950,10 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
       rook_to = (piece_color == WHITE) ? D1 : D8;
     }
 
+    // 5. Mettre à jour le hash pour le mouvement de la tour lors du roque
+    hash ^= zobrist_pieces[piece_color][ROOK][rook_from]; // Retirer tour de l'ancienne case
+    hash ^= zobrist_pieces[piece_color][ROOK][rook_to];   // Ajouter tour à la nouvelle case
+
     // Déplacer la tour
     board->pieces[piece_color][ROOK] &= ~(1ULL << rook_from);
     board->pieces[piece_color][ROOK] |= (1ULL << rook_to);
@@ -940,18 +961,35 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     board->occupied[piece_color] |= (1ULL << rook_to);
   }
 
+  // Ajouter le nouveau état des droits de roque au hash
+  hash ^= zobrist_castling[board->castle_rights];
+
   // Recalculer all_pieces
   board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
 
+  // 6. Mettre à jour en passant dans le hash
+  if (board->en_passant >= 0 && board->en_passant < 64) {
+    hash ^= zobrist_en_passant[board->en_passant]; // Retirer ancien en_passant
+  }
+  
   // Réinitialiser en_passant par défaut
   board->en_passant = -1;
   // Si un pion avance de deux cases, définir la case en_passant
   if (piece_type == PAWN && abs((int)move->to - (int)move->from) == 16) {
     board->en_passant =
         (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
+    // Ajouter nouveau en_passant au hash
+    hash ^= zobrist_en_passant[board->en_passant];
   }
+  
+  // 7. Changer le joueur actif dans le hash
+  hash ^= zobrist_side_to_move;
+  
   // Basculer le joueur actif
   board->to_move = (board->to_move == WHITE) ? BLACK : WHITE;
+  
+  // Sauvegarder le nouveau hash
+  board->zobrist_key = hash;
 }
 
 // Restaure l'état du board
