@@ -43,6 +43,9 @@ void generate_knight_moves(const Board *board, Couleur color, MoveList *moves);
 void generate_queen_moves(const Board *board, Couleur color, MoveList *moves);
 void generate_king_moves(const Board *board, Couleur color, MoveList *moves);
 
+// Génération de captures uniquement (pour quiescence search)
+void generate_capture_moves_only(const Board *board, MoveList *moves);
+
 // Détection d'échec
 int is_square_attacked(const Board *board, Square square,
                        Couleur attacking_color);

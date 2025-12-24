@@ -708,6 +708,250 @@ void generate_king_moves(const Board *board, Couleur color, MoveList *moves) {
   }
 }
 
+// ========== GÉNÉRATION DE CAPTURES UNIQUEMENT ==========
+
+// Fonction pour générer uniquement les captures de pions
+static void generate_pawn_captures_only(const Board *board, Couleur color,
+                                        MoveList *moves) {
+  Bitboard pawns = board->pieces[color][PAWN];
+  int direction = (color == WHITE) ? 8 : -8;
+
+  while (pawns) {
+    Square from = __builtin_ctzll(pawns);
+    pawns &= pawns - 1;
+
+    if (from < A1 || from > H8)
+      continue;
+
+    // Génerer uniquement les captures, pas les pushes
+    generate_pawn_captures(board, color, from, direction, moves);
+
+    // Promotions avec capture (pion sur 7ème rangée qui peut capturer)
+    int to_rank = (from + direction) / 8;
+    if ((color == WHITE && to_rank == 7) || (color == BLACK && to_rank == 0)) {
+      // Vérifier captures diagonales avec promotion
+      int left_capture = (color == WHITE) ? from + 7 : from - 9;
+      int right_capture = (color == WHITE) ? from + 9 : from - 7;
+
+      if ((from % 8) != 0 && left_capture >= A1 && left_capture <= H8) {
+        if (is_square_occupied(board, left_capture) &&
+            get_piece_color(board, left_capture) != color) {
+          PieceType captured = get_piece_type(board, left_capture);
+          ADD_PROMOTIONS(from, left_capture, captured, moves);
+        }
+      }
+      if ((from % 8) != 7 && right_capture >= A1 && right_capture <= H8) {
+        if (is_square_occupied(board, right_capture) &&
+            get_piece_color(board, right_capture) != color) {
+          PieceType captured = get_piece_type(board, right_capture);
+          ADD_PROMOTIONS(from, right_capture, captured, moves);
+        }
+      }
+    }
+  }
+
+  // En passant est aussi une capture
+  generate_en_passant(board, color, moves);
+}
+
+// Fonction pour générer uniquement les captures de pièces glissantes
+static void slide_direction_captures_only(const Board *board, Square from,
+                                          int offset, Couleur color,
+                                          MoveList *moves) {
+  int rank = from / 8;
+  int file = from % 8;
+  int max_steps = calculate_max_steps(rank, file, offset);
+
+  if (max_steps == 0)
+    return;
+
+  for (int step = 1; step <= max_steps; step++) {
+    Square to = from + step * offset;
+
+    if (to < A1 || to > H8)
+      break;
+
+    if (is_square_occupied(board, to)) {
+      // Uniquement ajouter si c'est une capture
+      if (get_piece_color(board, to) != color) {
+        Move capture = create_move(from, to, MOVE_CAPTURE);
+        capture.captured_piece = get_piece_type(board, to);
+        movelist_add(moves, capture);
+      }
+      break; // Arrêter dans cette direction
+    }
+    // Ne pas ajouter les coups non-capture
+  }
+}
+
+// Générer uniquement les captures de tours
+static void generate_rook_captures_only(const Board *board, Couleur color,
+                                        MoveList *moves) {
+  Bitboard rooks = board->pieces[color][ROOK];
+
+  while (rooks != 0) {
+    Square from = __builtin_ctzll(rooks);
+    rooks &= (rooks - 1);
+
+    if (from < A1 || from > H8)
+      continue;
+
+    slide_direction_captures_only(board, from, +8, color, moves); // Nord
+    slide_direction_captures_only(board, from, -8, color, moves); // Sud
+    slide_direction_captures_only(board, from, +1, color, moves); // Est
+    slide_direction_captures_only(board, from, -1, color, moves); // Ouest
+  }
+}
+
+// Générer uniquement les captures de fous
+static void generate_bishop_captures_only(const Board *board, Couleur color,
+                                          MoveList *moves) {
+  Bitboard bishops = board->pieces[color][BISHOP];
+
+  while (bishops != 0) {
+    Square from = __builtin_ctzll(bishops);
+    bishops &= (bishops - 1);
+
+    if (from < A1 || from > H8)
+      continue;
+
+    slide_direction_captures_only(board, from, +9, color, moves); // Nord-Est
+    slide_direction_captures_only(board, from, +7, color, moves); // Nord-Ouest
+    slide_direction_captures_only(board, from, -7, color, moves); // Sud-Est
+    slide_direction_captures_only(board, from, -9, color, moves); // Sud-Ouest
+  }
+}
+
+// Générer uniquement les captures de cavaliers
+static void generate_knight_captures_only(const Board *board, Couleur color,
+                                          MoveList *moves) {
+  static const int knight_offsets[8] = {+17, +15, +10, +6, -6, -10, -15, -17};
+
+  Bitboard knights = board->pieces[color][KNIGHT];
+
+  while (knights != 0) {
+    Square from = __builtin_ctzll(knights);
+    knights &= (knights - 1);
+
+    if (from < A1 || from > H8)
+      continue;
+
+    int from_file = from % 8;
+    int from_rank = from / 8;
+
+    for (int i = 0; i < 8; i++) {
+      Square to = from + knight_offsets[i];
+
+      if (to < A1 || to > H8)
+        continue;
+
+      int to_file = to % 8;
+      int to_rank = to / 8;
+      int file_diff = abs(to_file - from_file);
+      int rank_diff = abs(to_rank - from_rank);
+
+      if (!((file_diff == 2 && rank_diff == 1) ||
+            (file_diff == 1 && rank_diff == 2)))
+        continue;
+
+      // Uniquement les captures
+      if (is_square_occupied(board, to) && get_piece_color(board, to) != color) {
+        Move capture = create_move(from, to, MOVE_CAPTURE);
+        capture.captured_piece = get_piece_type(board, to);
+        movelist_add(moves, capture);
+      }
+    }
+  }
+}
+
+// Générer uniquement les captures de dames
+static void generate_queen_captures_only(const Board *board, Couleur color,
+                                         MoveList *moves) {
+  Bitboard queens = board->pieces[color][QUEEN];
+
+  while (queens != 0) {
+    Square from = __builtin_ctzll(queens);
+    queens &= (queens - 1);
+
+    if (from < A1 || from > H8)
+      continue;
+
+    // Mouvements orthogonaux (comme la tour)
+    slide_direction_captures_only(board, from, +8, color, moves);
+    slide_direction_captures_only(board, from, -8, color, moves);
+    slide_direction_captures_only(board, from, +1, color, moves);
+    slide_direction_captures_only(board, from, -1, color, moves);
+
+    // Mouvements diagonaux (comme le fou)
+    slide_direction_captures_only(board, from, +9, color, moves);
+    slide_direction_captures_only(board, from, +7, color, moves);
+    slide_direction_captures_only(board, from, -7, color, moves);
+    slide_direction_captures_only(board, from, -9, color, moves);
+  }
+}
+
+// Générer uniquement les captures du roi
+static void generate_king_captures_only(const Board *board, Couleur color,
+                                        MoveList *moves) {
+  static const int king_offsets[8] = {+8, -8, +1, -1, +9, +7, -7, -9};
+
+  Bitboard kings = board->pieces[color][KING];
+
+  while (kings != 0) {
+    Square from = __builtin_ctzll(kings);
+    kings &= (kings - 1);
+
+    if (from < A1 || from > H8)
+      continue;
+
+    int from_file = from % 8;
+    int from_rank = from / 8;
+
+    for (int i = 0; i < 8; i++) {
+      Square to = from + king_offsets[i];
+
+      if (to < A1 || to > H8)
+        continue;
+
+      int to_file = to % 8;
+      int to_rank = to / 8;
+      int file_diff = abs(to_file - from_file);
+      int rank_diff = abs(to_rank - from_rank);
+
+      if (file_diff > 1 || rank_diff > 1)
+        continue;
+
+      // Uniquement les captures
+      if (is_square_occupied(board, to) && get_piece_color(board, to) != color) {
+        Move capture = create_move(from, to, MOVE_CAPTURE);
+        capture.captured_piece = get_piece_type(board, to);
+        movelist_add(moves, capture);
+      }
+    }
+  }
+}
+
+// Fonction principale pour générer UNIQUEMENT les captures légales
+void generate_capture_moves_only(const Board *board, MoveList *moves) {
+  if (!moves || !board)
+    return;
+
+  movelist_init(moves);
+  Couleur color = board->to_move;
+
+  // Générer uniquement les captures de chaque type de pièce
+  generate_pawn_captures_only(board, color, moves);
+  generate_knight_captures_only(board, color, moves);
+  generate_bishop_captures_only(board, color, moves);
+  generate_rook_captures_only(board, color, moves);
+  generate_queen_captures_only(board, color, moves);
+  generate_king_captures_only(board, color, moves);
+
+  // Filtrer pour ne garder que les coups légaux
+  filter_legal_moves(board, moves);
+}
+
+
 // Vérifie si une case est attaquée par la couleur adverse
 int is_square_attacked(const Board *board, Square square,
                        Couleur attacking_color) {
