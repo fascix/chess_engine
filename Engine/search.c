@@ -32,7 +32,7 @@ static TranspositionTable tt_global;
 
 void initialize_engine(void) {
   DEBUG_LOG("=== INITIALISATION DU MOTEUR (V%d) ===\n", VERSION);
-  init_zobrist();
+  // Zobrist already initialized in main(), no need to call again
 #if VERSION >= 9
   init_killer_moves(); // V9: Killer Moves
 #endif
