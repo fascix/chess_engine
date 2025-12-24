@@ -723,31 +723,8 @@ static void generate_pawn_captures_only(const Board *board, Couleur color,
     if (from < A1 || from > H8)
       continue;
 
-    // Génerer uniquement les captures, pas les pushes
+    // generate_pawn_captures gère déjà les captures normales ET les promotions avec capture
     generate_pawn_captures(board, color, from, direction, moves);
-
-    // Promotions avec capture (pion sur 7ème rangée qui peut capturer)
-    int to_rank = (from + direction) / 8;
-    if ((color == WHITE && to_rank == 7) || (color == BLACK && to_rank == 0)) {
-      // Vérifier captures diagonales avec promotion
-      int left_capture = (color == WHITE) ? from + 7 : from - 9;
-      int right_capture = (color == WHITE) ? from + 9 : from - 7;
-
-      if ((from % 8) != 0 && left_capture >= A1 && left_capture <= H8) {
-        if (is_square_occupied(board, left_capture) &&
-            get_piece_color(board, left_capture) != color) {
-          PieceType captured = get_piece_type(board, left_capture);
-          ADD_PROMOTIONS(from, left_capture, captured, moves);
-        }
-      }
-      if ((from % 8) != 7 && right_capture >= A1 && right_capture <= H8) {
-        if (is_square_occupied(board, right_capture) &&
-            get_piece_color(board, right_capture) != color) {
-          PieceType captured = get_piece_type(board, right_capture);
-          ADD_PROMOTIONS(from, right_capture, captured, moves);
-        }
-      }
-    }
   }
 
   // En passant est aussi une capture
@@ -1212,13 +1189,15 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
   board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
 
   // 6. Mettre à jour en passant dans le hash
+  // D'abord retirer l'ancien en_passant (qui est encore dans board)
   if (board->en_passant >= 0 && board->en_passant < 64) {
     hash ^= zobrist_en_passant[board->en_passant]; // Retirer ancien en_passant
   }
   
   // Réinitialiser en_passant par défaut
   board->en_passant = -1;
-  // Si un pion avance de deux cases, définir la case en_passant
+  
+  // Si un pion avance de deux cases, définir la nouvelle case en_passant
   if (piece_type == PAWN && abs((int)move->to - (int)move->from) == 16) {
     board->en_passant =
         (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
@@ -1282,10 +1261,8 @@ void filter_legal_moves(const Board *board, MoveList *moves) {
 
   for (int read_idx = 0; read_idx < moves->count; read_idx++) {
     if (is_move_legal(board, &moves->moves[read_idx])) {
-      // Si le coup est légal et qu'on n'est pas déjà au bon endroit, le déplacer
-      if (write_idx != read_idx) {
-        moves->moves[write_idx] = moves->moves[read_idx];
-      }
+      // Déplacer le coup légal à la position d'écriture
+      moves->moves[write_idx] = moves->moves[read_idx];
       write_idx++;
     }
 #ifdef DEBUG
