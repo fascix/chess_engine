@@ -1,7 +1,7 @@
 """
 Module pour gérer la sauvegarde des parties au format PGN
 """
-import chess. pgn
+import chess.pgn
 import os
 from datetime import datetime
 import io
@@ -53,7 +53,7 @@ def save_game_pgn(board, result, white_player="Human", black_player="Engine", ti
     # Ajouter les métadonnées (headers PGN standard)
     game.headers["Event"] = "Chess Engine Game"
     game.headers["Site"] = "Local"
-    game.headers["Date"] = datetime.now().strftime("%Y. %m.%d")
+    game.headers["Date"] = datetime.now().strftime("%Y.%m.%d")
     game.headers["Round"] = "1"
     game.headers["White"] = white_player
     game.headers["Black"] = black_player

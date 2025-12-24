@@ -60,6 +60,9 @@ def solo_game(timer, player_is_white=True):
             winner = game_logic.get_time_winner()
             if winner:
                 print(f"Temps écoulé ! {winner}")
+                # Save game with appropriate result
+                result = "0-1" if game_logic.white_timer <= 0 else "1-0"
+                game_logic.end_game_and_save(result, "Human", "Human")
                 running = False
 
         # Rendu du jeu
@@ -69,7 +72,7 @@ def solo_game(timer, player_is_white=True):
         # Check for checkmate AFTER rendering so the last move is visible
         if game_logic.board.is_checkmate():
             pygame.time.wait(500)  # Brief pause to see the final position
-            gui.display_checkmate(screen, game_logic.board.turn)
+            gui.display_checkmate(screen, game_logic.board.turn, "Human", "Human")
             running = False
 
     pygame.quit()
@@ -147,6 +150,11 @@ def chess_engine(timer, player_is_white=True):
                 winner = game_logic.get_time_winner()
                 if winner:
                     print(f"Temps écoulé ! {winner}")
+                    # Save game with appropriate result
+                    result = "0-1" if game_logic.white_timer <= 0 else "1-0"
+                    white_player = "Human" if player_is_white else "Engine"
+                    black_player = "Engine" if player_is_white else "Human"
+                    game_logic.end_game_and_save(result, white_player, black_player)
                     running = False
 
             # Rendu du jeu
@@ -155,7 +163,9 @@ def chess_engine(timer, player_is_white=True):
             # Check for checkmate AFTER rendering so the last move is visible
             if game_logic.board.is_checkmate():
                 pygame.time.wait(500)  # Brief pause to see the final position
-                gui.display_checkmate(screen, game_logic.board.turn)
+                white_player = "Human" if player_is_white else "Engine"
+                black_player = "Engine" if player_is_white else "Human"
+                gui.display_checkmate(screen, game_logic.board.turn, white_player, black_player)
                 running = False
     finally:
         pass
@@ -236,6 +246,9 @@ def bot_vs_bot(timer):
                 winner = game_logic.get_time_winner()
                 if winner:
                     print(f"Temps écoulé ! {winner}")
+                    # Save game with appropriate result
+                    result = "0-1" if game_logic.white_timer <= 0 else "1-0"
+                    game_logic.end_game_and_save(result, "Bot1", "Bot2")
                     running = False
 
             # Rendu du jeu
@@ -245,7 +258,7 @@ def bot_vs_bot(timer):
             # Check for checkmate AFTER rendering so the last move is visible
             if game_logic.board.is_checkmate():
                 pygame.time.wait(500)  # Brief pause to see the final position
-                gui.display_checkmate(screen, game_logic.board.turn)
+                gui.display_checkmate(screen, game_logic.board.turn, "Bot1", "Bot2")
                 running = False
     finally:
         pass
