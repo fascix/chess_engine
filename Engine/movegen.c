@@ -1234,6 +1234,17 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
 #if VERSION >= 11
   // Sauvegarder le nouveau hash incrémental
   board->zobrist_key = hash;
+  
+  // VERIFICATION: Compare incremental vs calculated (debug only)
+  #ifdef DEBUG
+  uint64_t calculated_hash = zobrist_hash(board);
+  if (hash != calculated_hash) {
+    fprintf(stderr, "ZOBRIST BUG! Incremental=%016llx Calculated=%016llx Diff=%016llx\n",
+            (unsigned long long)hash,
+            (unsigned long long)calculated_hash,
+            (unsigned long long)(hash ^ calculated_hash));
+  }
+  #endif
 #endif
 }
 
