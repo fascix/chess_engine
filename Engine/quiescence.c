@@ -14,9 +14,25 @@
 // ========== GÉNÉRATION DES CAPTURES ==========
 
 void generate_capture_moves(const Board *board, MoveList *moves) {
-  // Utiliser la nouvelle fonction optimisée qui génère uniquement les captures
+#if VERSION >= 12
+  // V12+: Utiliser la nouvelle fonction optimisée qui génère uniquement les captures
   // au lieu de générer tous les coups puis filtrer
   generate_capture_moves_only(board, moves);
+#else
+  // V10 et antérieur: Générer tous les coups puis filtrer
+  MoveList all_moves;
+  generate_legal_moves(board, &all_moves);
+
+  movelist_init(moves);
+
+  for (int i = 0; i < all_moves.count; i++) {
+    if (all_moves.moves[i].type == MOVE_CAPTURE ||
+        all_moves.moves[i].type == MOVE_EN_PASSANT ||
+        all_moves.moves[i].type == MOVE_PROMOTION) {
+      movelist_add(moves, all_moves.moves[i]);
+    }
+  }
+#endif
 }
 
 // ========== QUIESCENCE SEARCH ==========

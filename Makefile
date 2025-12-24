@@ -137,7 +137,7 @@ v$(1): | versions/v$(1)_build
 endef
 
 # Générer les règles pour chaque version
-$(foreach v,1 2 3 4 5 6 7 8 9 10,$(eval $(call COMPILE_VERSION,$(v))))
+$(foreach v,1 2 3 4 5 6 7 8 9 10 11 12 13,$(eval $(call COMPILE_VERSION,$(v))))
 
 # Création du dossier chess_engine pour la version actuelle
 chess_engine_dir:
@@ -149,7 +149,7 @@ current: $(OBJ_RELEASE) | chess_engine_dir
 	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -o chess_engine/chess_engine $^ -lm
 
 # Compilation de toutes les versions
-all_versions: v1 v2 v3 v4 v5 v6 v7 v8 v9 v10
+all_versions: v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13
 
 # Rebuild complet : clean + recompile everything
 rebuild: clean-all all
@@ -168,8 +168,8 @@ help:
 	@echo "    make release      - Compile la version release"
 	@echo "    make debug        - Compile la version debug"
 	@echo "    make current      - Compile la version actuelle dans chess_engine/"
-	@echo "    make all_versions - Compile toutes les versions (v1-v10)"
-	@echo "    make v1..v10      - Compile une version spécifique"
+	@echo "    make all_versions - Compile toutes les versions (v1-v13)"
+	@echo "    make v1..v13      - Compile une version spécifique"
 	@echo ""
 	@echo "  🧹 NETTOYAGE :"
 	@echo "    make clean            - Nettoie builds + exécutables principaux"
@@ -188,4 +188,4 @@ help:
 
 # Déclaration des cibles "virtuelles" pour éviter des conflits avec des fichiers du même nom
 .PHONY: all debug release clean clean-versions clean-logs clean-all distclean \
-        v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 all_versions current rebuild rebuild-versions help
+        v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 all_versions current rebuild rebuild-versions help

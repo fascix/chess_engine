@@ -14,7 +14,7 @@
 
 // Default version if not specified
 #ifndef VERSION
-#define VERSION 10
+#define VERSION 13
 #endif
 
 // Variables globales pour gérer le temps de recherche
@@ -75,8 +75,12 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
   // Variables needed for TT (used conditionally)
 #if VERSION >= 3
-  // Utiliser le hash Zobrist incrémental stocké dans le board
+  // V11+: Utiliser le hash Zobrist incrémental stocké dans le board
+#if VERSION >= 11
   uint64_t hash = board->zobrist_key;
+#else
+  uint64_t hash = zobrist_hash(board);
+#endif
   int tt_score;
   TTEntry *tt_entry = tt_probe(&tt_global, hash, ply, &tt_score);
 #else

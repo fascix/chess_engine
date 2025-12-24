@@ -1074,21 +1074,27 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
   // Sauvegarder l'état actuel
   *backup = *board;
   
-  // ========== MISE À JOUR INCRÉMENTALE DU HASH ZOBRIST ==========
+#if VERSION >= 11
+  // ========== V11+: MISE À JOUR INCRÉMENTALE DU HASH ZOBRIST ==========
   uint64_t hash = board->zobrist_key;
+#endif
 
   // Effacer la pièce de la case de départ
   PieceType piece_type = get_piece_type(board, move->from);
   Couleur piece_color = get_piece_color(board, move->from);
   
+#if VERSION >= 11
   // 1. Retirer la pièce de sa case de départ du hash
   hash ^= zobrist_pieces[piece_color][piece_type][move->from];
+#endif
 
   board->pieces[piece_color][piece_type] &= ~(1ULL << move->from);
   board->occupied[piece_color] &= ~(1ULL << move->from);
   
+#if VERSION >= 11
   // 2. Mettre à jour les droits de roque dans le hash
   hash ^= zobrist_castling[board->castle_rights]; // Retirer ancien état
+#endif
 
   // Mettre à jour les droits de roque
   if (piece_type == KING) {
@@ -1125,8 +1131,10 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     }
 
     if (captured_piece_type != EMPTY) {
+#if VERSION >= 11
       // 3. Retirer la pièce capturée du hash
       hash ^= zobrist_pieces[opponent][captured_piece_type][captured_square];
+#endif
       
       board->pieces[opponent][captured_piece_type] &=
           ~(1ULL << captured_square);
@@ -1148,9 +1156,11 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     }
   }
 
+#if VERSION >= 11
   // 4. Ajouter la pièce (ou promotion) à sa nouvelle case dans le hash
   PieceType arriving_piece = (move->type == MOVE_PROMOTION) ? move->promotion : piece_type;
   hash ^= zobrist_pieces[piece_color][arriving_piece][move->to];
+#endif
 
   // Placer la pièce sur la case d'arrivée
   if (move->type == MOVE_PROMOTION) {
@@ -1171,9 +1181,11 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
       rook_to = (piece_color == WHITE) ? D1 : D8;
     }
 
+#if VERSION >= 11
     // 5. Mettre à jour le hash pour le mouvement de la tour lors du roque
     hash ^= zobrist_pieces[piece_color][ROOK][rook_from]; // Retirer tour de l'ancienne case
     hash ^= zobrist_pieces[piece_color][ROOK][rook_to];   // Ajouter tour à la nouvelle case
+#endif
 
     // Déplacer la tour
     board->pieces[piece_color][ROOK] &= ~(1ULL << rook_from);
@@ -1182,17 +1194,21 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     board->occupied[piece_color] |= (1ULL << rook_to);
   }
 
+#if VERSION >= 11
   // Ajouter le nouveau état des droits de roque au hash
   hash ^= zobrist_castling[board->castle_rights];
+#endif
 
   // Recalculer all_pieces
   board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
 
+#if VERSION >= 11
   // 6. Mettre à jour en passant dans le hash
   // D'abord retirer l'ancien en_passant (qui est encore dans board)
   if (board->en_passant >= 0 && board->en_passant < 64) {
     hash ^= zobrist_en_passant[board->en_passant]; // Retirer ancien en_passant
   }
+#endif
   
   // Réinitialiser en_passant par défaut
   board->en_passant = -1;
@@ -1201,18 +1217,24 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
   if (piece_type == PAWN && abs((int)move->to - (int)move->from) == 16) {
     board->en_passant =
         (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
+#if VERSION >= 11
     // Ajouter nouveau en_passant au hash
     hash ^= zobrist_en_passant[board->en_passant];
+#endif
   }
   
+#if VERSION >= 11
   // 7. Changer le joueur actif dans le hash
   hash ^= zobrist_side_to_move;
+#endif
   
   // Basculer le joueur actif
   board->to_move = (board->to_move == WHITE) ? BLACK : WHITE;
   
-  // Sauvegarder le nouveau hash
+#if VERSION >= 11
+  // Sauvegarder le nouveau hash incrémental
   board->zobrist_key = hash;
+#endif
 }
 
 // Restaure l'état du board
@@ -1255,8 +1277,10 @@ int is_move_legal(const Board *board, const Move *move) {
   return legal;
 }
 
-// Filtre les mouvements illégaux d'une liste (en place, sans copie)
+// Filtre les mouvements illégaux d'une liste
 void filter_legal_moves(const Board *board, MoveList *moves) {
+#if VERSION >= 13
+  // V13+: Filtrage in-place sans copie
   int write_idx = 0; // Index d'écriture pour les coups légaux
 
   for (int read_idx = 0; read_idx < moves->count; read_idx++) {
@@ -1282,6 +1306,27 @@ void filter_legal_moves(const Board *board, MoveList *moves) {
 
   // Mettre à jour le compte final
   moves->count = write_idx;
+#else
+  // V10 et antérieur: Filtrage avec copie
+  MoveList legal_moves;
+  movelist_init(&legal_moves);
+
+  int filtered_count = 0;
+  for (int i = 0; i < moves->count; i++) {
+    if (is_move_legal(board, &moves->moves[i])) {
+      movelist_add(&legal_moves, moves->moves[i]);
+    } else {
+      filtered_count++;
+    }
+  }
+
+#ifdef DEBUG
+  fprintf(stderr, "[DEBUG FILTER] Filtered %d illegal moves out of %d\n",
+          filtered_count, moves->count);
+#endif
+
+  *moves = legal_moves;
+#endif
 }
 
 // Génération de mouvements légaux uniquement
