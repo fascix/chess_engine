@@ -4,6 +4,7 @@ Module contenant toutes les fonctions d'affichage et d'interface graphique
 import pygame
 import chess
 import time
+import settings
 from settings import *
 from support import *
 
@@ -58,7 +59,7 @@ def draw_board_centered(screen, board_size, board_offset_x, board_offset_y):
     for row in range(8):
         for col in range(8):
             # Utiliser les couleurs du thème actuel
-            colors = BOARD_COLORS[current_board_theme]
+            colors = BOARD_COLORS[settings.current_board_theme]
             color = colors[0] if (row + col) % 2 == 0 else colors[1]
             pygame.draw.rect(screen, color, 
                            (board_offset_x + col * tile_size, 

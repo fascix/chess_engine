@@ -94,6 +94,13 @@ def engine_worker(board_copy, result_queue, engine_path=None):
     try:
         if engine_path is None:
             engine_path = config.get_bot1_path()
+        
+        # Vérifier que le chemin n'est pas vide
+        if not engine_path or engine_path.strip() == "":
+            print(f"Erreur: Chemin d'engine vide ou invalide")
+            result_queue.put(None)
+            return
+            
         engine = chess.engine.SimpleEngine.popen_uci(engine_path)
         
         # Utiliser analyse + stop pour avoir les infos en temps réel
@@ -103,10 +110,18 @@ def engine_worker(board_copy, result_queue, engine_path=None):
             
             # Récupérer le meilleur coup
             best_move = analysis.info.get('pv', [None])[0] if 'pv' in analysis.info else None
+        
+        # Si aucun coup n'a été trouvé, essayer la méthode play en fallback
+        if best_move is None:
+            print("Warning: analysis n'a pas retourné de coup, utilisation de play() en fallback")
+            result = engine.play(board_copy, chess.engine.Limit(time=1.0))
+            best_move = result.move
             
         result_queue.put(best_move)
     except Exception as e:
         print(f"Erreur dans le moteur: {e}")
+        import traceback
+        traceback.print_exc()
         result_queue.put(None)
     finally:
         if engine is not None:
@@ -118,9 +133,20 @@ def engine_worker(board_copy, result_queue, engine_path=None):
 def start_engine_calculation(board, engine_path=None):
     """Démarre le calcul du moteur dans un thread séparé."""
     global engine_thinking, engine_move_ready, pending_engine_move
+    
+    if engine_thinking:
+        print("Warning: Tentative de démarrage de l'engine alors qu'il calcule déjà!")
+        return
+    
     engine_thinking = True
     engine_move_ready = False
     pending_engine_move = None
+    
+    if engine_path is None:
+        engine_path = config.get_bot1_path()
+    
+    print(f"Démarrage du calcul de l'engine avec le chemin: {engine_path}")
+    print(f"Position actuelle: {board.fen()}")
     
     board_copy = board.copy()
     thread = threading.Thread(target=engine_worker, args=(board_copy, engine_queue, engine_path))
@@ -131,12 +157,26 @@ def start_engine_calculation(board, engine_path=None):
 def start_engine2_calculation(board):
     """Démarre le calcul du second moteur (bot vs bot)."""
     global engine2_thinking, engine2_move_ready, pending_engine2_move
+    
+    if engine2_thinking:
+        print("Warning: Tentative de démarrage de l'engine2 alors qu'il calcule déjà!")
+        return
+    
     engine2_thinking = True
     engine2_move_ready = False
     pending_engine2_move = None
     
     board_copy = board.copy()
     engine2_path = config.get_bot2_path()
+    
+    # Si le chemin du bot 2 est vide, utiliser le même que bot 1
+    if not engine2_path or engine2_path.strip() == "":
+        print("Warning: Bot 2 path is empty, using Bot 1 path as fallback")
+        engine2_path = config.get_bot1_path()
+    
+    print(f"Démarrage du calcul de l'engine2 avec le chemin: {engine2_path}")
+    print(f"Position actuelle: {board.fen()}")
+    
     thread = threading.Thread(target=engine_worker, args=(board_copy, engine_queue2, engine2_path))
     thread.daemon = True
     thread.start()

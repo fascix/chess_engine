@@ -11,7 +11,7 @@ bot_engines = {
 
 # Current selected bots
 selected_bot1 = "ChessEngine"  # For 1 vs bot mode
-selected_bot2 = ""  # For bot vs bot mode (empty by default)
+selected_bot2 = "ChessEngine"  # For bot vs bot mode (default to same as bot1)
 
 def get_bot1_path():
     """Returns the path of the first bot"""

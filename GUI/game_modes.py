@@ -99,18 +99,28 @@ def chess_engine(timer, player_is_white=True):
     try:
         running = True
         while running:
+            # Vérifier si c'est le tour du bot et que l'engine ne calcule pas déjà
+            if not game_logic.engine_thinking and not game_logic.engine_move_ready and not game_logic.game_paused:
+                is_bot_turn = (player_is_white and game_logic.board.turn == chess.BLACK) or (not player_is_white and game_logic.board.turn == chess.WHITE)
+                if is_bot_turn and not game_logic.board.is_game_over():
+                    print("Déclenchement automatique de l'engine (tour du bot détecté)")
+                    game_logic.start_engine_calculation(game_logic.board)
+            
             # Vérifier si le moteur a terminé son calcul
             if game_logic.engine_thinking:
                 game_logic.check_engine_result()
             
             # Si le coup du moteur est prêt, l'exécuter
-            if game_logic.engine_move_ready and game_logic.pending_engine_move and not game_logic.game_paused:
-                if game_logic.pending_engine_move in game_logic.board.legal_moves:
+            if game_logic.engine_move_ready and not game_logic.game_paused:
+                if game_logic.pending_engine_move and game_logic.pending_engine_move in game_logic.board.legal_moves:
                     game_logic.execute_move(game_logic.board, game_logic.pending_engine_move)
+                    # Après le coup du bot, démarrer le calcul du joueur si c'est son tour
+                    # Pas besoin de démarrer l'engine ici car c'est le tour du joueur
+                elif game_logic.pending_engine_move is None:
+                    print("Erreur: L'engine n'a pas retourné de coup valide")
                         
                 game_logic.engine_move_ready = False
-                game_logic.pending_engine_move = None
-            
+                game_logic.pending_engine_move = None            
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -200,23 +210,33 @@ def bot_vs_bot(timer):
                 game_logic.check_engine2_result()
             
             # Si le coup du bot blanc est prêt, l'exécuter
-            if game_logic.engine_move_ready and game_logic.pending_engine_move and not game_logic.game_paused:
-                if game_logic.pending_engine_move in game_logic.board.legal_moves:
+            if game_logic.engine_move_ready and not game_logic.game_paused:
+                if game_logic.pending_engine_move and game_logic.pending_engine_move in game_logic.board.legal_moves:
                     game_logic.execute_move(game_logic.board, game_logic.pending_engine_move)
                     # Démarrer le bot noir si la partie n'est pas terminée
                     if not game_logic.board.is_game_over():
                         game_logic.start_engine2_calculation(game_logic.board)
+                elif game_logic.pending_engine_move is None:
+                    print("Erreur: Le bot blanc n'a pas retourné de coup valide")
+                    # Redémarrer le calcul si possible
+                    if not game_logic.board.is_game_over():
+                        game_logic.start_engine_calculation(game_logic.board)
                         
                 game_logic.engine_move_ready = False
                 game_logic.pending_engine_move = None
             
             # Si le coup du bot noir est prêt, l'exécuter
-            if game_logic.engine2_move_ready and game_logic.pending_engine2_move and not game_logic.game_paused:
-                if game_logic.pending_engine2_move in game_logic.board.legal_moves:
+            if game_logic.engine2_move_ready and not game_logic.game_paused:
+                if game_logic.pending_engine2_move and game_logic.pending_engine2_move in game_logic.board.legal_moves:
                     game_logic.execute_move(game_logic.board, game_logic.pending_engine2_move)
                     # Démarrer le bot blanc si la partie n'est pas terminée
                     if not game_logic.board.is_game_over():
                         game_logic.start_engine_calculation(game_logic.board)
+                elif game_logic.pending_engine2_move is None:
+                    print("Erreur: Le bot noir n'a pas retourné de coup valide")
+                    # Redémarrer le calcul si possible
+                    if not game_logic.board.is_game_over():
+                        game_logic.start_engine2_calculation(game_logic.board)
                         
                 game_logic.engine2_move_ready = False
                 game_logic.pending_engine2_move = None
