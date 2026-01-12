@@ -3,6 +3,7 @@
 #include "move_ordering.h"
 #include "utils.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 // Macro pour logs de debug conditionnels
 #ifdef DEBUG
@@ -13,19 +14,30 @@
 
 // ========== GÉNÉRATION DES CAPTURES ==========
 
+// Génère uniquement les captures et promotions (sans les coups tranquilles)
+// Plus performant que de générer tous les coups puis les filtrer
+// Référence: https://www.chessprogramming.org/Quiescence_Search
 void generate_capture_moves(const Board *board, MoveList *moves) {
-  MoveList all_moves;
-  generate_legal_moves(board, &all_moves);
+  // Générer tous les coups pseudo-légaux
+  generate_moves(board, moves);
 
-  movelist_init(moves);
-
-  for (int i = 0; i < all_moves.count; i++) {
-    if (all_moves.moves[i].type == MOVE_CAPTURE ||
-        all_moves.moves[i].type == MOVE_EN_PASSANT ||
-        all_moves.moves[i].type == MOVE_PROMOTION) {
-      movelist_add(moves, all_moves.moves[i]);
+  // Filtrer uniquement les captures et promotions IN-PLACE (sans copie)
+  int write_idx = 0;
+  for (int read_idx = 0; read_idx < moves->count; read_idx++) {
+    Move *m = &moves->moves[read_idx];
+    // Garder uniquement les captures, en-passant et promotions
+    if (m->type == MOVE_CAPTURE || m->type == MOVE_EN_PASSANT ||
+        m->type == MOVE_PROMOTION) {
+      // Vérifier la légalité uniquement pour ces coups
+      if (is_move_legal(board, m)) {
+        if (write_idx != read_idx) {
+          moves->moves[write_idx] = *m;
+        }
+        write_idx++;
+      }
     }
   }
+  moves->count = write_idx;
 }
 
 // ========== QUIESCENCE SEARCH ==========
@@ -40,8 +52,10 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
   // Limite de profondeur pour éviter les boucles infinies
   if (ply >= 128) { // Sécurité maximale
     int score = evaluate_position(board);
-    // evaluate_position returns from white's perspective, adjust for current player
-    if (color == BLACK) score = -score;
+    // evaluate_position returns from white's perspective, adjust for current
+    // player
+    if (color == BLACK)
+      score = -score;
 #ifdef DEBUG
     DEBUG_LOG("[QUIESCENCE] ply>=128, eval=%d\n", score);
 #endif
@@ -50,13 +64,16 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
 
   // Évaluation statique
   int stand_pat = evaluate_position(board);
-  // evaluate_position returns from white's perspective, adjust for current player
-  if (color == BLACK) stand_pat = -stand_pat;
+  // evaluate_position returns from white's perspective, adjust for current
+  // player
+  if (color == BLACK)
+    stand_pat = -stand_pat;
 
   // Beta cutoff
   if (stand_pat >= beta) {
 #ifdef DEBUG
-    DEBUG_LOG("[QUIESCENCE] stand_pat=%d >= beta=%d, cutoff\n", stand_pat, beta);
+    DEBUG_LOG("[QUIESCENCE] stand_pat=%d >= beta=%d, cutoff\n", stand_pat,
+              beta);
 #endif
     return beta;
   }
@@ -103,7 +120,8 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     if (stand_pat + delta < alpha) {
       *board = local_backup; // Restaurer depuis le backup local
 #ifdef DEBUG
-      DEBUG_LOG("[QUIESCENCE] Delta prune: stand_pat=%d delta=%d alpha=%d\n", stand_pat, delta, alpha);
+      DEBUG_LOG("[QUIESCENCE] Delta prune: stand_pat=%d delta=%d alpha=%d\n",
+                stand_pat, delta, alpha);
 #endif
       continue;
     }
@@ -117,7 +135,8 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     *board = local_backup;
 
 #ifdef DEBUG
-    DEBUG_LOG("[QUIESCENCE] ply=%d move=%s score=%d\n", ply, move_to_string(&ordered_captures.moves[i]), score);
+    DEBUG_LOG("[QUIESCENCE] ply=%d move=%s score=%d\n", ply,
+              move_to_string(&ordered_captures.moves[i]), score);
 #endif
 
     // Mise à jour alpha-beta

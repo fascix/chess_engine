@@ -51,6 +51,11 @@ void board_init(Board *board) {
   board->en_passant = -1;
   board->halfmove_clock = 0;
   board->move_number = 1;
+
+  // Initialiser le hash Zobrist (nécessite que init_zobrist() ait été appelé)
+  // Cette fonction est définie dans zobrist.c
+  extern uint64_t zobrist_hash(const Board *board);
+  board->zobrist_hash = zobrist_hash(board);
 }
 
 bool is_square_occupied(const Board *board, Square square) {
@@ -248,4 +253,8 @@ void board_from_fen(Board *board, const char *fen) {
     return;
 
   reset_move_counters(board);
+
+  // Initialiser le hash Zobrist
+  extern uint64_t zobrist_hash(const Board *board);
+  board->zobrist_hash = zobrist_hash(board);
 }

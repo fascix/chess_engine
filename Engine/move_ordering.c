@@ -178,3 +178,78 @@ void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
     }
   }
 }
+
+// ========== ORDONNANCEMENT IN-PLACE (SANS COPIE) ==========
+
+// Calcule le score d'un coup pour l'ordonnancement
+static int calculate_move_score(const Board *board, const Move *move,
+                                Move hash_move, int ply) {
+  int score = 0;
+
+  // 1. Hash move (priorité maximale)
+  if (hash_move.from == move->from && hash_move.to == move->to) {
+    score = 1000000;
+  }
+  // 2. Captures (MVV-LVA)
+  else if (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT) {
+    score = 100000 + mvv_lva_score(move);
+  }
+#if VERSION >= 9
+  // 3. Killer moves
+  else if (is_killer_move(*move, ply)) {
+    score = 90000;
+  }
+#endif
+#if VERSION >= 8
+  // 4. History heuristic pour les coups quiet
+  else {
+    score = history_scores[board->to_move][move->from][move->to];
+  }
+#else
+  // Sans history : score par défaut
+  else {
+    score = 0;
+  }
+#endif
+
+  return score;
+}
+
+// Version améliorée: trie IN-PLACE sans copie (évite allocation et copie)
+// Référence: https://www.chessprogramming.org/Move_Ordering
+void order_moves_inplace(const Board *board, MoveList *moves, Move hash_move,
+                         int ply) {
+  if (moves->count <= 1) {
+    return; // Rien à trier
+  }
+
+  // Calculer les scores pour chaque coup
+  int scores[256];
+  for (int i = 0; i < moves->count; i++) {
+    scores[i] = calculate_move_score(board, &moves->moves[i], hash_move, ply);
+  }
+
+  // Tri par sélection (simple et efficace pour petites listes)
+  // Alternative: on pourrait utiliser qsort mais moins de contrôle
+  for (int i = 0; i < moves->count - 1; i++) {
+    int best_idx = i;
+    for (int j = i + 1; j < moves->count; j++) {
+      if (scores[j] > scores[best_idx]) {
+        best_idx = j;
+      }
+    }
+
+    // Swap si nécessaire
+    if (best_idx != i) {
+      // Swap scores
+      int temp_score = scores[i];
+      scores[i] = scores[best_idx];
+      scores[best_idx] = temp_score;
+
+      // Swap moves
+      Move temp_move = moves->moves[i];
+      moves->moves[i] = moves->moves[best_idx];
+      moves->moves[best_idx] = temp_move;
+    }
+  }
+}

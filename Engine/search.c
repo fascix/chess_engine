@@ -75,7 +75,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
   // Variables needed for TT (used conditionally)
 #if VERSION >= 3
-  uint64_t hash = zobrist_hash(board);
+  // Utiliser le hash incrémental depuis le board (au lieu de le recalculer)
+  uint64_t hash = board->zobrist_hash;
   int tt_score;
   TTEntry *tt_entry = tt_probe(&tt_global, hash, ply, &tt_score);
 #else

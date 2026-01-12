@@ -17,6 +17,10 @@ typedef struct {
 void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
                  Move hash_move, int ply);
 
+// Version améliorée: trie IN-PLACE sans copie
+void order_moves_inplace(const Board *board, MoveList *moves, Move hash_move,
+                         int ply);
+
 // Initialise les tables de killer moves et history
 void init_killer_moves(void);
 

@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 PASSED=0
 FAILED=0
-ENGINE="./chess_engine_debug"
+ENGINE="./chess_engine"
 
 echo "=========================================="
 echo "   PERFT TESTING - Chess Engine"

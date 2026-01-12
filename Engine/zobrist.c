@@ -139,6 +139,32 @@ uint64_t zobrist_hash(const Board *board) {
   return hash;
 }
 
+// ========== FONCTIONS D'ACCÈS AUX CLÉS (pour update incrémental) ==========
+
+uint64_t zobrist_get_piece_key(Couleur color, PieceType piece, Square square) {
+  if (color < 0 || color > 1 || piece < 0 || piece > 5 || square < 0 ||
+      square > 63) {
+    return 0;
+  }
+  return zobrist_pieces[color][piece][square];
+}
+
+uint64_t zobrist_get_castling_key(int castle_rights) {
+  if (castle_rights < 0 || castle_rights >= 16) {
+    return 0;
+  }
+  return zobrist_castling[castle_rights];
+}
+
+uint64_t zobrist_get_en_passant_key(Square square) {
+  if (square < 0 || square >= 64) {
+    return 0;
+  }
+  return zobrist_en_passant[square];
+}
+
+uint64_t zobrist_get_side_key(void) { return zobrist_side_to_move; }
+
 // ========== TEST DE VALIDATION ==========
 
 void test_zobrist_uniqueness(void) {

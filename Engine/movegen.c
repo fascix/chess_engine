@@ -856,8 +856,17 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
   PieceType piece_type = get_piece_type(board, move->from);
   Couleur piece_color = get_piece_color(board, move->from);
 
+  // Update Zobrist: retirer la pièce de la case de départ
+  extern uint64_t zobrist_get_piece_key(Couleur, PieceType, Square);
+  board->zobrist_hash ^=
+      zobrist_get_piece_key(piece_color, piece_type, move->from);
+
   board->pieces[piece_color][piece_type] &= ~(1ULL << move->from);
   board->occupied[piece_color] &= ~(1ULL << move->from);
+
+  // Update Zobrist: retirer les anciens droits de roque
+  extern uint64_t zobrist_get_castling_key(int);
+  board->zobrist_hash ^= zobrist_get_castling_key(board->castle_rights);
 
   // Mettre à jour les droits de roque
   if (piece_type == KING) {
@@ -880,6 +889,9 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     }
   }
 
+  // Update Zobrist: ajouter les nouveaux droits de roque
+  board->zobrist_hash ^= zobrist_get_castling_key(board->castle_rights);
+
   // Gérer la capture (y compris les promotions avec capture)
   PieceType captured_piece_type = EMPTY;
   Square captured_square = move->to;
@@ -894,6 +906,10 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
     }
 
     if (captured_piece_type != EMPTY) {
+      // Update Zobrist: retirer la pièce capturée
+      board->zobrist_hash ^=
+          zobrist_get_piece_key(opponent, captured_piece_type, captured_square);
+
       board->pieces[opponent][captured_piece_type] &=
           ~(1ULL << captured_square);
       board->occupied[opponent] &= ~(1ULL << captured_square);
@@ -902,6 +918,9 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
       // roque IMPORTANT: Ce bloc doit être à l'intérieur du if
       // (captured_piece_type != EMPTY)
       if (captured_piece_type == ROOK) {
+        // Update Zobrist: retirer les anciens droits de roque
+        board->zobrist_hash ^= zobrist_get_castling_key(board->castle_rights);
+
         if (captured_square == H1)
           board->castle_rights &= ~WHITE_KINGSIDE;
         if (captured_square == A1)
@@ -910,14 +929,23 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
           board->castle_rights &= ~BLACK_KINGSIDE;
         if (captured_square == A8)
           board->castle_rights &= ~BLACK_QUEENSIDE;
+
+        // Update Zobrist: ajouter les nouveaux droits de roque
+        board->zobrist_hash ^= zobrist_get_castling_key(board->castle_rights);
       }
     }
   }
 
   // Placer la pièce sur la case d'arrivée
   if (move->type == MOVE_PROMOTION) {
+    // Update Zobrist: ajouter la pièce promue
+    board->zobrist_hash ^=
+        zobrist_get_piece_key(piece_color, move->promotion, move->to);
     board->pieces[piece_color][move->promotion] |= (1ULL << move->to);
   } else {
+    // Update Zobrist: ajouter la pièce sur la case d'arrivée
+    board->zobrist_hash ^=
+        zobrist_get_piece_key(piece_color, piece_type, move->to);
     board->pieces[piece_color][piece_type] |= (1ULL << move->to);
   }
   board->occupied[piece_color] |= (1ULL << move->to);
@@ -933,6 +961,10 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
       rook_to = (piece_color == WHITE) ? D1 : D8;
     }
 
+    // Update Zobrist: déplacer la tour
+    board->zobrist_hash ^= zobrist_get_piece_key(piece_color, ROOK, rook_from);
+    board->zobrist_hash ^= zobrist_get_piece_key(piece_color, ROOK, rook_to);
+
     // Déplacer la tour
     board->pieces[piece_color][ROOK] &= ~(1ULL << rook_from);
     board->pieces[piece_color][ROOK] |= (1ULL << rook_to);
@@ -943,13 +975,26 @@ void make_move_temp(Board *board, const Move *move, Board *backup) {
   // Recalculer all_pieces
   board->all_pieces = board->occupied[WHITE] | board->occupied[BLACK];
 
+  // Update Zobrist: retirer l'ancien en_passant (si présent)
+  extern uint64_t zobrist_get_en_passant_key(Square);
+  if (backup->en_passant >= 0) {
+    board->zobrist_hash ^= zobrist_get_en_passant_key(backup->en_passant);
+  }
+
   // Réinitialiser en_passant par défaut
   board->en_passant = -1;
   // Si un pion avance de deux cases, définir la case en_passant
   if (piece_type == PAWN && abs((int)move->to - (int)move->from) == 16) {
     board->en_passant =
         (piece_color == WHITE) ? (move->from + 8) : (move->from - 8);
+    // Update Zobrist: ajouter le nouveau en_passant
+    board->zobrist_hash ^= zobrist_get_en_passant_key(board->en_passant);
   }
+
+  // Update Zobrist: changer le joueur actif
+  extern uint64_t zobrist_get_side_key(void);
+  board->zobrist_hash ^= zobrist_get_side_key();
+
   // Basculer le joueur actif
   board->to_move = (board->to_move == WHITE) ? BLACK : WHITE;
 }
@@ -994,16 +1039,21 @@ int is_move_legal(const Board *board, const Move *move) {
   return legal;
 }
 
-// Filtre les mouvements illégaux d'une liste
+// Filtre les mouvements illégaux d'une liste (IN-PLACE sans copie)
+// Référence: https://www.chessprogramming.org/Move_Generation
 void filter_legal_moves(const Board *board, MoveList *moves) {
-
-  MoveList legal_moves;
-  movelist_init(&legal_moves);
-
+  // Filtrage in-place: on garde uniquement les coups légaux
+  // en écrivant à l'indice write_idx
+  int write_idx = 0;
   int filtered_count = 0;
-  for (int i = 0; i < moves->count; i++) {
-    if (is_move_legal(board, &moves->moves[i])) {
-      movelist_add(&legal_moves, moves->moves[i]);
+
+  for (int read_idx = 0; read_idx < moves->count; read_idx++) {
+    if (is_move_legal(board, &moves->moves[read_idx])) {
+      // Copier uniquement si nécessaire (évite la copie quand pas de filtre)
+      if (write_idx != read_idx) {
+        moves->moves[write_idx] = moves->moves[read_idx];
+      }
+      write_idx++;
     } else {
       filtered_count++;
     }
@@ -1014,7 +1064,8 @@ void filter_legal_moves(const Board *board, MoveList *moves) {
           filtered_count, moves->count);
 #endif
 
-  *moves = legal_moves;
+  // Mettre à jour le compteur
+  moves->count = write_idx;
 }
 
 // Génération de mouvements légaux uniquement
