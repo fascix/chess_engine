@@ -38,6 +38,5 @@ tests/config.json
 
 /lichess-bot
 
-.vscode/c_cpp_properties.json
-.vscode/launch.json
-.vscode/settings.json
+.vscode
+
