@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 
 PASSED=0
 FAILED=0
-ENGINE="./chess_engine"
+ENGINE="../chess_engine"
 
 echo "=========================================="
 echo "   PERFT TESTING - Chess Engine"
@@ -36,10 +36,9 @@ test_perft() {
     echo -n "Test: $description (depth $depth)... "
     
     # Envoyer les commandes à l'engine et capturer le résultat
-    result=$(echo -e "position fen $fen\ngo perft $depth\nquit" | timeout 60 $ENGINE 2>/dev/null | grep "Nodes:" | tail -1 | awk '{print $2}' || echo "0")
+    result=$(echo -e "position fen $fen\\nperft $depth\\nquit" | timeout 60 $ENGINE 2>/dev/null | grep "Nodes:" | tail -1 | awk '{print $2}' || echo "0")
     
-    if [ "$result" = "$expected" ]; then
-        echo -e "${GREEN}✅ PASS${NC} (Nodes: $result)"
+    if [ "$result" = "$expected" ]; then        echo -e "${GREEN}✅ PASS${NC} (Nodes: $result)"
         ((PASSED++))
     else
         echo -e "${RED}❌ FAIL${NC} (Expected: $expected, Got: $result)"

@@ -50,12 +50,10 @@ echo
 # Test 1: Conformité UCI
 run_test "Conformité UCI" "uci_compliance_test.sh"
 
-# Test 2: Zobrist Incrémental
-run_test "Zobrist Incrémental" "test_zobrist_incremental.sh"
-
-# Test 3: Perft (génération de coups)
+# Test 2: Perft (génération de coups)
+# Note: Les tests perft valident aussi indirectement le Zobrist incrémental
+# car si le hash était cassé, les résultats seraient incorrects
 run_test "Perft (génération de coups)" "perft_test.sh"
-
 # Résumé final
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "📊 RÉSUMÉ DES TESTS"

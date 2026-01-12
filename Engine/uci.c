@@ -70,7 +70,8 @@ void handle_perft(Board *board, char *params) {
 
   // Calculer et afficher le total
   unsigned long total = perft(board, depth);
-  printf("Total: %lu\n", total);
+  printf("Nodes: %lu\n", total); // Format compatible avec les tests
+  printf("Total: %lu\n", total); // Ancien format pour rétrocompatibilité
   fflush(stdout);
 }
 
