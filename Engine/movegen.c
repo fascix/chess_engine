@@ -1039,8 +1039,7 @@ int is_move_legal(const Board *board, const Move *move) {
   return legal;
 }
 
-// Filtre les mouvements illégaux d'une liste (IN-PLACE sans copie)
-// Référence: https://www.chessprogramming.org/Move_Generation
+
 void filter_legal_moves(const Board *board, MoveList *moves) {
   // Filtrage in-place: on garde uniquement les coups légaux
   // en écrivant à l'indice write_idx
