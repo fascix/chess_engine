@@ -56,7 +56,8 @@ char *move_to_string(const Move *move) {
   if (move->type == MOVE_PROMOTION) {
     const char pieces[] = "pnbrqk"; // UCI utilise minuscules
     size_t len = strlen(buffer);
-    if (len < sizeof(buffer) - 1) {
+    // Validate promotion piece is in valid range (KNIGHT=1 to QUEEN=4)
+    if (len < sizeof(buffer) - 1 && move->promotion >= KNIGHT && move->promotion <= QUEEN) {
       snprintf(buffer + len, sizeof(buffer) - len, "%c", pieces[move->promotion]);
     }
   }
