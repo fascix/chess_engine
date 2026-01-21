@@ -459,7 +459,8 @@ void apply_uci_moves(Board *board, char *moves_str) {
   strncpy(moves_copy, moves_str, sizeof(moves_copy) - 1);
   moves_copy[sizeof(moves_copy) - 1] = '\0';
 
-  char *move_str = strtok(moves_copy, " ");
+  char *saveptr;
+  char *move_str = strtok_r(moves_copy, " ", &saveptr);
   while (move_str != NULL) {
     Move uci_move = parse_uci_move(move_str);
 
@@ -499,37 +500,38 @@ void apply_uci_moves(Board *board, char *moves_str) {
       fflush(stdout);
     }
 
-    move_str = strtok(NULL, " ");
+    move_str = strtok_r(NULL, " ", &saveptr);
   }
 }
 
 // Parser de commandes
 void parse_uci_command(char *line, Board *board) {
-  char *command = strtok(line, " ");
+  char *saveptr;
+  char *command = strtok_r(line, " ", &saveptr);
 
   if (strcmp(command, "uci") == 0) {
     handle_uci();
   } else if (strcmp(command, "isready") == 0) {
     handle_isready();
   } else if (strcmp(command, "debug") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = strtok_r(NULL, "", &saveptr);
     handle_debug(params);
   } else if (strcmp(command, "setoption") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = strtok_r(NULL, "", &saveptr);
     handle_setoption(params);
   } else if (strcmp(command, "register") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = strtok_r(NULL, "", &saveptr);
     handle_register(params);
   } else if (strcmp(command, "ucinewgame") == 0) {
     handle_ucinewgame();
   } else if (strcmp(command, "position") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = strtok_r(NULL, "", &saveptr);
     handle_position(board, params);
   } else if (strcmp(command, "go") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = strtok_r(NULL, "", &saveptr);
     handle_go(board, params);
   } else if (strcmp(command, "perft") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = strtok_r(NULL, "", &saveptr);
     handle_perft(board, params);
   } else if (strcmp(command, "ponderhit") == 0) {
     handle_ponderhit();
