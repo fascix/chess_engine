@@ -32,15 +32,12 @@ void initialize_engine(void) {
   DEBUG_LOG("=== MOTEUR PRÊT ===\n\n");
 }
 
-// ========== NEGAMAX (V1: Alpha-Beta + Quiescence) ==========
+// ========== NEGAMAX (Alpha-Beta + Quiescence) ==========
 
 int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
                        Couleur color, int ply, int in_null_move) {
   // Increment global node counter
   global_nodes_searched++;
-
-  // (in_null_move est ignoré en V1)
-  (void)in_null_move;
 
   // Vérifier le temps tous les 2048 noeuds
   static int node_count = 0;
