@@ -51,11 +51,15 @@ char *move_to_string(const Move *move) {
   char from_str[3] = {'a' + (move->from % 8), '1' + (move->from / 8), '\0'};
   char to_str[3] = {'a' + (move->to % 8), '1' + (move->to / 8), '\0'};
 
-  sprintf(buffer, "%s%s", from_str, to_str);
+  snprintf(buffer, sizeof(buffer), "%s%s", from_str, to_str);
 
   if (move->type == MOVE_PROMOTION) {
     const char pieces[] = "pnbrqk"; // UCI utilise minuscules
-    sprintf(buffer + strlen(buffer), "%c", pieces[move->promotion]);
+    size_t len = strlen(buffer);
+    // Validate promotion piece is in valid range (KNIGHT=1 to QUEEN=4)
+    if (len < sizeof(buffer) - 1 && move->promotion >= KNIGHT && move->promotion <= QUEEN) {
+      snprintf(buffer + len, sizeof(buffer) - len, "%c", pieces[move->promotion]);
+    }
   }
 
   return buffer;

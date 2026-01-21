@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "uci.h"
 #include "perft.h"
 #include "search.h"
@@ -135,6 +136,9 @@ void handle_setoption(char *params) {
 
   if (value_token) {
     size_t name_len = value_token - name_token;
+    if (name_len >= sizeof(option_name)) {
+      name_len = sizeof(option_name) - 1;
+    }
     strncpy(option_name, name_token, name_len);
     option_name[name_len] = '\0';
     value_token += 7; // Passer " value "
@@ -204,6 +208,9 @@ void setup_from_fen(Board *board, char *params) {
     // FEN se termine avant "moves"
     size_t fen_len = moves_start - fen_start;
     char fen_string[256];
+    if (fen_len >= sizeof(fen_string)) {
+      fen_len = sizeof(fen_string) - 1;
+    }
     strncpy(fen_string, fen_start, fen_len);
     fen_string[fen_len] = '\0';
     board_from_fen(board, fen_string);
@@ -459,7 +466,8 @@ void apply_uci_moves(Board *board, char *moves_str) {
   strncpy(moves_copy, moves_str, sizeof(moves_copy) - 1);
   moves_copy[sizeof(moves_copy) - 1] = '\0';
 
-  char *move_str = strtok(moves_copy, " ");
+  char *saveptr;
+  char *move_str = strtok_r(moves_copy, " ", &saveptr);
   while (move_str != NULL) {
     Move uci_move = parse_uci_move(move_str);
 
@@ -499,37 +507,38 @@ void apply_uci_moves(Board *board, char *moves_str) {
       fflush(stdout);
     }
 
-    move_str = strtok(NULL, " ");
+    move_str = strtok_r(NULL, " ", &saveptr);
   }
 }
 
 // Parser de commandes
 void parse_uci_command(char *line, Board *board) {
-  char *command = strtok(line, " ");
+  char *saveptr;
+  char *command = strtok_r(line, " ", &saveptr);
 
   if (strcmp(command, "uci") == 0) {
     handle_uci();
   } else if (strcmp(command, "isready") == 0) {
     handle_isready();
   } else if (strcmp(command, "debug") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = saveptr; // Get the rest of the line
     handle_debug(params);
   } else if (strcmp(command, "setoption") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = saveptr; // Get the rest of the line
     handle_setoption(params);
   } else if (strcmp(command, "register") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = saveptr; // Get the rest of the line
     handle_register(params);
   } else if (strcmp(command, "ucinewgame") == 0) {
     handle_ucinewgame();
   } else if (strcmp(command, "position") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = saveptr; // Get the rest of the line
     handle_position(board, params);
   } else if (strcmp(command, "go") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = saveptr; // Get the rest of the line
     handle_go(board, params);
   } else if (strcmp(command, "perft") == 0) {
-    char *params = strtok(NULL, "");
+    char *params = saveptr; // Get the rest of the line
     handle_perft(board, params);
   } else if (strcmp(command, "ponderhit") == 0) {
     handle_ponderhit();
