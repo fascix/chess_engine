@@ -521,24 +521,24 @@ void parse_uci_command(char *line, Board *board) {
   } else if (strcmp(command, "isready") == 0) {
     handle_isready();
   } else if (strcmp(command, "debug") == 0) {
-    char *params = strtok_r(NULL, "", &saveptr);
+    char *params = saveptr; // Get the rest of the line
     handle_debug(params);
   } else if (strcmp(command, "setoption") == 0) {
-    char *params = strtok_r(NULL, "", &saveptr);
+    char *params = saveptr; // Get the rest of the line
     handle_setoption(params);
   } else if (strcmp(command, "register") == 0) {
-    char *params = strtok_r(NULL, "", &saveptr);
+    char *params = saveptr; // Get the rest of the line
     handle_register(params);
   } else if (strcmp(command, "ucinewgame") == 0) {
     handle_ucinewgame();
   } else if (strcmp(command, "position") == 0) {
-    char *params = strtok_r(NULL, "", &saveptr);
+    char *params = saveptr; // Get the rest of the line
     handle_position(board, params);
   } else if (strcmp(command, "go") == 0) {
-    char *params = strtok_r(NULL, "", &saveptr);
+    char *params = saveptr; // Get the rest of the line
     handle_go(board, params);
   } else if (strcmp(command, "perft") == 0) {
-    char *params = strtok_r(NULL, "", &saveptr);
+    char *params = saveptr; // Get the rest of the line
     handle_perft(board, params);
   } else if (strcmp(command, "ponderhit") == 0) {
     handle_ponderhit();
