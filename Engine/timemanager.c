@@ -40,42 +40,43 @@ void parse_go_params(char *params, GoParams *go_params) {
   if (!params)
     return;
 
-  char *token = strtok(params, " ");
+  char *saveptr;
+  char *token = strtok_r(params, " ", &saveptr);
   while (token != NULL) {
     if (strcmp(token, "wtime") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       if (token)
         go_params->wtime = atoi(token);
     } else if (strcmp(token, "btime") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       if (token)
         go_params->btime = atoi(token);
     } else if (strcmp(token, "winc") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       if (token)
         go_params->winc = atoi(token);
     } else if (strcmp(token, "binc") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       if (token)
         go_params->binc = atoi(token);
     } else if (strcmp(token, "movestogo") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       if (token)
         go_params->movestogo = atoi(token);
     } else if (strcmp(token, "depth") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       if (token)
         go_params->depth = atoi(token);
     } else if (strcmp(token, "nodes") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       if (token)
         go_params->nodes = atoi(token);
     } else if (strcmp(token, "mate") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       if (token)
         go_params->mate = atoi(token);
     } else if (strcmp(token, "movetime") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       if (token)
         go_params->movetime = atoi(token);
     } else if (strcmp(token, "infinite") == 0) {
@@ -87,7 +88,7 @@ void parse_go_params(char *params, GoParams *go_params) {
       // Format: searchmoves e2e4 d2d4 ...
       // On saute tous les tokens jusqu'à un autre keyword
       DEBUG_LOG_TIME("searchmoves parameter ignored\n");
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
       while (token != NULL) {
         // Vérifier si c'est un keyword connu
         if (strcmp(token, "wtime") == 0 || strcmp(token, "btime") == 0 ||
@@ -99,11 +100,11 @@ void parse_go_params(char *params, GoParams *go_params) {
           // Revenir en arrière pour retraiter ce token
           break;
         }
-        token = strtok(NULL, " ");
+        token = strtok_r(NULL, " ", &saveptr);
       }
       continue; // Retraiter le token courant
     } else {
-      token = strtok(NULL, " ");
+      token = strtok_r(NULL, " ", &saveptr);
     }
   }
 

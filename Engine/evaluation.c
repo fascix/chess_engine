@@ -524,6 +524,8 @@ int evaluate_position(const Board *board) {
     return STALEMATE_SCORE;
   case GAME_ONGOING:
     break;
+  default:
+    break;
   }
 
   int score = 0;

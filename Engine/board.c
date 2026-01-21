@@ -201,6 +201,9 @@ const char *parse_fen_castling(Board *board, const char *fen) {
       case 'q':
         board->castle_rights |= BLACK_QUEENSIDE;
         break;
+      default:
+        // Ignore invalid castle rights characters
+        break;
       }
       fen++;
     }
