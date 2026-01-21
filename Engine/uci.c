@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "uci.h"
 #include "perft.h"
 #include "search.h"
@@ -135,6 +136,9 @@ void handle_setoption(char *params) {
 
   if (value_token) {
     size_t name_len = value_token - name_token;
+    if (name_len >= sizeof(option_name)) {
+      name_len = sizeof(option_name) - 1;
+    }
     strncpy(option_name, name_token, name_len);
     option_name[name_len] = '\0';
     value_token += 7; // Passer " value "
@@ -204,6 +208,9 @@ void setup_from_fen(Board *board, char *params) {
     // FEN se termine avant "moves"
     size_t fen_len = moves_start - fen_start;
     char fen_string[256];
+    if (fen_len >= sizeof(fen_string)) {
+      fen_len = sizeof(fen_string) - 1;
+    }
     strncpy(fen_string, fen_start, fen_len);
     fen_string[fen_len] = '\0';
     board_from_fen(board, fen_string);
