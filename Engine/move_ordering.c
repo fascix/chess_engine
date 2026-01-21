@@ -141,23 +141,14 @@ void order_moves(const Board *board, MoveList *moves, OrderedMoveList *ordered,
     else if (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT) {
       score = 100000 + mvv_lva_score(move);
     }
-#if VERSION >= 9
     // 3. Killer moves
     else if (is_killer_move(*move, ply)) {
       score = 90000;
     }
-#endif
-#if VERSION >= 8
-    // 4. History heuristic pour les coups quiet ← CETTE LIGNE MANQUE !
+    // 4. History heuristic pour les coups quiet
     else {
       score = history_scores[board->to_move][move->from][move->to];
     }
-#else
-    // Sans history : score par défaut
-    else {
-      score = 0;
-    }
-#endif
 
     ordered->scores[i] = score;
   }
@@ -194,23 +185,14 @@ static int calculate_move_score(const Board *board, const Move *move,
   else if (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT) {
     score = 100000 + mvv_lva_score(move);
   }
-#if VERSION >= 9
   // 3. Killer moves
   else if (is_killer_move(*move, ply)) {
     score = 90000;
   }
-#endif
-#if VERSION >= 8
   // 4. History heuristic pour les coups quiet
   else {
     score = history_scores[board->to_move][move->from][move->to];
   }
-#else
-  // Sans history : score par défaut
-  else {
-    score = 0;
-  }
-#endif
 
   return score;
 }
