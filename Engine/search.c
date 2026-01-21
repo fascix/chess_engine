@@ -12,36 +12,23 @@
 #define DEBUG_LOG(...)
 #endif
 
-// Default version if not specified
-#ifndef VERSION
-#define VERSION 10
-#endif
-
 // Variables globales pour gérer le temps de recherche
 static clock_t search_start_time;
 static int search_time_limit_ms;
 static volatile int search_should_stop;
 static long global_nodes_searched; // Global counter for all nodes explored
 
-#if VERSION >= 3
-// V3: Table de transposition globale
+// Table de transposition globale
 static TranspositionTable tt_global;
-#endif
 
 // ========== INITIALISATION DU MOTEUR ==========
 
 void initialize_engine(void) {
-  DEBUG_LOG("=== INITIALISATION DU MOTEUR (V%d) ===\n", VERSION);
+  DEBUG_LOG("=== INITIALISATION DU MOTEUR ===\n");
   init_zobrist();
-#if VERSION >= 9
-  init_killer_moves(); // V9: Killer Moves
-#endif
-#if VERSION >= 7
-  init_lmr_table(); // V7: Late Move Reductions
-#endif
-#if VERSION >= 3
-  tt_init(&tt_global); // V3: Transposition Table
-#endif
+  init_killer_moves();
+  init_lmr_table();
+  tt_init(&tt_global);
   DEBUG_LOG("=== MOTEUR PRÊT ===\n\n");
 }
 
@@ -73,21 +60,12 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     return 0;
   }
 
-  // Variables needed for TT (used conditionally)
-#if VERSION >= 3
   // Utiliser le hash incrémental depuis le board (au lieu de le recalculer)
   uint64_t hash = board->zobrist_hash;
   int tt_score;
   TTEntry *tt_entry = tt_probe(&tt_global, hash, ply, &tt_score);
-#else
-  uint64_t hash = 0;
-  TTEntry *tt_entry = NULL;
-  (void)hash;     // Suppress unused warning
-  (void)tt_entry; // Suppress unused warning
-#endif
 
-#if VERSION >= 3
-  // V3: Transposition Table Probe
+  // Transposition Table Probe
   if (tt_entry != NULL && tt_entry->depth >= depth) {
     if (tt_entry->type == TT_EXACT) {
       return tt_score;
@@ -109,7 +87,6 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
       }
     }
   }
-#endif
 
   if (ply >= 128) {
     int eval = evaluate_position(board);
@@ -133,8 +110,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     return eval;
   }
 
-#if VERSION >= 5
-  // V5: Reverse Futility Pruning
+  // Reverse Futility Pruning
   if (depth <= 2 && !is_in_check(board, color)) {
     int static_eval = evaluate_position(board);
     // evaluate_position returns from white's perspective, adjust for current
@@ -151,10 +127,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
       return beta;
     }
   }
-#endif
 
-#if VERSION >= 6
-  // V6: Null Move Pruning
+  // Null Move Pruning
   if (depth >= 3 && !in_null_move && !is_in_check(board, color) &&
       has_non_pawn_material(board, color)) {
     // "Jouer" le coup nul
@@ -180,7 +154,6 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
       return beta; // Pruning
     }
   }
-#endif
 
   MoveList moves;
   generate_legal_moves(board, &moves);
@@ -197,8 +170,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   Move hash_move = {0};
   int hash_move_valid = 0;
 
-#if VERSION >= 3
-  // V3: Récupérer le meilleur coup de la TT pour le move ordering
+  // Récupérer le meilleur coup de la TT pour le move ordering
   if (tt_entry != NULL) {
     Move candidate = tt_entry->best_move;
 
@@ -231,28 +203,16 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     }
 #endif
   }
-#endif
 
-#if VERSION >= 2
-  // V2: Move Ordering (utiliser hash_move seulement s'il est validé)
+  // Move Ordering (utiliser hash_move seulement s'il est validé)
   OrderedMoveList ordered_moves;
   order_moves(board, &moves, &ordered_moves,
               hash_move_valid ? hash_move : (Move){0}, ply);
-#else
-  // V1: Pas d'ordonnancement, utiliser l'ordre de génération
-  OrderedMoveList ordered_moves;
-  ordered_moves.count = moves.count;
-  for (int i = 0; i < moves.count; i++) {
-    ordered_moves.moves[i] = moves.moves[i];
-    ordered_moves.scores[i] = 0;
-  }
-#endif
 
   int max_score = -INFINITY_SCORE;
   Move best_move = {0};
   int alpha_orig = alpha;
 
-#if VERSION >= 10
   int static_eval_for_futility = -INFINITY_SCORE;
   int futility_pruning_active = (depth <= 2 && !is_in_check(board, color));
   if (futility_pruning_active) {
@@ -262,11 +222,9 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     if (color == BLACK)
       static_eval_for_futility = -static_eval_for_futility;
   }
-#endif
 
   for (int i = 0; i < ordered_moves.count; i++) {
-#if VERSION >= 10
-    // V10: Futility Pruning
+    // Futility Pruning
     // Conditions strictes pour éviter de pruner des coups importants
     if (i >= 3 && // Laisser au moins 3 coups s'exécuter
         futility_pruning_active && is_quiet_move(&ordered_moves.moves[i]) &&
@@ -277,21 +235,18 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
         continue; // Prune ce coup
       }
     }
-#endif
 
     apply_move(board, &ordered_moves.moves[i], ply);
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
     int score;
 
-#if VERSION >= 4
-    // V4: Principal Variation Search (PVS)
+    // Principal Variation Search (PVS)
     if (i == 0) {
       // Premier coup (PV-node), recherche avec une fenêtre complète
       score = -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent,
                                   ply + 1, 0);
     } else {
-#if VERSION >= 7
-      // V7: Late Move Reductions (LMR)
+      // Late Move Reductions (LMR)
       int reduction = 0;
       if (depth >= 3 && i >= 4 && is_quiet_move(&ordered_moves.moves[i])) {
         reduction = get_lmr_reduction(depth, i);
@@ -307,11 +262,6 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
         score = -negamax_alpha_beta(board, depth - 1, -alpha - 1, -alpha,
                                     opponent, ply + 1, 0);
       }
-#else
-      // Sans LMR: recherche directe avec fenêtre nulle
-      score = -negamax_alpha_beta(board, depth - 1, -alpha - 1, -alpha,
-                                  opponent, ply + 1, 0);
-#endif
 
       // Si la recherche (réduite ou non) est prometteuse, faire une recherche
       // complète (PVS)
@@ -320,11 +270,6 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
                                     ply + 1, 0);
       }
     }
-#else
-    // V1-V3: Recherche standard sans PVS
-    score = -negamax_alpha_beta(board, depth - 1, -beta, -alpha, opponent,
-                                ply + 1, 0);
-#endif
 
     undo_move(board, ply);
 
@@ -345,17 +290,11 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
     if (alpha >= beta) {
       // Beta cutoff (fail-high)
-#if VERSION >= 8
       if (is_quiet_move(&best_move)) {
         update_history(best_move, depth, color);
-#if VERSION >= 9
         store_killer_move(best_move, ply);
-#endif
       }
-#endif
-#if VERSION >= 3
       tt_store(&tt_global, hash, depth, beta, TT_LOWERBOUND, best_move, ply);
-#endif
 #ifdef DEBUG
       DEBUG_LOG("[NEGAMAX] ply=%d beta cutoff move=%s score=%d\n", ply,
                 move_to_string(&best_move), beta);
@@ -364,8 +303,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     }
   }
 
-#if VERSION >= 3
-  // V3: Transposition Table Store
+  // Transposition Table Store
   TTEntryType tt_type;
   if (max_score <= alpha_orig) {
     tt_type = TT_UPPERBOUND;
@@ -375,7 +313,6 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     tt_type = TT_EXACT;
   }
   tt_store(&tt_global, hash, depth, max_score, tt_type, best_move, ply);
-#endif
 
   return max_score;
 }
@@ -389,9 +326,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
   search_should_stop = 0;
   global_nodes_searched = 0; // Reset global counter
 
-#if VERSION >= 3
-  tt_new_search(&tt_global); // V3
-#endif
+  tt_new_search(&tt_global);
 
   SearchResult best_result = {0};
   best_result.score = -INFINITY_SCORE;
