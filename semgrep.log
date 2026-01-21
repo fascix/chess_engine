@@ -1,0 +1,1363 @@
+                     
+                     
+┌───────────────────┐
+│ 199 Code Findings │
+└───────────────────┘
+                                 
+  [36m[22m[24m  Engine/board.c[0m
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+           10┆ memset(board, 0, sizeof(Board));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-memset
+          When handling sensitive information in a buffer, it's important to ensure  that the data is securely
+          erased before the buffer is deleted or reused.  While `memset()` is commonly used for this purpose, 
+          it can leave sensitive  information behind due to compiler optimizations or other factors.  To avoid
+          this potential vulnerability, it's recommended to use the  `memset_s()` function instead.           
+          `memset_s()` is a standardized function  that securely overwrites the memory with a specified value,
+          making it more  difficult for an attacker to recover any sensitive data that was stored in  the     
+          buffer. By using `memset_s()` instead of `memset()`, you can help to  ensure that your application  
+          is more secure and less vulnerable to exploits  that rely on residual data in memory.               
+                                                                                                              
+           ▶▶┆ Autofix ▶ memset_s(board, 0, sizeof(Board)
+           10┆ memset(board, 0, sizeof(Board));
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-missing-default-in-switch
+          The code does not have a default case in an expression with multiple conditions, such as a switch
+          statement.                                                                                       
+                                                                                                           
+          191┆ switch (*fen) {
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+          237┆ memset(board, 0, sizeof(Board));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-memset
+          When handling sensitive information in a buffer, it's important to ensure  that the data is securely
+          erased before the buffer is deleted or reused.  While `memset()` is commonly used for this purpose, 
+          it can leave sensitive  information behind due to compiler optimizations or other factors.  To avoid
+          this potential vulnerability, it's recommended to use the  `memset_s()` function instead.           
+          `memset_s()` is a standardized function  that securely overwrites the memory with a specified value,
+          making it more  difficult for an attacker to recover any sensitive data that was stored in  the     
+          buffer. By using `memset_s()` instead of `memset()`, you can help to  ensure that your application  
+          is more secure and less vulnerable to exploits  that rely on residual data in memory.               
+                                                                                                              
+           ▶▶┆ Autofix ▶ memset_s(board, 0, sizeof(Board)
+          237┆ memset(board, 0, sizeof(Board));
+                                      
+  [36m[22m[24m  Engine/evaluation.c[0m
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          114┆ Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+            ⋮┆----------------------------------------
+          115┆ int direction = (color == WHITE) ? 1 : -1;
+            ⋮┆----------------------------------------
+          185┆ int color_multiplier = (color == WHITE) ? 1 : -1;
+            ⋮┆----------------------------------------
+          223┆ int color_multiplier = (color == WHITE) ? 1 : -1;
+            ⋮┆----------------------------------------
+          268┆ int color_multiplier = (color == WHITE) ? 1 : -1;
+            ⋮┆----------------------------------------
+          292┆ int multiplier = (occupant == WHITE) ? 1 : -1;
+            ⋮┆----------------------------------------
+          365┆ Couleur opponent = (piece_color == WHITE) ? BLACK : WHITE;
+            ⋮┆----------------------------------------
+          385┆ int color_multiplier =
+          386┆     (color == WHITE) ? -1 : 1; // Pénalité pour nos pièces
+            ⋮┆----------------------------------------
+          415┆ int color_multiplier = (color == WHITE) ? 1 : -1;
+            ⋮┆----------------------------------------
+          426┆ int home_rank = (color == WHITE) ? 0 : 7;
+            ⋮┆----------------------------------------
+          432┆ int is_bad_square =
+          433┆     (file == 0 || file == 7) && (rank >= 2 && rank <= 5);
+            ⋮┆----------------------------------------
+          457┆ int home_rank = (color == WHITE) ? 0 : 7;
+            ⋮┆----------------------------------------
+          481┆ int color_multiplier = (color == WHITE) ? 1 : -1;
+            ⋮┆----------------------------------------
+          485┆ Bitboard initial_pawns = (color == WHITE) ? 0xFF00ULL : 0xFF000000000000ULL;
+            ⋮┆----------------------------------------
+          491┆ int developed_pieces =
+          492┆     __builtin_popcountll(
+          493┆         board->pieces[color][KNIGHT] &
+          494┆         ~((color == WHITE) ? 0x42ULL : 0x4200000000000000ULL)) +
+          495┆     __builtin_popcountll(
+          496┆         board->pieces[color][BISHOP] &
+          497┆         ~((color == WHITE) ? 0x24ULL : 0x2400000000000000ULL));
+            ⋮┆----------------------------------------
+          513┆ int should_log = (eval_call_count++ % 1000 == 0); // Log 1 éval sur 1000
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-missing-default-in-switch
+          The code does not have a default case in an expression with multiple conditions, such as a switch
+          statement.                                                                                       
+                                                                                                           
+          517┆ switch (result) {
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+          569┆ fprintf(stderr,
+          570┆         "[EVAL] mat=%d pst=%d safe_dev=%d pawn_pen=%d "
+          571┆         "phase_bonus=%d -> TOTAL=%d\n",
+          572┆         material, pst, safe_dev, pawn_adv_penalty, phase_bonus,
+          573┆         score);
+                                         
+  [36m[22m[24m  Engine/move_ordering.c[0m
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+           21┆ memset(killer_moves, 0, sizeof(killer_moves));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-memset
+          When handling sensitive information in a buffer, it's important to ensure  that the data is securely
+          erased before the buffer is deleted or reused.  While `memset()` is commonly used for this purpose, 
+          it can leave sensitive  information behind due to compiler optimizations or other factors.  To avoid
+          this potential vulnerability, it's recommended to use the  `memset_s()` function instead.           
+          `memset_s()` is a standardized function  that securely overwrites the memory with a specified value,
+          making it more  difficult for an attacker to recover any sensitive data that was stored in  the     
+          buffer. By using `memset_s()` instead of `memset()`, you can help to  ensure that your application  
+          is more secure and less vulnerable to exploits  that rely on residual data in memory.               
+                                                                                                              
+           ▶▶┆ Autofix ▶ memset_s(killer_moves, 0, sizeof(killer_moves)
+           21┆ memset(killer_moves, 0, sizeof(killer_moves));
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+           22┆ memset(history_scores, 0, sizeof(history_scores));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-memset
+          When handling sensitive information in a buffer, it's important to ensure  that the data is securely
+          erased before the buffer is deleted or reused.  While `memset()` is commonly used for this purpose, 
+          it can leave sensitive  information behind due to compiler optimizations or other factors.  To avoid
+          this potential vulnerability, it's recommended to use the  `memset_s()` function instead.           
+          `memset_s()` is a standardized function  that securely overwrites the memory with a specified value,
+          making it more  difficult for an attacker to recover any sensitive data that was stored in  the     
+          buffer. By using `memset_s()` instead of `memset()`, you can help to  ensure that your application  
+          is more secure and less vulnerable to exploits  that rely on residual data in memory.               
+                                                                                                              
+           ▶▶┆ Autofix ▶ memset_s(history_scores, 0, sizeof(history_scores)
+           22┆ memset(history_scores, 0, sizeof(history_scores));
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          108┆ Couleur defending_color = (attacking_color == WHITE) ? BLACK : WHITE;
+                                   
+  [36m[22m[24m  Engine/movegen.c[0m
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.NULL-Pointer-Dereference
+          The product dereferences a pointer that it expects to be valid but is NULL.
+                                                                                     
+           40┆ void generate_moves(const Board *board, MoveList *moves) {
+           41┆   // Vérifications de sécurité
+           42┆   if (!moves || !board)
+           43┆     return;
+           44┆
+           45┆   movelist_init(moves);
+           46┆
+           47┆   // Générer les coups de toutes les pièces selon le joueur actuel
+           48┆   Couleur color = board->to_move;
+           49┆
+             [hid 47 additional lines, adjust with --max-lines-per-finding] 
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+           51┆ fprintf(stderr, "[DEBUG] generate_moves for %s\n",
+           52┆         color == WHITE ? "WHITE" : "BLACK");
+            ⋮┆----------------------------------------
+           58┆ fprintf(stderr, "[DEBUG] After pawn_moves: %d moves (added %d)\n",
+           59┆         moves->count, moves->count - start_count);
+            ⋮┆----------------------------------------
+           65┆ fprintf(stderr, "[DEBUG] After rook_moves: %d moves (added %d)\n",
+           66┆         moves->count, moves->count - start_count);
+            ⋮┆----------------------------------------
+           72┆ fprintf(stderr, "[DEBUG] After bishop_moves: %d moves (added %d)\n",
+           73┆         moves->count, moves->count - start_count);
+            ⋮┆----------------------------------------
+           79┆ fprintf(stderr, "[DEBUG] After knight_moves: %d moves (added %d)\n",
+           80┆         moves->count, moves->count - start_count);
+            ⋮┆----------------------------------------
+           86┆ fprintf(stderr, "[DEBUG] After queen_moves: %d moves (added %d)\n",
+           87┆         moves->count, moves->count - start_count);
+            ⋮┆----------------------------------------
+           93┆ fprintf(stderr, "[DEBUG] After king_moves: %d moves (added %d)\n",
+           94┆         moves->count, moves->count - start_count);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          148┆ int left_capture = (color == WHITE) ? from + 7 : from - 9;
+            ⋮┆----------------------------------------
+          149┆ int right_capture = (color == WHITE) ? from + 9 : from - 7;
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.NULL-Pointer-Dereference
+          The product dereferences a pointer that it expects to be valid but is NULL.
+                                                                                     
+          160┆ static void generate_en_passant(const Board *board, Couleur color,
+          161┆                                 MoveList *moves) {
+          162┆   if (board->en_passant == -1)
+          163┆     return;
+          164┆
+          165┆   int ep_rank_check = board->en_passant / 8;
+          166┆ #ifdef DEBUG
+          167┆   fprintf(stderr, "[DEBUG EP] en_passant square=%d (rank=%d), color=%s\n",
+          168┆           board->en_passant, ep_rank_check, color == WHITE ? "WHITE" : "BLACK");
+          169┆ #endif
+             [hid 43 additional lines, adjust with --max-lines-per-finding] 
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+          167┆ fprintf(stderr, "[DEBUG EP] en_passant square=%d (rank=%d), color=%s\n",
+          168┆         board->en_passant, ep_rank_check, color == WHITE ? "WHITE" : "BLACK");
+            ⋮┆----------------------------------------
+          173┆ fprintf(stderr, "[DEBUG EP] Wrong rank for en-passant, skipping\n");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          181┆ Square target_pawn_square = (color == WHITE) ? ep_square - 8 : ep_square + 8;
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+          192┆ fprintf(stderr, "[DEBUG EP] Adding left en-passant move from %d to %d\n",
+          193┆         left_attacker, ep_square);
+            ⋮┆----------------------------------------
+          206┆ fprintf(stderr, "[DEBUG EP] Adding right en-passant move from %d to %d\n",
+          207┆         right_attacker, ep_square);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          219┆ int direction = (color == WHITE) ? 8 : -8;
+            ⋮┆----------------------------------------
+          220┆ int start_rank = (color == WHITE) ? 1 : 6;
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-memory-address-exposure
+          The software generates an error message that includes sensitive information about its environment,
+          users, or associated data. In particular, exposure of memory addresses might defeat ASLR.         
+                                                                                                            
+          223┆ fprintf(stderr, "[DEBUG PAWN] Generating for %s, bitboard=0x%llx\n",
+          224┆         color == WHITE ? "WHITE" : "BLACK", pawns);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+          223┆ fprintf(stderr, "[DEBUG PAWN] Generating for %s, bitboard=0x%llx\n",
+          224┆         color == WHITE ? "WHITE" : "BLACK", pawns);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-memory-address-exposure
+          The software generates an error message that includes sensitive information about its environment,
+          users, or associated data. In particular, exposure of memory addresses might defeat ASLR.         
+                                                                                                            
+          386┆ fprintf(stderr, "[DEBUG KNIGHT] Generating for %s, bitboard=0x%llx\n",
+          387┆         color == WHITE ? "WHITE" : "BLACK", knights);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+          386┆ fprintf(stderr, "[DEBUG KNIGHT] Generating for %s, bitboard=0x%llx\n",
+          387┆         color == WHITE ? "WHITE" : "BLACK", knights);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          500┆ if (!(board->castle_rights & WHITE_KINGSIDE))
+          501┆   return 1;
+            ⋮┆----------------------------------------
+          514┆ if (!(board->castle_rights & WHITE_QUEENSIDE))
+          515┆   return 1;
+            ⋮┆----------------------------------------
+          530┆ if (!(board->castle_rights & BLACK_KINGSIDE))
+          531┆   return 1;
+            ⋮┆----------------------------------------
+          541┆ if (!(board->castle_rights & BLACK_QUEENSIDE))
+          542┆   return 1;
+            ⋮┆----------------------------------------
+          570┆ int has_rights =
+          571┆     is_kingside ? (color == WHITE ? (board->castle_rights & WHITE_KINGSIDE)
+          572┆                                   : (board->castle_rights & BLACK_KINGSIDE))
+          573┆                 : (color == WHITE ? (board->castle_rights & WHITE_QUEENSIDE)
+          574┆                                   : (board->castle_rights & BLACK_QUEENSIDE));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+          577┆ fprintf(stderr, "[DEBUG CASTLE] Try %s %s castle, rights=%d\n",
+          578┆         color == WHITE ? "WHITE" : "BLACK",
+          579┆         is_kingside ? "kingside" : "queenside", has_rights);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          609┆ Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+          615┆ fprintf(stderr, "[DEBUG CASTLE] Adding %s %s castle move from %d to %d\n",
+          616┆         color == WHITE ? "WHITE" : "BLACK",
+          617┆         is_kingside ? "kingside" : "queenside", king_pos, king_dest);
+            ⋮┆----------------------------------------
+          622┆ fprintf(
+          623┆     stderr,
+          624┆     "[DEBUG CASTLE] Castle move is illegal (king in check after move)\n");
+            ⋮┆----------------------------------------
+          629┆ fprintf(stderr,
+          630┆         "[DEBUG CASTLE] Castle blocked: passage_square=%d attacked=%d, "
+          631┆         "king_dest=%d attacked=%d\n",
+          632┆         passage_square, is_square_attacked(board, passage_square, opponent),
+          633┆         king_dest, is_square_attacked(board, king_dest, opponent));
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          721┆ int pawn_direction = (attacking_color == WHITE) ? 1 : -1;
+            ⋮┆----------------------------------------
+          845┆ Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.NULL-Pointer-Dereference
+          The product dereferences a pointer that it expects to be valid but is NULL.
+                                                                                     
+          850┆ void make_move_temp(Board *board, const Move *move, Board *backup) {
+          851┆
+          852┆   // Sauvegarder l'état actuel
+          853┆   *backup = *board;
+          854┆
+          855┆   // Effacer la pièce de la case de départ
+          856┆   PieceType piece_type = get_piece_type(board, move->from);
+          857┆   Couleur piece_color = get_piece_color(board, move->from);
+          858┆
+          859┆   // Update Zobrist: retirer la pièce de la case de départ
+             [hid 141 additional lines, adjust with --max-lines-per-finding] 
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          900┆ Couleur opponent = (piece_color == WHITE) ? BLACK : WHITE;
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+          1062┆ fprintf(stderr, "[DEBUG FILTER] Filtered %d illegal moves out of %d\n",
+          1063┆         filtered_count, moves->count);
+                                      
+  [36m[22m[24m  Engine/quiescence.c[0m
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          130┆ Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+                                  
+  [36m[22m[24m  Engine/search.c[0m
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+           91┆ if (tt_entry != NULL && tt_entry->depth >= depth) {
+            ⋮┆----------------------------------------
+          169┆ int null_score =
+          170┆     -negamax_alpha_beta(board, depth - 1 - R, -beta, -beta + 1,
+          171┆                         (color == WHITE) ? BLACK : WHITE, ply + 1, 1);
+            ⋮┆----------------------------------------
+          202┆ if (tt_entry != NULL) {
+            ⋮┆----------------------------------------
+          207┆ if (candidate.from >= 0 && candidate.from < 64 && candidate.to >= 0 &&
+          208┆     candidate.to < 64) {
+          209┆   // ✅ VALIDER que le coup est dans la liste des coups légaux
+          210┆   for (int i = 0; i < moves.count; i++) {
+          211┆     if (moves.moves[i].from == candidate.from &&
+          212┆         moves.moves[i].to == candidate.to &&
+          213┆         moves.moves[i].type == candidate.type &&
+          214┆         // Pour les promotions, vérifier aussi la pièce promue
+          215┆         (candidate.type != MOVE_PROMOTION ||
+          216┆          moves.moves[i].promotion == candidate.promotion)) {
+             [hid 9 additional lines, adjust with --max-lines-per-finding] 
+          283┆ Couleur opponent = (color == WHITE) ? BLACK : WHITE;
+                                          
+  [36m[22m[24m  Engine/search_helpers.c[0m
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+           50┆ double reduction = 0.7844 + log(depth) * log(move_num) / 2.4696;
+            ⋮┆----------------------------------------
+           50┆ double reduction = 0.7844 + log(depth) * log(move_num) / 2.4696;
+                                       
+  [36m[22m[24m  Engine/timemanager.c[0m
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           43┆ char *token = strtok(params, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           43┆ char *token = strtok(params, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           46┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           46┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           48┆ go_params->wtime = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           48┆ go_params->wtime = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           50┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           50┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           52┆ go_params->btime = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           52┆ go_params->btime = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           54┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           54┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           56┆ go_params->winc = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           56┆ go_params->winc = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           58┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           58┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           60┆ go_params->binc = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           60┆ go_params->binc = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           62┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           62┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           64┆ go_params->movestogo = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           64┆ go_params->movestogo = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           66┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           66┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           68┆ go_params->depth = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           68┆ go_params->depth = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           70┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           70┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           72┆ go_params->nodes = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           72┆ go_params->nodes = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           74┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           74┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           76┆ go_params->mate = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           76┆ go_params->mate = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           78┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           78┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           80┆ go_params->movetime = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           80┆ go_params->movetime = atoi(token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           90┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+           90┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          102┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          102┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          106┆ token = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          106┆ token = strtok(NULL, " ");
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          146┆ int my_time = (board->to_move == WHITE) ? params->wtime : params->btime;
+            ⋮┆----------------------------------------
+          147┆ int my_inc = (board->to_move == WHITE) ? params->winc : params->binc;
+                                         
+  [36m[22m[24m  Engine/transposition.c[0m
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+           16┆ memset(tt, 0, sizeof(TranspositionTable));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-memset
+          When handling sensitive information in a buffer, it's important to ensure  that the data is securely
+          erased before the buffer is deleted or reused.  While `memset()` is commonly used for this purpose, 
+          it can leave sensitive  information behind due to compiler optimizations or other factors.  To avoid
+          this potential vulnerability, it's recommended to use the  `memset_s()` function instead.           
+          `memset_s()` is a standardized function  that securely overwrites the memory with a specified value,
+          making it more  difficult for an attacker to recover any sensitive data that was stored in  the     
+          buffer. By using `memset_s()` instead of `memset()`, you can help to  ensure that your application  
+          is more secure and less vulnerable to exploits  that rely on residual data in memory.               
+                                                                                                              
+           ▶▶┆ Autofix ▶ memset_s(tt, 0, sizeof(TranspositionTable)
+           16┆ memset(tt, 0, sizeof(TranspositionTable));
+                               
+  [36m[22m[24m  Engine/uci.c[0m
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-write-into-stack-buffer
+          The software directly writes into a stack buffer. This might lead to a stack-based buffer overflow.
+                                                                                                             
+           38┆ memset(line, 0, sizeof(line));
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+           38┆ memset(line, 0, sizeof(line));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-memset
+          When handling sensitive information in a buffer, it's important to ensure  that the data is securely
+          erased before the buffer is deleted or reused.  While `memset()` is commonly used for this purpose, 
+          it can leave sensitive  information behind due to compiler optimizations or other factors.  To avoid
+          this potential vulnerability, it's recommended to use the  `memset_s()` function instead.           
+          `memset_s()` is a standardized function  that securely overwrites the memory with a specified value,
+          making it more  difficult for an attacker to recover any sensitive data that was stored in  the     
+          buffer. By using `memset_s()` instead of `memset()`, you can help to  ensure that your application  
+          is more secure and less vulnerable to exploits  that rely on residual data in memory.               
+                                                                                                              
+           ▶▶┆ Autofix ▶ memset_s(line, 0, sizeof(line)
+           38┆ memset(line, 0, sizeof(line));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           39┆ if (!fgets(line, sizeof(line), stdin))
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-write-into-stack-buffer
+          The software directly writes into a stack buffer. This might lead to a stack-based buffer overflow.
+                                                                                                             
+           39┆ if (!fgets(line, sizeof(line), stdin))
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          line is an array. It's passed to parse_uci_command. Check if a length is also passed. If not, check
+          if parse_uci_command is aware of its length somehow. If not, check for buffer over read/write.     
+                                                                                                             
+           48┆ parse_uci_command(line, &board);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+           60┆ int depth = atoi(params);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+           60┆ int depth = atoi(params);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+          112┆ fprintf(stderr, "[UCI] Debug mode enabled\n");
+            ⋮┆----------------------------------------
+          115┆ fprintf(stderr, "[UCI] Debug mode disabled\n");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-pointer-subtraction
+          The software subtracts one pointer from another in order to determine size, but this calculation can
+          be incorrect if the pointers do not exist in the same memory chunk.                                 
+                                                                                                              
+          137┆ size_t name_len = value_token - name_token;
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          138┆ strncpy(option_name, name_token, name_len);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-write-into-stack-buffer
+          The software directly writes into a stack buffer. This might lead to a stack-based buffer overflow.
+                                                                                                             
+          138┆ strncpy(option_name, name_token, name_len);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-string-copy-fn
+          Finding triggers whenever there is a strcpy or strncpy used. This is an issue because strcpy does   
+          not affirm the size of the destination array and strncpy will not automatically NULL-terminate      
+          strings. This can lead to buffer overflows, which can cause program crashes and potentially let an  
+          attacker inject code in the program. Fix this by using strcpy_s instead (although note that strcpy_s
+          is an optional part of the C11 standard, and so may not be available).                              
+                                                                                                              
+          138┆ strncpy(option_name, name_token, name_len);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          option_name is an array. It's passed to strncpy. Check if a length is also passed. If not, check if
+          strncpy is aware of its length somehow. If not, check for buffer over read/write.                  
+                                                                                                             
+          138┆ strncpy(option_name, name_token, name_len);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          142┆ strncpy(option_name, name_token, sizeof(option_name) - 1);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-write-into-stack-buffer
+          The software directly writes into a stack buffer. This might lead to a stack-based buffer overflow.
+                                                                                                             
+          142┆ strncpy(option_name, name_token, sizeof(option_name) - 1);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-string-copy-fn
+          Finding triggers whenever there is a strcpy or strncpy used. This is an issue because strcpy does   
+          not affirm the size of the destination array and strncpy will not automatically NULL-terminate      
+          strings. This can lead to buffer overflows, which can cause program crashes and potentially let an  
+          attacker inject code in the program. Fix this by using strcpy_s instead (although note that strcpy_s
+          is an optional part of the C11 standard, and so may not be available).                              
+                                                                                                              
+          142┆ strncpy(option_name, name_token, sizeof(option_name) - 1);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-atoi-atol-atof
+          The atoi(), atol(), atof(), and similar functions don't handle errors. They don't check for integer
+          overflow and can return a negative value.  They have undefined behavior if the value of the result 
+          cannot be  represented. They return 0 (or 0.0) if the string does not represent  an integer (or    
+          decimal), which is indistinguishable from a correctly  formatted, zero-denoting input string.      
+                                                                                                             
+          148┆ int hash_mb = atoi(value_token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.correctness.incorrect-use-ato-fn
+          Avoid the 'ato*()' family of functions. Their use can lead to undefined behavior, integer overflows,
+          and lack of appropriate error handling. Instead prefer the 'strtol*()' family of functions.         
+                                                                                                              
+          148┆ int hash_mb = atoi(value_token);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          option_name is an array. It's passed to DEBUG_LOG_UCI. Check if a length is also passed. If not,
+          check if DEBUG_LOG_UCI is aware of its length somehow. If not, check for buffer over read/write.
+                                                                                                          
+          163┆ DEBUG_LOG_UCI("Unknown or unsupported option: %s\n", option_name);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-pointer-subtraction
+          The software subtracts one pointer from another in order to determine size, but this calculation can
+          be incorrect if the pointers do not exist in the same memory chunk.                                 
+                                                                                                              
+          205┆ size_t fen_len = moves_start - fen_start;
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          207┆ strncpy(fen_string, fen_start, fen_len);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-write-into-stack-buffer
+          The software directly writes into a stack buffer. This might lead to a stack-based buffer overflow.
+                                                                                                             
+          207┆ strncpy(fen_string, fen_start, fen_len);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-string-copy-fn
+          Finding triggers whenever there is a strcpy or strncpy used. This is an issue because strcpy does   
+          not affirm the size of the destination array and strncpy will not automatically NULL-terminate      
+          strings. This can lead to buffer overflows, which can cause program crashes and potentially let an  
+          attacker inject code in the program. Fix this by using strcpy_s instead (although note that strcpy_s
+          is an optional part of the C11 standard, and so may not be available).                              
+                                                                                                              
+          207┆ strncpy(fen_string, fen_start, fen_len);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          fen_string is an array. It's passed to strncpy. Check if a length is also passed. If not, check if
+          strncpy is aware of its length somehow. If not, check for buffer over read/write.                 
+                                                                                                            
+          207┆ strncpy(fen_string, fen_start, fen_len);
+            ⋮┆----------------------------------------
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          fen_string is an array. It's passed to board_from_fen. Check if a length is also passed. If not, 
+          check if board_from_fen is aware of its length somehow. If not, check for buffer over read/write.
+                                                                                                           
+          209┆ board_from_fen(board, fen_string);
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+          235┆ memset(&move, 0, sizeof(move));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-memset
+          When handling sensitive information in a buffer, it's important to ensure  that the data is securely
+          erased before the buffer is deleted or reused.  While `memset()` is commonly used for this purpose, 
+          it can leave sensitive  information behind due to compiler optimizations or other factors.  To avoid
+          this potential vulnerability, it's recommended to use the  `memset_s()` function instead.           
+          `memset_s()` is a standardized function  that securely overwrites the memory with a specified value,
+          making it more  difficult for an attacker to recover any sensitive data that was stored in  the     
+          buffer. By using `memset_s()` instead of `memset()`, you can help to  ensure that your application  
+          is more secure and less vulnerable to exploits  that rely on residual data in memory.               
+                                                                                                              
+           ▶▶┆ Autofix ▶ memset_s(&move, 0, sizeof(move)
+          235┆ memset(&move, 0, sizeof(move));
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-integer-truncation
+          Truncation errors occur when a primitive is cast to a primitive of a  smaller size and data is lost
+          in the conversion. The value cannot be  trusted and the application will be in an undefined state. 
+                                                                                                             
+          256┆ char p = uci_str[4];
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          346┆ strncpy(params_copy, params, sizeof(params_copy) - 1);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-write-into-stack-buffer
+          The software directly writes into a stack buffer. This might lead to a stack-based buffer overflow.
+                                                                                                             
+          346┆ strncpy(params_copy, params, sizeof(params_copy) - 1);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-string-copy-fn
+          Finding triggers whenever there is a strcpy or strncpy used. This is an issue because strcpy does   
+          not affirm the size of the destination array and strncpy will not automatically NULL-terminate      
+          strings. This can lead to buffer overflows, which can cause program crashes and potentially let an  
+          attacker inject code in the program. Fix this by using strcpy_s instead (although note that strcpy_s
+          is an optional part of the C11 standard, and so may not be available).                              
+                                                                                                              
+          346┆ strncpy(params_copy, params, sizeof(params_copy) - 1);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          params_copy is an array. It's passed to parse_go_params. Check if a length is also passed. If not,
+          check if parse_go_params is aware of its length somehow. If not, check for buffer over read/write.
+                                                                                                            
+          353┆ parse_go_params(params_copy, &go_params);
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.NULL-Pointer-Dereference
+          The product dereferences a pointer that it expects to be valid but is NULL.
+                                                                                     
+          431┆ void apply_uci_move(Board *board, const Move *move) {
+          432┆   Board dummy_backup;
+          433┆
+          434┆   // Sauvegarder les informations AVANT le coup
+          435┆   PieceType moving_piece = get_piece_type(board, move->from);
+          436┆   int is_capture =
+          437┆       (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT);
+          438┆   Couleur moving_color = board->to_move;
+          439┆
+          440┆   // Appliquer le coup
+             [hid 14 additional lines, adjust with --max-lines-per-finding] 
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          436┆ int is_capture =
+          437┆     (move->type == MOVE_CAPTURE || move->type == MOVE_EN_PASSANT);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          459┆ strncpy(moves_copy, moves_str, sizeof(moves_copy) - 1);
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-write-into-stack-buffer
+          The software directly writes into a stack buffer. This might lead to a stack-based buffer overflow.
+                                                                                                             
+          459┆ strncpy(moves_copy, moves_str, sizeof(moves_copy) - 1);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-string-copy-fn
+          Finding triggers whenever there is a strcpy or strncpy used. This is an issue because strcpy does   
+          not affirm the size of the destination array and strncpy will not automatically NULL-terminate      
+          strings. This can lead to buffer overflows, which can cause program crashes and potentially let an  
+          attacker inject code in the program. Fix this by using strcpy_s instead (although note that strcpy_s
+          is an optional part of the C11 standard, and so may not be available).                              
+                                                                                                              
+          459┆ strncpy(moves_copy, moves_str, sizeof(moves_copy) - 1);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          moves_copy is an array. It's passed to strtok. Check if a length is also passed. If not, check if
+          strtok is aware of its length somehow. If not, check for buffer over read/write.                 
+                                                                                                           
+          462┆ char *move_str = strtok(moves_copy, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          462┆ char *move_str = strtok(moves_copy, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          462┆ char *move_str = strtok(moves_copy, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          502┆ move_str = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          502┆ move_str = strtok(NULL, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          508┆ char *command = strtok(line, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          508┆ char *command = strtok(line, " ");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          515┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          515┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          518┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          518┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          521┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          521┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          526┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          526┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          529┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          529┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+          532┆ char *params = strtok(NULL, "");
+   
+    ❯❱ Users.USER.Semgrep_rules.c.lang.security.insecure-use-strtok-fn
+          Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently
+          erasing the delimiter character. Use 'strtok_r()' instead.                                    
+                                                                                                        
+          532┆ char *params = strtok(NULL, "");
+                                 
+  [36m[22m[24m  Engine/utils.c[0m
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          from_str is an array. It's passed to printf. Check if a length is also passed. If not, check if
+          printf is aware of its length somehow. If not, check for buffer over read/write.               
+                                                                                                         
+           16┆ printf("%s%s", from_str, to_str);
+            ⋮┆----------------------------------------
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          to_str is an array. It's passed to printf. Check if a length is also passed. If not, check if printf
+          is aware of its length somehow. If not, check for buffer over read/write.                           
+                                                                                                              
+           16┆ printf("%s%s", from_str, to_str);
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.Other.raptor-insecure-api-sprintf-vsprintf
+          A buffer overflow condition exists when a program attempts to put more data in a buffer than it can 
+          hold, or when a program attempts to put data in a memory area outside of the boundaries of a buffer.
+                                                                                                              
+           54┆ sprintf(buffer, "%s%s", from_str, to_str);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           54┆ sprintf(buffer, "%s%s", from_str, to_str);
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+           54┆ sprintf(buffer, "%s%s", from_str, to_str);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+           54┆ sprintf(buffer, "%s%s", from_str, to_str);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          buffer is an array. It's passed to sprintf. Check if a length is also passed. If not, check if
+          sprintf is aware of its length somehow. If not, check for buffer over read/write.             
+                                                                                                        
+           54┆ sprintf(buffer, "%s%s", from_str, to_str);
+            ⋮┆----------------------------------------
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          from_str is an array. It's passed to sprintf. Check if a length is also passed. If not, check if
+          sprintf is aware of its length somehow. If not, check for buffer over read/write.               
+                                                                                                          
+           54┆ sprintf(buffer, "%s%s", from_str, to_str);
+            ⋮┆----------------------------------------
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          to_str is an array. It's passed to sprintf. Check if a length is also passed. If not, check if
+          sprintf is aware of its length somehow. If not, check for buffer over read/write.             
+                                                                                                        
+           54┆ sprintf(buffer, "%s%s", from_str, to_str);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-interesting-api-calls
+          Locate all calls to interesting and potentially insecure API functions (candidate points). The   
+          auditor can backtrace from these candidate points to find pathways allowing access from untrusted
+          input.                                                                                           
+                                                                                                           
+           58┆ sprintf(buffer + strlen(buffer), "%c", pieces[move->promotion]);
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+           58┆ sprintf(buffer + strlen(buffer), "%c", pieces[move->promotion]);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.Uncontrolled-Format-String
+          The product uses a function that accepts a format string as an argument, but the format string     
+          originates from an external source. When an attacker can modify an externally-controlled format    
+          string, this can lead to buffer overflows, denial of service, or data representation problems. It  
+          should be noted that in some circumstances, such as internationalization, the set of format strings
+          is externally controlled by design. If the source of these format strings is trusted (e.g. only    
+          contained in library files that are only modifiable by the system administrator), then the external
+          control might not itself pose a vulnerability.                                                     
+                                                                                                             
+           58┆ sprintf(buffer + strlen(buffer), "%c", pieces[move->promotion]);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.clear_rules.arrays-passed-to-functions
+          buffer is an array. It's passed to strlen. Check if a length is also passed. If not, check if strlen
+          is aware of its length somehow. If not, check for buffer over read/write.                           
+                                                                                                              
+           58┆ sprintf(buffer + strlen(buffer), "%c", pieces[move->promotion]);
+   
+    ❯❱ Users.USER.Semgrep_rules.c.Other.raptor-integer-truncation
+          Truncation errors occur when a primitive is cast to a primitive of a  smaller size and data is lost
+          in the conversion. The value cannot be  trusted and the application will be in an undefined state. 
+                                                                                                             
+           76┆ char c = piece_chars[piece + 1];
+            ⋮┆----------------------------------------
+           78┆ c = c + 32; // Minuscule pour noir
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+          140┆ memcpy(&temp, board, sizeof(Board));
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          145┆ Couleur opponent = (temp.to_move == WHITE) ? BLACK : WHITE;
+   
+   ❯❯❱ Users.USER.Semgrep_rules.c.clear_rules.Stack-based-Buffer-Overflow
+          A stack-based buffer overflow condition is a condition where the buffer being overwritten is      
+          allocated on the stack (i.e., is a local variable or, rarely, a parameter to a function). "Stack  
+          Overflow" is often used to mean the same thing as stack-based buffer overflow, however it is also 
+          used on occasion to mean stack exhaustion, usually a result from an excessively recursive function
+          call. Due to the ambiguity of the term, use of stack overflow to describe either circumstance is  
+          discouraged.                                                                                      
+                                                                                                            
+          170┆ memcpy(&temp, board, sizeof(Board));
+   
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+          174┆ Couleur opponent = (board->to_move == WHITE) ? BLACK : WHITE;
+                                   
+  [36m[22m[24m  Engine/zobrist.c[0m
+     ❱ Users.USER.Semgrep_rules.c.Other.raptor-typos
+          The programmer accidentally uses the wrong operator, which changes the application logic in
+          security-relevant ways. This rule also covers some other common typo patterns.             
+                                                                                                     
+           27┆ if (seed == 0) {
+
