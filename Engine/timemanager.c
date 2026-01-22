@@ -1,15 +1,9 @@
 #define _POSIX_C_SOURCE 200809L
 #include "timemanager.h"
+#include "logger.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// Macro pour logs de debug conditionnels
-#ifdef DEBUG
-#define DEBUG_LOG_TIME(...) fprintf(stderr, "[TIME] " __VA_ARGS__)
-#else
-#define DEBUG_LOG_TIME(...)
-#endif
 
 // Constantes pour la gestion du temps
 #define DEFAULT_TIME_MS 3000
@@ -36,7 +30,7 @@ void parse_go_params(char *params, GoParams *go_params) {
   go_params->infinite = 0;
   go_params->ponder = 0;
 
-  DEBUG_LOG_TIME("Parsing go params: '%s'\n", params ? params : "(null)");
+  LOG_DEBUG("[TIME] " "Parsing go params: '%s'\n", params ? params : "(null)");
 
   if (!params)
     return;
@@ -88,7 +82,7 @@ void parse_go_params(char *params, GoParams *go_params) {
       // Ignorer proprement searchmoves (liste de coups à considérer)
       // Format: searchmoves e2e4 d2d4 ...
       // On saute tous les tokens jusqu'à un autre keyword
-      DEBUG_LOG_TIME("searchmoves parameter ignored\n");
+      LOG_DEBUG("[TIME] " "searchmoves parameter ignored\n");
       token = strtok_r(NULL, " ", &saveptr);
       while (token != NULL) {
         // Vérifier si c'est un keyword connu
@@ -109,7 +103,7 @@ void parse_go_params(char *params, GoParams *go_params) {
     }
   }
 
-  DEBUG_LOG_TIME(
+  LOG_DEBUG("[TIME] " 
       "Parsed: wtime=%d btime=%d winc=%d binc=%d depth=%d movetime=%d\n",
       go_params->wtime, go_params->btime, go_params->winc, go_params->binc,
       go_params->depth, go_params->movetime);
@@ -128,19 +122,19 @@ int estimate_moves_to_go(const Board *board) {
 
 // Calcule le temps alloué pour ce coup
 int calculate_time_for_move(const Board *board, const GoParams *params) {
-  DEBUG_LOG_TIME("Calculating time for move (to_move=%s)\n",
+  LOG_DEBUG("[TIME] " "Calculating time for move (to_move=%s)\n",
                  board->to_move == WHITE ? "WHITE" : "BLACK");
 
   // Cas 1: Temps fixe spécifié
   if (params->movetime > 0) {
     int allocated_time = (int)(params->movetime * 0.95); // 90% du movetime
-    DEBUG_LOG_TIME("Using fixed movetime: %dms, allocated: %dms\n", params->movetime, allocated_time);
+    LOG_DEBUG("[TIME] " "Using fixed movetime: %dms, allocated: %dms\n", params->movetime, allocated_time);
     return allocated_time;
   }
 
   // Cas 2: Mode infini
   if (params->infinite) {
-    DEBUG_LOG_TIME("Infinite search mode\n");
+    LOG_DEBUG("[TIME] " "Infinite search mode\n");
     return 3600000; // 1 heure
   }
 
@@ -148,11 +142,11 @@ int calculate_time_for_move(const Board *board, const GoParams *params) {
   int my_time = (board->to_move == WHITE) ? params->wtime : params->btime;
   int my_inc = (board->to_move == WHITE) ? params->winc : params->binc;
 
-  DEBUG_LOG_TIME("Available: time=%dms, inc=%dms\n", my_time, my_inc);
+  LOG_DEBUG("[TIME] " "Available: time=%dms, inc=%dms\n", my_time, my_inc);
 
   // Cas 3: Pas de temps spécifié
   if (my_time < 0) {
-    DEBUG_LOG_TIME("No time specified, using default: %dms\n", DEFAULT_TIME_MS);
+    LOG_DEBUG("[TIME] " "No time specified, using default: %dms\n", DEFAULT_TIME_MS);
     return DEFAULT_TIME_MS;
   }
 
@@ -162,7 +156,7 @@ int calculate_time_for_move(const Board *board, const GoParams *params) {
     if (panic_time < PANIC_MIN_TIME_MS) {
       panic_time = PANIC_MIN_TIME_MS;
     }
-    DEBUG_LOG_TIME("Panic mode: %dms\n", panic_time);
+    LOG_DEBUG("[TIME] " "Panic mode: %dms\n", panic_time);
     return panic_time;
   }
 
@@ -196,7 +190,7 @@ int calculate_time_for_move(const Board *board, const GoParams *params) {
     allocated_time = MAX_TIME_PER_MOVE_MS;
   }
 
-  DEBUG_LOG_TIME("Allocated time: %dms (moves_to_go=%d)\n", allocated_time,
+  LOG_DEBUG("[TIME] " "Allocated time: %dms (moves_to_go=%d)\n", allocated_time,
                  moves_to_go);
 
   return allocated_time;

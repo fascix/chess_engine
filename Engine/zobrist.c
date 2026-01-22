@@ -1,15 +1,9 @@
 #include "zobrist.h"
 #include "movegen.h"
+#include "logger.h"
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
-
-// Macro pour logs de debug conditionnels
-#ifdef DEBUG
-#define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define DEBUG_LOG(...)
-#endif
 
 // ========== TABLES ZOBRIST GLOBALES ==========
 static uint64_t zobrist_pieces[2][6][64]; // [color][piece][square]
@@ -80,9 +74,9 @@ void init_zobrist(void) {
     }
   }
   if (zero_count > 0) {
-    DEBUG_LOG("WARNING: %d clés Zobrist sont à 0 !\n", zero_count);
+    LOG_DEBUG("WARNING: %d clés Zobrist sont à 0 !\n", zero_count);
   }
-  DEBUG_LOG("Zobrist initialisé : %d clés non-nulles\n",
+  LOG_DEBUG("Zobrist initialisé : %d clés non-nulles\n",
             2 * 6 * 64 + 16 + 64 + 1 - zero_count);
 #endif
 }
@@ -91,7 +85,7 @@ void init_zobrist(void) {
 
 uint64_t zobrist_hash(const Board *board) {
   if (!board) {
-    DEBUG_LOG("zobrist_hash: null board pointer\n");
+    LOG_DEBUG("zobrist_hash: null board pointer\n");
     return 0;
   }
 
@@ -104,7 +98,7 @@ uint64_t zobrist_hash(const Board *board) {
       while (pieces) {
         int square = __builtin_ctzll(pieces);
         if (square < 0 || square >= 64) {
-          DEBUG_LOG("zobrist_hash: invalid square=%d (color=%d piece=%d)\n",
+          LOG_DEBUG("zobrist_hash: invalid square=%d (color=%d piece=%d)\n",
                     square, color, piece);
           // Clear lowest bit and continue defensively
           pieces &= pieces - 1;
@@ -120,7 +114,7 @@ uint64_t zobrist_hash(const Board *board) {
   if (board->castle_rights >= 0 && board->castle_rights < 16) {
     hash ^= zobrist_castling[board->castle_rights];
   } else {
-    DEBUG_LOG("zobrist_hash: invalid castle_rights=%d\n", board->castle_rights);
+    LOG_DEBUG("zobrist_hash: invalid castle_rights=%d\n", board->castle_rights);
   }
 
   // En passant (vérifier borne)
@@ -128,7 +122,7 @@ uint64_t zobrist_hash(const Board *board) {
     hash ^= zobrist_en_passant[board->en_passant];
   } else if (board->en_passant != -1) {
     // -1 signifie pas d'en-passant; autres valeurs sont suspectes
-    DEBUG_LOG("zobrist_hash: invalid en_passant=%d\n", board->en_passant);
+    LOG_DEBUG("zobrist_hash: invalid en_passant=%d\n", board->en_passant);
   }
 
   // Joueur actuel
@@ -168,7 +162,7 @@ uint64_t zobrist_get_side_key(void) { return zobrist_side_to_move; }
 // ========== TEST DE VALIDATION ==========
 
 void test_zobrist_uniqueness(void) {
-  DEBUG_LOG("\n=== TEST UNICITÉ ZOBRIST ===\n");
+  LOG_DEBUG("\n=== TEST UNICITÉ ZOBRIST ===\n");
 
   // Test 1 : Positions différentes = hash différents
   Board b1, b2;
@@ -176,7 +170,7 @@ void test_zobrist_uniqueness(void) {
   board_init(&b2);
 
   uint64_t h1 = zobrist_hash(&b1);
-  DEBUG_LOG("Position initiale : hash = %016llx\n", (unsigned long long)h1);
+  LOG_DEBUG("Position initiale : hash = %016llx\n", (unsigned long long)h1);
 
   // Bouger un pion
   Move m = {.from = E2, .to = E4, .type = MOVE_NORMAL};
@@ -184,21 +178,21 @@ void test_zobrist_uniqueness(void) {
   make_move_temp(&b2, &m, &backup);
 
   uint64_t h2 = zobrist_hash(&b2);
-  DEBUG_LOG("Après e2e4      : hash = %016llx\n", (unsigned long long)h2);
+  LOG_DEBUG("Après e2e4      : hash = %016llx\n", (unsigned long long)h2);
 
   if (h1 == h2) {
-    DEBUG_LOG("❌ ERREUR : Hash identiques pour positions différentes !\n");
+    LOG_DEBUG("❌ ERREUR : Hash identiques pour positions différentes !\n");
   } else {
-    DEBUG_LOG("✓ Hash différents (écart = %lld)\n",
+    LOG_DEBUG("✓ Hash différents (écart = %lld)\n",
               (long long)(h2 > h1 ? h2 - h1 : h1 - h2));
   }
 
   // Test 2 : Vérifier qu'aucun hash n'est 0
   if (h1 == 0 || h2 == 0) {
-    DEBUG_LOG("❌ ERREUR : Hash égal à 0 détecté !\n");
+    LOG_DEBUG("❌ ERREUR : Hash égal à 0 détecté !\n");
   } else {
-    DEBUG_LOG("✓ Aucun hash nul\n");
+    LOG_DEBUG("✓ Aucun hash nul\n");
   }
 
-  DEBUG_LOG("=== FIN TEST ===\n\n");
+  LOG_DEBUG("=== FIN TEST ===\n\n");
 }

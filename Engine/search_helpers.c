@@ -1,13 +1,7 @@
 #include "search_helpers.h"
+#include "logger.h"
 #include <math.h>
 #include <stdio.h>
-
-// Macro pour logs de debug conditionnels
-#ifdef DEBUG
-#define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define DEBUG_LOG(...)
-#endif
 
 // ========== BACKUP STACK ==========
 
@@ -59,7 +53,7 @@ void init_lmr_table(void) {
     }
   }
 
-  DEBUG_LOG("[LMR] Table initialisée avec formule Ethereal\n");
+  LOG_DEBUG("[LMR] Table initialisée avec formule Ethereal\n");
 }
 
 int get_lmr_reduction(int depth, int move_number) {

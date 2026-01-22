@@ -1,14 +1,8 @@
 #include "transposition.h"
 #include "evaluation.h" // For MATE_SCORE constant
+#include "logger.h"
 #include <stdio.h>
 #include <string.h>
-
-// Macro pour logs de debug conditionnels
-#ifdef DEBUG
-#define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define DEBUG_LOG(...)
-#endif
 
 // ========== INITIALISATION ==========
 
@@ -17,7 +11,7 @@ void tt_init(TranspositionTable *tt) {
   tt->current_age = 1;
 
 #ifdef DEBUG
-  DEBUG_LOG("TT initialisée : %zu entrées (%zu bytes)\n", (size_t)TT_SIZE,
+  LOG_DEBUG("TT initialisée : %zu entrées (%zu bytes)\n", (size_t)TT_SIZE,
             sizeof(TranspositionTable));
 #endif
 }
@@ -34,7 +28,7 @@ void tt_store(TranspositionTable *tt, uint64_t key, int depth, int score,
 #ifdef DEBUG
     static int zero_key_warnings = 0;
     if (zero_key_warnings++ < 3) {
-      DEBUG_LOG("WARNING: tt_store() appelé avec key=0 !\n");
+      LOG_DEBUG("WARNING: tt_store() appelé avec key=0 !\n");
     }
 #endif
     return; // NE PAS STOCKER
@@ -78,7 +72,7 @@ void tt_store(TranspositionTable *tt, uint64_t key, int depth, int score,
 #ifdef DEBUG
     static int store_count = 0;
     if (store_count++ < 10) {
-      DEBUG_LOG("TT_STORE: index=%u key=%016llx depth=%d score=%d->%d ply=%d\n",
+      LOG_DEBUG("TT_STORE: index=%u key=%016llx depth=%d score=%d->%d ply=%d\n",
                 index, (unsigned long long)key, depth, score, adjusted_score,
                 ply);
     }
@@ -95,7 +89,7 @@ TTEntry *tt_probe(TranspositionTable *tt, uint64_t key, int ply,
 #ifdef DEBUG
     static int zero_key_probes = 0;
     if (zero_key_probes++ < 3) {
-      DEBUG_LOG("WARNING: tt_probe() appelé avec key=0 !\n");
+      LOG_DEBUG("WARNING: tt_probe() appelé avec key=0 !\n");
     }
 #endif
     return NULL;
@@ -122,7 +116,7 @@ TTEntry *tt_probe(TranspositionTable *tt, uint64_t key, int ply,
 #ifdef DEBUG
     static int hit_count = 0;
     if (hit_count++ < 10) {
-      DEBUG_LOG("TT_HIT: index=%u key=%016llx depth=%d score=%d->%d ply=%d\n",
+      LOG_DEBUG("TT_HIT: index=%u key=%016llx depth=%d score=%d->%d ply=%d\n",
                 index, (unsigned long long)key, entry->depth, entry->score,
                 adjusted_score, ply);
     }
@@ -146,6 +140,6 @@ void tt_new_search(TranspositionTable *tt) {
   }
 
 #ifdef DEBUG
-  DEBUG_LOG("TT_NEW_SEARCH: age incremented to %d\n", tt->current_age);
+  LOG_DEBUG("TT_NEW_SEARCH: age incremented to %d\n", tt->current_age);
 #endif
 }
