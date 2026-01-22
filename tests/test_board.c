@@ -3,9 +3,8 @@
  * @brief Unit tests for board module
  */
 
-#include "unity.h"
+#include "../tests/unity/unity.h"
 #include "../Engine/board.h"
-#include "../Engine/movegen.h"
 #include <string.h>
 
 void setUp(void) {
