@@ -28,7 +28,7 @@ BUILD_DIR_DEBUG = build_debug
 # ========== MODULES COMMUNS ==========
 MODULES_COMMON = Engine/board.c Engine/movegen.c Engine/utils.c Engine/evaluation.c \
                  Engine/zobrist.c Engine/transposition.c Engine/move_ordering.c \
-                 Engine/quiescence.c Engine/search_helpers.c
+                 Engine/quiescence.c Engine/search_helpers.c Engine/logger.c Engine/vendor/log.c
 
 # ========== SOURCES PRINCIPALES ==========
 SRC = $(MODULES_COMMON) Engine/perft.c Engine/uci.c Engine/timemanager.c Engine/search.c Engine/main.c
@@ -62,11 +62,13 @@ $(BUILD_DIR_DEBUG):
 # $< est le fichier source, $@ est le fichier cible
 # -MMD -MP génèrent les fichiers de dépendances automatiques (.d)
 $(BUILD_DIR)/%.o: Engine/%.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -MMD -MP -c $< -o $@
 
 # Règle de compilation des fichiers sources en mode debug
 # Même principe que pour release mais avec les options de debug
 $(BUILD_DIR_DEBUG)/%.o: Engine/%.c | $(BUILD_DIR_DEBUG)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -MMD -MP -c $< -o $@
 
 # Construction de l'exécutable de release à partir des fichiers objets correspondants
@@ -105,6 +107,55 @@ clean-all: clean clean-logs
 # Alias pour clean-all
 distclean: clean-all
 
+# ========== TESTS UNITAIRES ==========
+
+# Dossier pour les tests unitaires
+TESTS_DIR = tests
+UNITY_DIR = $(TESTS_DIR)/unity
+BUILD_TESTS_DIR = build_tests
+
+# Sources Unity
+UNITY_SRC = $(UNITY_DIR)/unity.c
+
+# Sources de tests
+TEST_SOURCES = $(wildcard $(TESTS_DIR)/test_*.c)
+TEST_EXECUTABLES = $(patsubst $(TESTS_DIR)/test_%.c,$(BUILD_TESTS_DIR)/test_%,$(TEST_SOURCES))
+
+# Options de compilation pour les tests
+CFLAGS_TEST = $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -I$(UNITY_DIR)
+
+# Création du dossier de build pour les tests
+$(BUILD_TESTS_DIR):
+	mkdir -p $(BUILD_TESTS_DIR)
+
+# Compilation des tests unitaires
+$(BUILD_TESTS_DIR)/test_%: $(TESTS_DIR)/test_%.c $(UNITY_SRC) $(MODULES_COMMON) | $(BUILD_TESTS_DIR)
+	$(CC) $(CFLAGS_TEST) -o $@ $< $(UNITY_SRC) $(MODULES_COMMON) -lm
+
+# Cible pour construire tous les tests
+build-tests: $(TEST_EXECUTABLES)
+	@echo "✅ Tous les tests ont été compilés"
+
+# Cible pour exécuter tous les tests
+test: build-tests
+	@echo "=========================================="
+	@echo "   Running Unit Tests"
+	@echo "=========================================="
+	@for test in $(TEST_EXECUTABLES); do \
+		echo "Running $$test..."; \
+		$$test || exit 1; \
+	done
+	@echo "✅ Tous les tests sont passés!"
+
+# Nettoyage des tests
+clean-tests:
+	@echo "🧹 Nettoyage des tests..."
+	@rm -rf $(BUILD_TESTS_DIR)
+	@echo "✅ Tests nettoyés"
+
+# Alias pour clean-all
+distclean: clean-all
+
 # Inclusion des fichiers de dépendances automatiques générés lors de la compilation
 # Cela permet à make de connaître les dépendances exactes entre fichiers sources et headers
 -include $(BUILD_DIR)/*.d
@@ -133,9 +184,14 @@ help:
 	@echo "  🔄 REBUILD :"
 	@echo "    make rebuild          - Clean + rebuild release"
 	@echo ""
+	@echo "  🧪 TESTS :"
+	@echo "    make build-tests      - Compile les tests unitaires"
+	@echo "    make test             - Compile et exécute tous les tests unitaires"
+	@echo "    make clean-tests      - Nettoie les tests compilés"
+	@echo ""
 	@echo "  📚 AUTRES :"
 	@echo "    make help             - Affiche cette aide"
 	@echo ""
 
 # Déclaration des cibles "virtuelles" pour éviter des conflits avec des fichiers du même nom
-.PHONY: all debug release clean clean-logs clean-all distclean rebuild help
+.PHONY: all debug release clean clean-logs clean-all distclean rebuild help build-tests test clean-tests

@@ -1,16 +1,10 @@
 #include "search.h"
+#include "logger.h"
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-// Macro pour logs de debug conditionnels
-#ifdef DEBUG
-#define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define DEBUG_LOG(...)
-#endif
 
 // Variables globales pour gérer le temps de recherche
 static clock_t search_start_time;
@@ -24,12 +18,12 @@ static TranspositionTable tt_global;
 // ========== INITIALISATION DU MOTEUR ==========
 
 void initialize_engine(void) {
-  DEBUG_LOG("=== INITIALISATION DU MOTEUR ===\n");
+  LOG_DEBUG("=== INITIALISATION DU MOTEUR ===\n");
   init_zobrist();
   init_killer_moves();
   init_lmr_table();
   tt_init(&tt_global);
-  DEBUG_LOG("=== MOTEUR PRÊT ===\n\n");
+  LOG_DEBUG("=== MOTEUR PRÊT ===\n\n");
 }
 
 // ========== NEGAMAX (Alpha-Beta + Quiescence) ==========
@@ -92,7 +86,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     if (color == BLACK)
       eval = -eval;
 #ifdef DEBUG
-    DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (static) color=%s\n", ply,
+    LOG_DEBUG("[NEGAMAX] ply=%d depth=%d eval=%d (static) color=%s\n", ply,
               depth, eval, color == WHITE ? "WHITE" : "BLACK");
 #endif
     return eval;
@@ -101,7 +95,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   if (depth == 0) {
     int eval = quiescence_search(board, alpha, beta, color, ply);
 #ifdef DEBUG
-    DEBUG_LOG("[NEGAMAX] ply=%d depth=%d eval=%d (quiescence) color=%s\n", ply,
+    LOG_DEBUG("[NEGAMAX] ply=%d depth=%d eval=%d (quiescence) color=%s\n", ply,
               depth, eval, color == WHITE ? "WHITE" : "BLACK");
 #endif
     return eval;
@@ -117,7 +111,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     int rfp_margin = 150 * depth;
     if (static_eval - rfp_margin >= beta) {
 #ifdef DEBUG
-      DEBUG_LOG(
+      LOG_DEBUG(
           "[NEGAMAX] RFP prune at ply=%d, static_eval=%d, margin=%d, beta=%d\n",
           ply, static_eval, rfp_margin, beta);
 #endif
@@ -144,7 +138,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     *board = backup; // Restaure l'état
 
 #ifdef DEBUG
-    DEBUG_LOG("[NEGAMAX] Null move prune? score=%d beta=%d ply=%d\n",
+    LOG_DEBUG("[NEGAMAX] Null move prune? score=%d beta=%d ply=%d\n",
               null_score, beta, ply);
 #endif
     if (null_score >= beta) {
@@ -186,7 +180,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
           hash_move = moves.moves[i]; // ✅ Coup complet validé
           hash_move_valid = 1;
 #ifdef DEBUG
-          DEBUG_LOG("[TT] Hash move VALIDÉ: %s\n", move_to_string(&hash_move));
+          LOG_DEBUG("[TT] Hash move VALIDÉ: %s\n", move_to_string(&hash_move));
 #endif
           break;
         }
@@ -195,7 +189,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
 #ifdef DEBUG
     if (!hash_move_valid && (candidate.from != 0 || candidate.to != 0)) {
-      DEBUG_LOG("[TT] Hash move REJETÉ (illégal): from=%d to=%d\n",
+      LOG_DEBUG("[TT] Hash move REJETÉ (illégal): from=%d to=%d\n",
                 candidate.from, candidate.to);
     }
 #endif
@@ -271,7 +265,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     undo_move(board, ply);
 
 #ifdef DEBUG
-    DEBUG_LOG("[NEGAMAX] ply=%d move=%s score=%d color=%s\n", ply,
+    LOG_DEBUG("[NEGAMAX] ply=%d move=%s score=%d color=%s\n", ply,
               move_to_string(&ordered_moves.moves[i]), score,
               color == WHITE ? "WHITE" : "BLACK");
 #endif
@@ -293,7 +287,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
       }
       tt_store(&tt_global, hash, depth, beta, TT_LOWERBOUND, best_move, ply);
 #ifdef DEBUG
-      DEBUG_LOG("[NEGAMAX] ply=%d beta cutoff move=%s score=%d\n", ply,
+      LOG_DEBUG("[NEGAMAX] ply=%d beta cutoff move=%s score=%d\n", ply,
                 move_to_string(&best_move), beta);
 #endif
       return beta;
@@ -363,7 +357,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
                                       INFINITY_SCORE, color_for_negamax, 1, 0);
 
 #ifdef DEBUG
-      DEBUG_LOG("[ITERATIVE] depth=%d move=%s score=%d root_player=%s\n",
+      LOG_DEBUG("[ITERATIVE] depth=%d move=%s score=%d root_player=%s\n",
                 current_depth, move_to_string(&ordered_moves.moves[i]), score,
                 root_player == WHITE ? "WHITE" : "BLACK");
 #endif
@@ -419,7 +413,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     generate_legal_moves(board, &emergency_moves);
     if (emergency_moves.count > 0) {
       best_move_overall = emergency_moves.moves[0];
-      DEBUG_LOG("[EMERGENCY] Aucun coup trouvé, fallback vers %s\n",
+      LOG_DEBUG("[EMERGENCY] Aucun coup trouvé, fallback vers %s\n",
                 move_to_string(&best_move_overall));
     }
   }

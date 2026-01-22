@@ -1,14 +1,8 @@
 #include "move_ordering.h"
 #include "utils.h"
+#include "logger.h"
 #include <stdio.h>
 #include <string.h>
-
-// Macro pour logs de debug conditionnels
-#ifdef DEBUG
-#define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define DEBUG_LOG(...)
-#endif
 
 // ========== TABLES GLOBALES ==========
 

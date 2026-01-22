@@ -2,15 +2,9 @@
 #include "evaluation.h"
 #include "move_ordering.h"
 #include "utils.h"
+#include "logger.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-// Macro pour logs de debug conditionnels
-#ifdef DEBUG
-#define DEBUG_LOG(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define DEBUG_LOG(...)
-#endif
 
 // ========== GÉNÉRATION DES CAPTURES ==========
 
@@ -57,7 +51,7 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     if (color == BLACK)
       score = -score;
 #ifdef DEBUG
-    DEBUG_LOG("[QUIESCENCE] ply>=128, eval=%d\n", score);
+    LOG_DEBUG("[QUIESCENCE] ply>=128, eval=%d\n", score);
 #endif
     return score;
   }
@@ -72,7 +66,7 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
   // Beta cutoff
   if (stand_pat >= beta) {
 #ifdef DEBUG
-    DEBUG_LOG("[QUIESCENCE] stand_pat=%d >= beta=%d, cutoff\n", stand_pat,
+    LOG_DEBUG("[QUIESCENCE] stand_pat=%d >= beta=%d, cutoff\n", stand_pat,
               beta);
 #endif
     return beta;
@@ -90,7 +84,7 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
   // Pas de captures = position quiète
   if (capture_moves.count == 0) {
 #ifdef DEBUG
-    DEBUG_LOG("[QUIESCENCE] Quiet position, stand_pat=%d\n", stand_pat);
+    LOG_DEBUG("[QUIESCENCE] Quiet position, stand_pat=%d\n", stand_pat);
 #endif
     return stand_pat;
   }
@@ -120,7 +114,7 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     if (stand_pat + delta < alpha) {
       *board = local_backup; // Restaurer depuis le backup local
 #ifdef DEBUG
-      DEBUG_LOG("[QUIESCENCE] Delta prune: stand_pat=%d delta=%d alpha=%d\n",
+      LOG_DEBUG("[QUIESCENCE] Delta prune: stand_pat=%d delta=%d alpha=%d\n",
                 stand_pat, delta, alpha);
 #endif
       continue;
@@ -135,14 +129,14 @@ int quiescence_search_depth(Board *board, int alpha, int beta, Couleur color,
     *board = local_backup;
 
 #ifdef DEBUG
-    DEBUG_LOG("[QUIESCENCE] ply=%d move=%s score=%d\n", ply,
+    LOG_DEBUG("[QUIESCENCE] ply=%d move=%s score=%d\n", ply,
               move_to_string(&ordered_captures.moves[i]), score);
 #endif
 
     // Mise à jour alpha-beta
     if (score >= beta) {
 #ifdef DEBUG
-      DEBUG_LOG("[QUIESCENCE] Beta cutoff: score=%d >= beta=%d\n", score, beta);
+      LOG_DEBUG("[QUIESCENCE] Beta cutoff: score=%d >= beta=%d\n", score, beta);
 #endif
       return beta; // Beta cutoff
     }
