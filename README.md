@@ -115,6 +115,8 @@ Pour ajouter de nouveaux tests, créez un fichier `tests/test_*.c` qui utilise U
 
 Le moteur utilise la bibliothèque [log.c](https://github.com/rxi/log.c/) pour un système de logging flexible et configurable.
 
+📖 **[Guide complet d'utilisation du logger](docs/LOGGING_GUIDE.md)**
+
 #### Configuration du logging en C
 Le niveau de log par défaut est défini automatiquement :
 - **Mode DEBUG** (`make debug`) : LOG_DEBUG et supérieur
