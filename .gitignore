@@ -1,6 +1,7 @@
 # Dossier de build pour les .o et .d
 build
 build_debug
+build_tests
 
 # binaires du moteur 
 chess_engine
