@@ -41,3 +41,7 @@ tests/config.json
 
 .vscode
 
+/media
+
+search_tree.py
+__pycache__/
