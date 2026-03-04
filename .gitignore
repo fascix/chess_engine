@@ -43,5 +43,5 @@ tests/config.json
 
 /media
 
-search_tree.py
+*py
 __pycache__/
