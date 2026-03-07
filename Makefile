@@ -28,7 +28,8 @@ BUILD_DIR_DEBUG = build_debug
 # ========== MODULES COMMUNS ==========
 MODULES_COMMON = Engine/board.c Engine/movegen.c Engine/utils.c Engine/evaluation.c \
                  Engine/zobrist.c Engine/transposition.c Engine/move_ordering.c \
-                 Engine/quiescence.c Engine/search_helpers.c Engine/logger.c Engine/vendor/log.c
+                 Engine/quiescence.c Engine/search_helpers.c Engine/logger.c Engine/vendor/log.c \
+                 Engine/polyglot.c Engine/syzygy.c
 
 # ========== SOURCES PRINCIPALES ==========
 SRC = $(MODULES_COMMON) Engine/perft.c Engine/uci.c Engine/timemanager.c Engine/search.c Engine/main.c

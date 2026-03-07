@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include "uci.h"
 #include "perft.h"
+#include "polyglot.h"
 #include "search.h"
 #include "timemanager.h"
 #include <stdbool.h>
@@ -20,16 +21,21 @@ volatile int uci_debug = 0;             // Debug dynamique (0 ou 1)
 
 // Options UCI configurables
 UCIOptions uci_options = {
-    .hash_size_mb = 16, // Défaut: 16 MB
-    .ponder = 0,        // Défaut: désactivé
-    .own_book = 0,      // Défaut: pas de livre
-    .analyse_mode = 0   // Défaut: mode normal
+    .hash_size_mb = 16,      // Défaut: 16 MB
+    .ponder = 0,             // Défaut: désactivé
+    .own_book = 0,           // Défaut: pas de livre
+    .book_path = "book.bin", // Défaut: book.bin
+    .analyse_mode = 0        // Défaut: mode normal
 };
 
 // Boucle principale UCI
 void uci_loop() {
   char line[4096];
   Board board;
+
+  // Initialiser le moteur (Zobrist, TT, Polyglot)
+  polyglot_init();
+  initialize_engine();
 
   // Initialiser le board en position initiale
   board_from_fen(&board,
@@ -89,6 +95,8 @@ void handle_uci() {
   printf("option name Ponder type check default false\n");
   fflush(stdout);
   printf("option name OwnBook type check default false\n");
+  fflush(stdout);
+  printf("option name BookPath type string default book.bin\n");
   fflush(stdout);
   printf("option name UCI_AnalyseMode type check default false\n");
   fflush(stdout);
@@ -160,6 +168,11 @@ void handle_setoption(char *params) {
   } else if (strcmp(option_name, "OwnBook") == 0 && value_token) {
     uci_options.own_book = (strcmp(value_token, "true") == 0) ? 1 : 0;
     DEBUG_LOG_UCI("OwnBook set to %d\n", uci_options.own_book);
+  } else if (strcmp(option_name, "BookPath") == 0 && value_token) {
+    strncpy(uci_options.book_path, value_token,
+            sizeof(uci_options.book_path) - 1);
+    uci_options.book_path[sizeof(uci_options.book_path) - 1] = '\0';
+    DEBUG_LOG_UCI("BookPath set to %s\n", uci_options.book_path);
   } else if (strcmp(option_name, "UCI_AnalyseMode") == 0 && value_token) {
     uci_options.analyse_mode = (strcmp(value_token, "true") == 0) ? 1 : 0;
     DEBUG_LOG_UCI("UCI_AnalyseMode set to %d\n", uci_options.analyse_mode);
@@ -359,7 +372,22 @@ void handle_go(Board *board, char *params) {
   GoParams go_params;
   parse_go_params(params_copy, &go_params);
 
-  // Calculer le temps alloué
+  // 1. Vérifier si on utilise un livre d'ouverture
+  if (uci_options.own_book) {
+    Move book_move = polyglot_get_move(board, uci_options.book_path);
+    if (book_move.from != -1) {
+      // Valider le coup du livre
+      if (validate_and_fix_move(board, &book_move)) {
+        printf("bestmove %s\n", move_to_string(&book_move));
+        fflush(stdout);
+        DEBUG_LOG_UCI("Book move found: %s\n", move_to_string(&book_move));
+        DEBUG_LOG_UCI("=== HANDLE_GO END (BOOK) ===\n\n");
+        return;
+      }
+    }
+  }
+
+  // 2. Calculer le temps alloué
   int time_limit_ms = calculate_time_for_move(board, &go_params);
 
   int max_depth = 64;
@@ -516,29 +544,35 @@ void parse_uci_command(char *line, Board *board) {
   char *saveptr;
   char *command = strtok_r(line, " ", &saveptr);
 
+  if (!command)
+    return;
+
+  // Sauter les espaces au début de params
+  char *params = saveptr;
+  if (params) {
+    while (*params == ' ')
+      params++;
+    if (*params == '\0')
+      params = NULL;
+  }
+
   if (strcmp(command, "uci") == 0) {
     handle_uci();
   } else if (strcmp(command, "isready") == 0) {
     handle_isready();
   } else if (strcmp(command, "debug") == 0) {
-    char *params = saveptr; // Get the rest of the line
     handle_debug(params);
   } else if (strcmp(command, "setoption") == 0) {
-    char *params = saveptr; // Get the rest of the line
     handle_setoption(params);
   } else if (strcmp(command, "register") == 0) {
-    char *params = saveptr; // Get the rest of the line
     handle_register(params);
   } else if (strcmp(command, "ucinewgame") == 0) {
     handle_ucinewgame();
   } else if (strcmp(command, "position") == 0) {
-    char *params = saveptr; // Get the rest of the line
     handle_position(board, params);
   } else if (strcmp(command, "go") == 0) {
-    char *params = saveptr; // Get the rest of the line
     handle_go(board, params);
   } else if (strcmp(command, "perft") == 0) {
-    char *params = saveptr; // Get the rest of the line
     handle_perft(board, params);
   } else if (strcmp(command, "ponderhit") == 0) {
     handle_ponderhit();
