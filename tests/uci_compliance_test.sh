@@ -1,8 +1,12 @@
 #!/bin/bash
-# Test de conformité UCI pour ChessEngine v2.0
+# Test de conformité UCI pour Pallas v2.0
 # Teste les nouvelles fonctionnalités implémentées
 
-ENGINE="./chess_engine"
+if [ -f "../pallas" ]; then
+    ENGINE="../pallas"
+else
+    ENGINE="./pallas"
+fi
 TIMEOUT=3
 
 echo "=== Test de conformité UCI ==="

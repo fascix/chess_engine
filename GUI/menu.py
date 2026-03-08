@@ -129,8 +129,8 @@ def main_menu():
 
     # Fonts
     title_font = pygame.font.Font(None, 96)
-    # Main title text — use explicit string "Chess Engine"
-    title_text = "Chess Engine"
+    # Main title text — use explicit string "Pallas"
+    title_text = "Pallas"
     # Render title with shadow and accent
     title_shadow = title_font.render(title_text, True, (0, 0, 0))
     title_surface = title_font.render(title_text, True, UI_ACCENT)
@@ -249,7 +249,7 @@ def game_mode_menu():
     screen = pygame.display.get_surface()
     pygame.display.set_caption("Sélection du mode de jeu")
     font = pygame.font.Font(None, 48)
-    menu_options = ["Mode 2 joueurs", "Mode Chess Engine (bot)", "Mode Bot vs Bot", "Retour"]
+    menu_options = ["Mode 2 joueurs", "Mode Pallas (bot)", "Mode Bot vs Bot", "Retour"]
     selected_index = 0
     clock = pygame.time.Clock()
     running = True

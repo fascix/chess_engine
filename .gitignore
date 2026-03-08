@@ -45,3 +45,7 @@ tests/config.json
 
 *py
 __pycache__/
+pallas-pure
+pallas-no-book
+pallas-no-tb
+pallas

@@ -34,7 +34,9 @@ void uci_loop() {
   Board board;
 
   // Initialiser le moteur (Zobrist, TT, Polyglot)
+#ifndef DISABLE_BOOK
   polyglot_init();
+#endif
   initialize_engine();
 
   // Initialiser le board en position initiale
@@ -84,7 +86,7 @@ void handle_perft(Board *board, char *params) {
 
 // Gestionnaire commande "uci"
 void handle_uci() {
-  printf("id name ChessEngine v2.0\n");
+  printf("id name Pallas v2.0\n");
   fflush(stdout);
   printf("id author Fascix\n");
   fflush(stdout);
@@ -373,6 +375,7 @@ void handle_go(Board *board, char *params) {
   parse_go_params(params_copy, &go_params);
 
   // 1. Vérifier si on utilise un livre d'ouverture
+#ifndef DISABLE_BOOK
   if (uci_options.own_book) {
     Move book_move = polyglot_get_move(board, uci_options.book_path);
     if (book_move.from != -1) {
@@ -386,6 +389,7 @@ void handle_go(Board *board, char *params) {
       }
     }
   }
+#endif
 
   // 2. Calculer le temps alloué
   int time_limit_ms = calculate_time_for_move(board, &go_params);

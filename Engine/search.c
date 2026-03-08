@@ -1,5 +1,8 @@
 #include "search.h"
 #include "logger.h"
+#ifndef DISABLE_TABLEBASES
+#include "syzygy.h"
+#endif
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -321,6 +324,25 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
   SearchResult best_result = {0};
   best_result.score = -INFINITY_SCORE;
   best_result.nodes_searched = 0;
+
+  // 0. Vérifier les tablebases de fin de partie
+#ifndef DISABLE_TABLEBASES
+  Move syzygy_move = {0};
+  int wdl = syzygy_probe_wdl(board);
+  if (wdl != -1) {
+    // Si on a un résultat WDL, on peut tenter de trouver le coup DTZ
+    if (syzygy_probe_dtz(board, &syzygy_move)) {
+      best_result.best_move = syzygy_move;
+      best_result.depth = 0;
+      best_result.nodes_searched = 1;
+      // Score approximatif basé sur WDL (0: Loss, 2: Draw, 4: Win)
+      int scores[] = {-MATE_SCORE + 100, -MATE_SCORE + 200, 0, MATE_SCORE - 200,
+                      MATE_SCORE - 100};
+      best_result.score = scores[wdl];
+      return best_result;
+    }
+  }
+#endif
 
   // ========== FIX #2: INITIALISATION SÉCURISÉE ==========
   Move best_move_overall;

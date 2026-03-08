@@ -5,13 +5,13 @@ Configuration file for bot paths and game settings
 # Bot engine paths
 bot_engines = {
     "Stockfish": "/opt/homebrew/bin/stockfish",
-    "ChessEngine": "../chess_engine",  # Our custom engine
+    "Pallas": "../pallas",  # Our custom engine
     "Bot2": ""  # Empty for bot vs bot second bot
 }
 
 # Current selected bots
-selected_bot1 = "ChessEngine"  # For 1 vs bot mode
-selected_bot2 = "ChessEngine"  # For bot vs bot mode (default to same as bot1)
+selected_bot1 = "Pallas"  # For 1 vs bot mode
+selected_bot2 = "Pallas"  # For bot vs bot mode (default to same as bot1)
 
 def get_bot1_path():
     """Returns the path of the first bot"""

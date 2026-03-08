@@ -10,7 +10,7 @@ import gui
 
 def solo_game(timer, player_is_white=True):
     """Mode de jeu à 2 joueurs."""
-    pygame.display.set_caption("Chess Engine - Mode 2 joueurs")
+    pygame.display.set_caption("Pallas - Mode 2 joueurs")
     
     # Réinitialiser le jeu
     game_logic.reset_game()
@@ -79,7 +79,7 @@ def solo_game(timer, player_is_white=True):
 
 def chess_engine(timer, player_is_white=True):
     """Mode de jeu contre l'ordinateur."""
-    pygame.display.set_caption("Chess Engine - Contre l'ordinateur")
+    pygame.display.set_caption("Pallas - Contre l'ordinateur")
     
     # Réinitialiser le jeu
     game_logic.reset_game()
@@ -182,7 +182,7 @@ def chess_engine(timer, player_is_white=True):
 
 def bot_vs_bot(timer):
     """Mode de jeu bot contre bot."""
-    pygame.display.set_caption("Chess Engine - Bot vs Bot")
+    pygame.display.set_caption("Pallas - Bot vs Bot")
     
     # Réinitialiser le jeu
     game_logic.reset_game()
