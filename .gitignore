@@ -45,3 +45,5 @@ tests/config.json
 
 *py
 __pycache__/
+
+pallas
