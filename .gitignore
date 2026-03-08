@@ -47,3 +47,4 @@ tests/config.json
 __pycache__/
 
 pallas
+config.json
