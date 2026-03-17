@@ -2,6 +2,10 @@
 
 Un moteur d'échecs UCI écrit en C avec une interface graphique Python.
 
+# Vidéo de démonstration : 
+
+[![Voir la démo]](https://youtu.be/3oYraQ3-LYk)
+
 ## Caractéristiques
 
 - **Moteur d'échecs UCI** : Implémentation complète du protocole UCI pour la compatibilité avec les interfaces d'échecs
