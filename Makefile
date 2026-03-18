@@ -42,13 +42,13 @@ OBJ_DEBUG = $(patsubst Engine/%.c,$(BUILD_DIR_DEBUG)/%.o,$(SRC))
 # Liste les fichiers objets pour la build debug, placés dans le dossier build_debug
 
 # Cible par défaut : compilation en mode release
-all: chess_engine
+all: pallas
 
 # Cible pour la compilation en mode debug
-debug: chess_engine_debug
+debug: pallas_debug
 
 # Alias pour la compilation release
-release: chess_engine
+release: pallas
 
 # Création du dossier build s'il n'existe pas, nécessaire pour y placer les fichiers objets release
 $(BUILD_DIR):
@@ -73,11 +73,11 @@ $(BUILD_DIR_DEBUG)/%.o: Engine/%.c | $(BUILD_DIR_DEBUG)
 
 # Construction de l'exécutable de release à partir des fichiers objets correspondants
 # -lm lie la bibliothèque mathématique
-chess_engine: $(OBJ_RELEASE)
+pallas: $(OBJ_RELEASE)
 	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -o $@ $^ -lm
 
 # Construction de l'exécutable de debug à partir des fichiers objets correspondants
-chess_engine_debug: $(OBJ_DEBUG)
+pallas_debug: $(OBJ_DEBUG)
 	$(CC) $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -o $@ $^ -lm
 
 # ========== CIBLES DE NETTOYAGE ==========
@@ -85,9 +85,9 @@ chess_engine_debug: $(OBJ_DEBUG)
 # Nettoyage basique : supprime les exécutables et dossiers build
 clean:
 	@echo "🧹 Nettoyage des builds principaux..."
-	@rm -f chess_engine_debug
+	@rm -f pallas_debug
 	@rm -rf $(BUILD_DIR) $(BUILD_DIR_DEBUG)
-	@rm -rf chess_engine
+	@rm -rf pallas
 	@echo "✅ Nettoyage terminé"
 
 # Nettoyage des logs et fichiers temporaires

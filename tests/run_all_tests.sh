@@ -38,7 +38,7 @@ run_test() {
 }
 
 # Vérifier que le moteur est compilé
-if [ ! -f "$PROJECT_DIR/chess_engine" ]; then
+if [ ! -f "$PROJECT_DIR/pallas" ]; then
     echo "❌ ERREUR: Le moteur n'est pas compilé. Exécutez 'make' d'abord."
     exit 1
 fi

@@ -78,7 +78,7 @@ void handle_perft(Board *board, char *params) {
 
 // Gestionnaire commande "uci"
 void handle_uci() {
-  printf("id name ChessEngine v2.0\n");
+  printf("id name Pallas v2.0\n");
   fflush(stdout);
   printf("id author Fascix\n");
   fflush(stdout);

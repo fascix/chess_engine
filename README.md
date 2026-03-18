@@ -1,4 +1,4 @@
-# Chess Engine
+# Pallas Chess Engine
 
 Un moteur d'échecs UCI écrit en C avec une interface graphique Python.
 
@@ -60,7 +60,7 @@ make clean
 
 ### Moteur UCI seul
 ```bash
-./chess_engine
+./pallas
 ```
 Le moteur accepte les commandes UCI standard (uci, isready, position, go, quit, etc.)
 
