@@ -4,6 +4,7 @@ Module contenant toutes les fonctions de menu
 import pygame
 import time
 import random
+import os
 from settings import *
 from menu_renderer import (draw_menu_panel, draw_menu_title, draw_menu_option_box, 
                            calculate_menu_layout, check_menu_click, update_hover_selection)
@@ -11,7 +12,9 @@ from menu_renderer import (draw_menu_panel, draw_menu_title, draw_menu_option_bo
 def load_main_menu_background():
     """Charge l'image de fond principale avec fallback sur un fond uni."""
     try:
-        bg = pygame.image.load('./assets/background6.png').convert()
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        bg_path = os.path.join(current_dir, 'assets', 'background6.png')
+        bg = pygame.image.load(bg_path).convert()
         screen = pygame.display.get_surface()
         if screen:
             bg = pygame.transform.smoothscale(bg, (screen.get_width(), screen.get_height()))

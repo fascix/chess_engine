@@ -341,13 +341,15 @@ def render_game(screen, board, font, player_is_white=True):
     screen_height = screen.get_height()
     
     # Taille disponible pour l'échiquier (entre le bord gauche et le panneau droit)
-    available_width = screen_width - RIGHT_PANEL_WIDTH - 100  # 100 = marges
-    available_height = screen_height - NAVBAR_HEIGHT - 40  # 40 = marges
+    # On laisse un peu plus de marge à gauche (100 -> 150)
+    available_width = screen_width - RIGHT_PANEL_WIDTH - 150
+    available_height = screen_height - NAVBAR_HEIGHT - 60
     board_size = min(available_width, available_height)
     
-    # Centrer l'échiquier dans l'espace disponible
-    board_offset_x = (available_width - board_size) // 2 + 50
-    board_offset_y = NAVBAR_HEIGHT + (available_height - board_size) // 2 + 20
+    # Centrer l'échiquier dans l'espace disponible à gauche du panneau
+    # On ajuste le décalage X pour mieux centrer
+    board_offset_x = (available_width - board_size) // 2 + 75
+    board_offset_y = NAVBAR_HEIGHT + (available_height - board_size) // 2 + 30
     
     # Dessiner la navbar
     new_game_btn, resign_btn = draw_navbar(screen, font)
