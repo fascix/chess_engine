@@ -12,10 +12,17 @@ NC='\033[0m' # No Color
 
 PASSED=0
 FAILED=0
-ENGINE="./pallas"
+# Essayer de trouver l'engine dans le dossier parent ou le dossier courant
+if [ -f "../pallas" ]; then
+    ENGINE="../pallas"
+elif [ -f "./pallas" ]; then
+    ENGINE="./pallas"
+else
+    ENGINE="../pallas" # Valeur par défaut pour l'erreur
+fi
 
 echo "=========================================="
-echo "   PERFT TESTING - Chess Engine"
+echo "      PERFT TESTING - Pallas Engine"
 echo "=========================================="
 echo ""
 

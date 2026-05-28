@@ -9,10 +9,11 @@ extern volatile int uci_debug;
 
 // Structure pour les options UCI configurables
 typedef struct {
-  int hash_size_mb; // Taille de la table de transposition (MB)
-  int ponder;       // Pondering activé (0/1)
-  int own_book;     // Utiliser le livre d'ouvertures (0/1)
-  int analyse_mode; // Mode analyse UCI (0/1)
+  int hash_size_mb;
+  int ponder;
+  int own_book;
+  char book_path[256];
+  int analyse_mode;
 } UCIOptions;
 
 extern UCIOptions uci_options;

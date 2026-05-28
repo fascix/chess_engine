@@ -2,7 +2,11 @@
 # Test de conformité UCI pour Pallas v2.0
 # Teste les nouvelles fonctionnalités implémentées
 
-ENGINE="./pallas"
+if [ -f "../pallas" ]; then
+    ENGINE="../pallas"
+else
+    ENGINE="./pallas"
+fi
 TIMEOUT=3
 
 echo "=== Test de conformité UCI ==="

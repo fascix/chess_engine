@@ -1,5 +1,8 @@
 #include "search.h"
 #include "logger.h"
+#ifndef DISABLE_TABLEBASES
+#include "syzygy.h"
+#endif
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -194,9 +197,8 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   }
 
   // Move Ordering (utiliser hash_move seulement s'il est validé)
-  OrderedMoveList ordered_moves;
-  order_moves(board, &moves, &ordered_moves,
-              hash_move_valid ? hash_move : (Move){0}, ply);
+  order_moves_inplace(board, &moves, hash_move_valid ? hash_move : (Move){0},
+                      ply);
 
   int max_score = -INFINITY_SCORE;
   Move best_move = {0};
@@ -212,11 +214,11 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
       static_eval_for_futility = -static_eval_for_futility;
   }
 
-  for (int i = 0; i < ordered_moves.count; i++) {
+  for (int i = 0; i < moves.count; i++) {
     // Futility Pruning
     // Conditions strictes pour éviter de pruner des coups importants
     if (i >= 3 && // Laisser au moins 3 coups s'exécuter
-        futility_pruning_active && is_quiet_move(&ordered_moves.moves[i]) &&
+        futility_pruning_active && is_quiet_move(&moves.moves[i]) &&
         abs(alpha) < MATE_SCORE - 100) { // Ne pas pruner près d'un mat
 
       int futility_margin = 200 * depth;
@@ -225,7 +227,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
       }
     }
 
-    apply_move(board, &ordered_moves.moves[i], ply);
+    apply_move(board, &moves.moves[i], ply);
     Couleur opponent = (color == WHITE) ? BLACK : WHITE;
     int score;
 
@@ -237,7 +239,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
     } else {
       // Late Move Reductions (LMR)
       int reduction = 0;
-      if (depth >= 3 && i >= 4 && is_quiet_move(&ordered_moves.moves[i])) {
+      if (depth >= 3 && i >= 4 && is_quiet_move(&moves.moves[i])) {
         reduction = get_lmr_reduction(depth, i);
       }
 
@@ -264,13 +266,13 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
 #ifdef DEBUG
     LOG_DEBUG("[NEGAMAX] ply=%d move=%s score=%d color=%s\n", ply,
-              move_to_string(&ordered_moves.moves[i]), score,
+              move_to_string(&moves.moves[i]), score,
               color == WHITE ? "WHITE" : "BLACK");
 #endif
 
     if (score > max_score) {
       max_score = score;
-      best_move = ordered_moves.moves[i];
+      best_move = moves.moves[i];
     }
 
     if (max_score > alpha) {
@@ -321,6 +323,25 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
   best_result.score = -INFINITY_SCORE;
   best_result.nodes_searched = 0;
 
+  // 0. Vérifier les tablebases de fin de partie
+#ifndef DISABLE_TABLEBASES
+  Move syzygy_move = {0};
+  int wdl = syzygy_probe_wdl(board);
+  if (wdl != -1) {
+    // Si on a un résultat WDL, on peut tenter de trouver le coup DTZ
+    if (syzygy_probe_dtz(board, &syzygy_move)) {
+      best_result.best_move = syzygy_move;
+      best_result.depth = 0;
+      best_result.nodes_searched = 1;
+      // Score approximatif basé sur WDL (0: Loss, 2: Draw, 4: Win)
+      int scores[] = {-MATE_SCORE + 100, -MATE_SCORE + 200, 0, MATE_SCORE - 200,
+                      MATE_SCORE - 100};
+      best_result.score = scores[wdl];
+      return best_result;
+    }
+  }
+#endif
+
   // ========== FIX #2: INITIALISATION SÉCURISÉE ==========
   Move best_move_overall;
   best_move_overall.from = -1; // ✅ Marqueur invalide
@@ -333,17 +354,16 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     if (moves.count == 0)
       break;
 
-    OrderedMoveList ordered_moves;
-    order_moves(board, &moves, &ordered_moves, (Move){0}, 0);
+    order_moves_inplace(board, &moves, (Move){0}, 0);
 
-    Move best_move_this_iter = ordered_moves.moves[0];
+    Move best_move_this_iter = moves.moves[0];
     int best_score_this_iter = -INFINITY_SCORE;
 
     // ✅ Sauvegarder le joueur à la racine
     Couleur root_player = board->to_move;
 
-    for (int i = 0; i < ordered_moves.count; i++) {
-      apply_move(board, &ordered_moves.moves[i], 0);
+    for (int i = 0; i < moves.count; i++) {
+      apply_move(board, &moves.moves[i], 0);
 
       // La couleur à passer à negamax doit être la couleur qui est maintenant
       // à jouer après avoir appliqué le coup (board->to_move).
@@ -356,7 +376,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
 #ifdef DEBUG
       LOG_DEBUG("[ITERATIVE] depth=%d move=%s score=%d root_player=%s\n",
-                current_depth, move_to_string(&ordered_moves.moves[i]), score,
+                current_depth, move_to_string(&moves.moves[i]), score,
                 root_player == WHITE ? "WHITE" : "BLACK");
 #endif
 
@@ -367,7 +387,7 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
 
       if (score > best_score_this_iter) {
         best_score_this_iter = score;
-        best_move_this_iter = ordered_moves.moves[i];
+        best_move_this_iter = moves.moves[i];
       }
     }
 

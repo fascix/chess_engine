@@ -6,7 +6,7 @@ project_root = os.path.dirname(current_dir)
 
 bot_engines = {
     "Stockfish": "/opt/homebrew/bin/stockfish",
-    "ChessEngine": os.path.join(project_root, "pallas"),  # Our custom engine
+    "Pallas": "../pallas",  # Our custom engine
     "Bot2": ""  # Empty for bot vs bot second bot
 }
 

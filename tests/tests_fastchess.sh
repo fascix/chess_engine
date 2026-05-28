@@ -2,8 +2,9 @@
 
 # === Configuration ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FASTCHESS="$SCRIPT_DIR/../fastchess-mac-arm64/fastchess"  # chemin vers fastchess (adapter si besoin)
-OPENINGS="$SCRIPT_DIR/../fastchess-mac-arm64/openings/8moves_v3.pgn"  # chemin vers le fichier d'ouvertures
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+FASTCHESS="$PROJECT_ROOT/fastchess-mac-arm64/fastchess"
+OPENINGS="$PROJECT_ROOT/fastchess-mac-arm64/openings/8moves_v3.pgn"
 
 # === Étape 1 : Saisie utilisateur ===
 read -p "Chemin du moteur 1 : " ENGINE1
@@ -11,8 +12,8 @@ read -p "Chemin du moteur 2 : " ENGINE2
 read -p "Nombre de parties (games) : " GAMES
 
 # === Étape 2 : Détermination du numéro de fichier ===
-LOG_DIR="$SCRIPT_DIR/../fastchess-mac-arm64/logs"
-PGN_DIR="$SCRIPT_DIR/../fastchess-mac-arm64/pgn_results"
+LOG_DIR="$PROJECT_ROOT/fastchess-mac-arm64/logs"
+PGN_DIR="$PROJECT_ROOT/fastchess-mac-arm64/pgn_results"
 
 mkdir -p "$LOG_DIR" "$PGN_DIR"
 

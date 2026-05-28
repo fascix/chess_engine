@@ -7,7 +7,7 @@ Le code a été réorganisé en modules séparés par responsabilité pour une m
 ## Structure des fichiers
 
 ```
-python_gui/
+GUI/
 ├── main.py              # Point d'entrée principal (simplifié)
 ├── settings.py          # Configuration et constantes
 ├── support.py           # Fonctions utilitaires (images, plateau, etc.)
@@ -96,7 +96,7 @@ python_gui/
 Pour lancer le jeu :
 
 ```bash
-cd python_gui
+cd GUI
 python main.py
 ```
 

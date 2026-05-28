@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "╔════════════════════════════════════════════════╗"
-echo "║   SUITE DE TESTS COMPLÈTE - ChessEngine v2.0  ║"
+echo "║      SUITE DE TESTS COMPLÈTE - Pallas v2.0     ║"
 echo "╚════════════════════════════════════════════════╝"
 echo
 

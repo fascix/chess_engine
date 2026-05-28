@@ -1,5 +1,10 @@
+# =============================================================================
+# 🏛️  PALLAS CHESS ENGINE - Makefile
+# =============================================================================
+# Ce Makefile permet de compiler le moteur Pallas dans différentes versions
+# (complète, sans livre, sans tablebases, ou pure).
+
 CC = gcc
-# Compilateur utilisé pour construire le projet, ici gcc (GNU Compiler Collection)
 
 EMSDK_DIR = emsdk
 # Chemin vers Emscripten SDK (pour la compilation WebAssembly)
@@ -10,38 +15,102 @@ CFLAGS_COMMON = -Wall -Wextra -std=c11 -IEngine
 # -std=c11 spécifie la norme C utilisée
 # -IEngine ajoute le dossier Engine aux chemins d'inclusion des headers
 
+CFLAGS_COMMON = -Wall -Wextra -std=c11 -IEngine
 CFLAGS_DEBUG = -g -DDEBUG -fsanitize=address,undefined
-# Options spécifiques pour la compilation en mode debug :
-# -g génère les informations de debug
-# -DDEBUG définit la macro DEBUG pour activer le code de debug
-# -fsanitize=address,undefined active les outils de détection d'erreurs mémoire et undefined behavior
-
 CFLAGS_RELEASE = -O3 -march=native -flto -DNDEBUG
-# Options spécifiques pour la compilation en mode release :
-# -O3 active les optimisations agressives
-# -march=native optimise pour l'architecture de la machine locale
-# -flto active le Link Time Optimization pour des optimisations globales
-# -DNDEBUG désactive les assertions (assert)
 
-# Dossiers de build pour les fichiers objets (.o) et les fichiers de dépendances (.d)
+# Bibliothèques à lier (maths)
+LIBS = -lm
+
+# -----------------------------------------------------------------------------
+# DOSSIERS ET FICHIERS
+# -----------------------------------------------------------------------------
+
 BUILD_DIR = build
 BUILD_DIR_DEBUG = build_debug
-# Ces dossiers permettent de séparer les fichiers objets et dépendances selon le type de build (release ou debug)
 
-# ========== MODULES COMMUNS ==========
-MODULES_COMMON = Engine/board.c Engine/movegen.c Engine/utils.c Engine/evaluation.c \
-                 Engine/zobrist.c Engine/transposition.c Engine/move_ordering.c \
-                 Engine/quiescence.c Engine/search_helpers.c Engine/logger.c Engine/vendor/log.c
+# Modules du moteur (logique métier)
+MODULES = Engine/board.c \
+          Engine/movegen.c \
+          Engine/utils.c \
+          Engine/evaluation.c \
+          Engine/zobrist.c \
+          Engine/transposition.c \
+          Engine/move_ordering.c \
+          Engine/quiescence.c \
+          Engine/search_helpers.c \
+          Engine/logger.c \
+          Engine/vendor/log.c \
+          Engine/polyglot.c \
+          Engine/syzygy.c
 
-# ========== SOURCES PRINCIPALES ==========
-SRC = $(MODULES_COMMON) Engine/perft.c Engine/uci.c Engine/timemanager.c Engine/search.c Engine/main.c
-# Liste tous les fichiers sources .c dans le dossier Engine
-# Note: Liste explicite pour contrôler l'ordre de compilation
+# Sources principales (UCI et Recherche)
+SRC = $(MODULES) \
+      Engine/perft.c \
+      Engine/uci.c \
+      Engine/timemanager.c \
+      Engine/search.c \
+      Engine/main.c
 
+# Objets correspondants
 OBJ_RELEASE = $(patsubst Engine/%.c,$(BUILD_DIR)/%.o,$(SRC))
-# Liste les fichiers objets pour la build release, placés dans le dossier build
-
 OBJ_DEBUG = $(patsubst Engine/%.c,$(BUILD_DIR_DEBUG)/%.o,$(SRC))
+
+# -----------------------------------------------------------------------------
+# CIBLES PRINCIPALES
+# -----------------------------------------------------------------------------
+
+# Cible par défaut : compilation en mode release complète
+all: pallas
+
+# Compilation de l'exécutable principal optimisé
+pallas: $(OBJ_RELEASE)
+	@echo "🔗 Liaison de l'exécutable pallas..."
+	@$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -o $@ $^ $(LIBS)
+	@echo "✅ Pallas compilé avec succès."
+
+# Compilation en mode debug avec sanitizers
+debug: pallas-debug
+
+pallas-debug: $(OBJ_DEBUG)
+	@echo "🔗 Liaison de l'exécutable pallas-debug..."
+	@$(CC) $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -o $@ $^ $(LIBS)
+	@echo "✅ Pallas-debug compilé avec succès."
+
+# -----------------------------------------------------------------------------
+# VERSIONS SPÉCIFIQUES (DÉSACTIVATION DE FEATURES)
+# -----------------------------------------------------------------------------
+
+# Version sans support du livre d'ouverture (.bin)
+pallas-no-book:
+	@echo "🔨 Compilation de Pallas (sans opening book)..."
+	@$(MAKE) clean-build
+	@$(MAKE) CFLAGS_RELEASE="$(CFLAGS_RELEASE) -DDISABLE_BOOK" pallas
+	@mv pallas pallas-no-book
+	@echo "✅ pallas-no-book généré."
+
+# Version sans support des tablebases Syzygy
+pallas-no-tb:
+	@echo "🔨 Compilation de Pallas (sans tablebases)..."
+	@$(MAKE) clean-build
+	@$(MAKE) CFLAGS_RELEASE="$(CFLAGS_RELEASE) -DDISABLE_TABLEBASES" pallas
+	@mv pallas pallas-no-tb
+	@echo "✅ pallas-no-tb généré."
+
+# Version "Pure" : algorithme de recherche et évaluation uniquement
+pallas-pure:
+	@echo "🔨 Compilation de Pallas (Pure - sans book ni tablebases)..."
+	@$(MAKE) clean-build
+	@$(MAKE) CFLAGS_RELEASE="$(CFLAGS_RELEASE) -DDISABLE_BOOK -DDISABLE_TABLEBASES" pallas
+	@mv pallas pallas-pure
+	@echo "✅ pallas-pure généré."
+
+# -----------------------------------------------------------------------------
+# RÈGLES DE COMPILATION DES OBJETS
+# -----------------------------------------------------------------------------
+
+# Compilation des objets Release
+$(BUILD_DIR)/%.o: Engine/%.c
 # Liste les fichiers objets pour la build debug, placés dans le dossier build_debug
 
 # Cible par défaut : compilation en mode release
@@ -66,12 +135,16 @@ $(BUILD_DIR_DEBUG):
 # -MMD -MP génèrent les fichiers de dépendances automatiques (.d)
 $(BUILD_DIR)/%.o: Engine/%.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -MMD -MP -c $< -o $@
+	@$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -MMD -MP -c $< -o $@
 
-# Règle de compilation des fichiers sources en mode debug
-# Même principe que pour release mais avec les options de debug
-$(BUILD_DIR_DEBUG)/%.o: Engine/%.c | $(BUILD_DIR_DEBUG)
+# Compilation des objets Debug
+$(BUILD_DIR_DEBUG)/%.o: Engine/%.c
 	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -MMD -MP -c $< -o $@
+
+# -----------------------------------------------------------------------------
+# TESTS UNITAIRES (UNITY)
+# -----------------------------------------------------------------------------
 	$(CC) $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -MMD -MP -c $< -o $@
 
 # Construction de l'exécutable de release à partir des fichiers objets correspondants
@@ -132,93 +205,84 @@ clean-logs:
 	@rm -rf pgn_results/*.pgn
 	@echo "✅ Logs nettoyés"
 
-# Nettoyage complet : tout supprimer (builds + logs)
-clean-all: clean clean-logs
-	@echo "🧹 Nettoyage complet..."
-	@rm -f *.o *.d *.dSYM
-	@rm -rf *.dSYM
-	@echo "✅ Nettoyage complet terminé"
-
-# Alias pour clean-all
-distclean: clean-all
-
-# ========== TESTS UNITAIRES ==========
-
-# Dossier pour les tests unitaires
 TESTS_DIR = tests
 UNITY_DIR = $(TESTS_DIR)/unity
 BUILD_TESTS_DIR = build_tests
-
-# Sources Unity
 UNITY_SRC = $(UNITY_DIR)/unity.c
-
-# Sources de tests
 TEST_SOURCES = $(wildcard $(TESTS_DIR)/test_*.c)
 TEST_EXECUTABLES = $(patsubst $(TESTS_DIR)/test_%.c,$(BUILD_TESTS_DIR)/test_%,$(TEST_SOURCES))
-
-# Options de compilation pour les tests
 CFLAGS_TEST = $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -I$(UNITY_DIR)
 
-# Création du dossier de build pour les tests
-$(BUILD_TESTS_DIR):
-	mkdir -p $(BUILD_TESTS_DIR)
+$(BUILD_TESTS_DIR)/test_%: $(TESTS_DIR)/test_%.c $(UNITY_SRC) $(MODULES)
+	@mkdir -p $(BUILD_TESTS_DIR)
+	@$(CC) $(CFLAGS_TEST) -o $@ $< $(UNITY_SRC) $(MODULES) $(LIBS)
 
-# Compilation des tests unitaires
-$(BUILD_TESTS_DIR)/test_%: $(TESTS_DIR)/test_%.c $(UNITY_SRC) $(MODULES_COMMON) | $(BUILD_TESTS_DIR)
-	$(CC) $(CFLAGS_TEST) -o $@ $< $(UNITY_SRC) $(MODULES_COMMON) -lm
-
-# Cible pour construire tous les tests
+# Compile tous les tests unitaires
 build-tests: $(TEST_EXECUTABLES)
-	@echo "✅ Tous les tests ont été compilés"
+	@echo "✅ Tous les tests unitaires ont été compilés dans $(BUILD_TESTS_DIR)/"
 
-# Cible pour exécuter tous les tests
+# Exécute tous les tests unitaires via Unity
 test: build-tests
 	@echo "=========================================="
-	@echo "   Running Unit Tests"
+	@echo "   Exécution des tests unitaires Unity    "
 	@echo "=========================================="
 	@for test in $(TEST_EXECUTABLES); do \
 		echo "Running $$test..."; \
 		$$test || exit 1; \
 	done
-	@echo "✅ Tous les tests sont passés!"
+	@echo "✅ Tous les tests unitaires sont passés !"
 
-# Nettoyage des tests
-clean-tests:
-	@echo "🧹 Nettoyage des tests..."
+# Exécute la suite complète de tests (UCI, Perft, Unity)
+test-all: all build-tests
+	@bash tests/run_all_tests.sh
+	@$(MAKE) test
+
+# -----------------------------------------------------------------------------
+# NETTOYAGE
+# -----------------------------------------------------------------------------
+
+# Nettoie uniquement les fichiers objets
+clean-build:
+	@rm -rf $(BUILD_DIR) $(BUILD_DIR_DEBUG)
+
+# Nettoie tout (objets et exécutables)
+clean: clean-build
+	@echo "🧹 Nettoyage complet des binaires..."
 	@rm -rf $(BUILD_TESTS_DIR)
-	@echo "✅ Tests nettoyés"
+	@rm -f pallas pallas-debug pallas-no-book pallas-no-tb pallas-pure chess_engine
+	@echo "✅ Nettoyage terminé."
 
-# Alias pour clean-all
-distclean: clean-all
+# Nettoie les fichiers de logs
+clean-logs:
+	@echo "🧹 Nettoyage des fichiers de logs..."
+	@rm -rf logs/*.log logs/*.txt
+	@rm -rf fastchess-mac-arm64/logs/*
+	@rm -rf fastchess-mac-arm64/pgn_results/*
+	@echo "✅ Logs nettoyés."
 
-# Inclusion des fichiers de dépendances automatiques générés lors de la compilation
-# Cela permet à make de connaître les dépendances exactes entre fichiers sources et headers
--include $(BUILD_DIR)/*.d
--include $(BUILD_DIR_DEBUG)/*.d
+# Nettoyage total
+distclean: clean clean-logs
 
-# Rebuild complet : clean + recompile everything
-rebuild: clean-all all
+# -----------------------------------------------------------------------------
+# AIDE
+# -----------------------------------------------------------------------------
 
-# ========== CIBLES D'AIDE ==========
-
-# Affiche l'aide sur les commandes disponibles
 help:
-	@echo "📖 Commandes Make disponibles :"
+	@echo "🏛️  PALLAS CHESS ENGINE - Guide de compilation"
 	@echo ""
-	@echo "  🔨 COMPILATION :"
-	@echo "    make              - Compile la version release (défaut)"
-	@echo "    make release      - Compile la version release"
-	@echo "    make debug        - Compile la version debug"
+	@echo "Usage: make [cible]"
 	@echo ""
-	@echo "  🧹 NETTOYAGE :"
-	@echo "    make clean            - Nettoie builds + exécutables principaux"
-	@echo "    make clean-logs       - Nettoie les logs et PGN"
-	@echo "    make clean-all        - Nettoyage complet (tout)"
-	@echo "    make distclean        - Alias pour clean-all"
+	@echo "CIBLES DE COMPILATION :"
+	@echo "  make              - Compile 'pallas' (version standard optimisée)"
+	@echo "  make debug        - Compile 'pallas-debug' (avec sanitizers et symboles)"
+	@echo "  make pallas-no-book - Compile une version sans support du livre d'ouverture"
+	@echo "  make pallas-no-tb   - Compile une version sans support des tablebases"
+	@echo "  make pallas-pure    - Compile une version 'pure' (sans book ni tablebases)"
 	@echo ""
-	@echo "  🔄 REBUILD :"
-	@echo "    make rebuild          - Clean + rebuild release"
-	@echo ""
+	@echo "CIBLES DE TEST :"
+	@echo "  make test         - Exécute les tests unitaires Unity"
+	@echo "  make test-all     - Exécute TOUS les tests (UCI, Perft, Unity)"
+	@echo "  make build-tests  - Compile uniquement les tests unitaires"
 	@echo "  🌐 WEBASSEMBLY :"
 	@echo "    make wasm             - Compile l'engine en WebAssembly"
 	@echo "    make wasm-clean       - Nettoie les fichiers WASM"
@@ -228,9 +292,18 @@ help:
 	@echo "    make test             - Compile et exécute tous les tests unitaires"
 	@echo "    make clean-tests      - Nettoie les tests compilés"
 	@echo ""
-	@echo "  📚 AUTRES :"
-	@echo "    make help             - Affiche cette aide"
+	@echo "CIBLES DE NETTOYAGE :"
+	@echo "  make clean        - Supprime les objets et tous les binaires Pallas"
+	@echo "  make clean-logs   - Supprime les logs du moteur et de fastchess"
+	@echo "  make distclean    - Nettoyage total (builds + logs)"
 	@echo ""
+	@echo "AUTRES :"
+	@echo "  make help         - Affiche ce message d'aide"
 
+# Inclusion automatique des dépendances générées par -MMD
+-include $(BUILD_DIR)/*.d
+-include $(BUILD_DIR_DEBUG)/*.d
+
+.PHONY: all debug pallas-debug pallas-no-book pallas-no-tb pallas-pure clean clean-build clean-logs clean-all test test-all build-tests help distclean
 # Déclaration des cibles "virtuelles" pour éviter des conflits avec des fichiers du même nom
 .PHONY: all debug release clean clean-logs clean-all distclean rebuild help build-tests test clean-tests wasm wasm-clean

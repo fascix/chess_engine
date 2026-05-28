@@ -20,9 +20,9 @@ def draw_navbar(screen, font):
     pygame.draw.rect(screen, UI_PANEL_BG, navbar_rect)
     pygame.draw.line(screen, UI_PANEL_BORDER, (0, NAVBAR_HEIGHT), (screen_width, NAVBAR_HEIGHT), 2)
     
-    # Titre "Pygame Chess"
+    # Titre "Pallas"
     title_font = pygame.font.Font(None, 48)
-    title_surface = title_font.render("Pygame Chess", True, UI_ACCENT)
+    title_surface = title_font.render("Pallas", True, UI_ACCENT)
     title_rect = title_surface.get_rect(midleft=(20, NAVBAR_HEIGHT // 2))
     screen.blit(title_surface, title_rect)
     

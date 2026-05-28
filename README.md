@@ -1,178 +1,182 @@
-# Pallas Chess Engine
+# 🏛️ Pallas - Chess Engine & GUI
 
-Un moteur d'échecs UCI écrit en C avec une interface graphique Python.
+**Pallas** est un projet de fin de licence de jeu d'échecs, il possède d'une part un moteur d'échecs écrit en **C** (Engine) et une interface graphique moderne développée en **Python** (GUI). 
+Le nom Pallas fait référence à l'épithète de la déesse Athéna, symbolisant la stratégie et la sagesse guerrière.
 
+---
 # Vidéo de démonstration : 
 
 [Voir la démo](https://youtu.be/3oYraQ3-LYk)
 
 ## Caractéristiques
 
-- **Moteur d'échecs UCI** : Implémentation complète du protocole UCI pour la compatibilité avec les interfaces d'échecs
-- **Interface graphique** : GUI interactive développée avec Pygame
-- **Recherche avancée** : Alpha-beta avec quiescence search, move ordering, et table de transposition
-- **Évaluation** : Fonction d'évaluation basée sur le matériel, la structure de pions, et les tables pièce-carré
-- **Hachage Zobrist** : Pour des mises à jour incrémentales rapides de la position
-- **Tests** : Scripts de tests perft, UCI compliance, et fastchess pour mesurer les performances
-
-## Structure du projet
+## 📂 Structure du Projet
 
 ```
 .
-├── Engine/              Code source du moteur en C
-│   ├── board.c/h       Représentation de l'échiquier
-│   ├── movegen.c/h     Génération de coups
-│   ├── search.c/h      Algorithme de recherche
-│   ├── evaluation.c/h  Fonction d'évaluation
-│   ├── uci.c/h         Interface UCI
-│   └── ...
-├── GUI/                 Interface graphique Python
-│   ├── main.py         Point d'entrée
-│   ├── gui.py          Affichage de l'échiquier
-│   ├── game_logic.py   Logique du jeu
-│   └── ...
-├── docs/                Documentation et diagrammes
-├── tests/               Scripts de test
-│   ├── perft_test.sh
-│   ├── uci_compliance_test.sh
-│   └── tests_fastchess.sh
-└── Makefile             Build system
+├── Engine/              # Code source du moteur en C
+│   ├── board.c/h       # Représentation par Bitboards
+│   ├── movegen.c/h     # Générateur de coups (126 tests perft OK)
+│   ├── search.c/h      # Algorithmes de recherche (Alpha-Beta, PVS)
+│   ├── evaluation.c/h  # Fonction d'évaluation (PeSTO)
+│   ├── polyglot.c/h    # Support Opening Book (.bin)
+│   ├── syzygy.c/h      # Support Tablebases de finales
+│   └── uci.c/h         # Interface de communication UCI
+├── GUI/                 # Interface graphique Python
+│   ├── main.py         # Point d'entrée
+│   ├── gui.py          # Rendu Pygame
+│   ├── game_logic.py   # Gestion des événements et threading
+│   └── assets/         # Ressources (images des pièces)
+├── docs/                # Documentation technique détaillée
+├── tests/               # Suite de tests (Perft, UCI, Unity)
+└── Makefile             # Système de build automatisé
 ```
 
-## Compilation
+---
 
-### Mode release (optimisé)
+## 🚀 L'Engine (Pallas Engine)
+
+La base de ce projet est un moteur d'échecs conforme au protocole **UCI**.
+
+### Caractéristiques Techniques
+- **Représentation du plateau** : Utilisation de **Bitboards** (64 bits) pour une manipulation ultra-rapide des positions et de la génération de coups.
+- **Algorithme de Recherche** : 
+    - **Alpha-Beta Pruning** avec **Iterative Deepening** pour une recherche de plus en plus profonde.
+    - **PVS (Principal Variation Search)** pour optimiser l'exploration des meilleurs coups.
+    - **Quiescence Search** avec MVV-LVA pour éliminer l'effet horizon lors des captures tactiques.
+    - **Transposition Table (TT)** avec hachage **Zobrist** pour mémoriser et réutiliser les analyses précédentes.
+    - **Move Ordering** avancé : Hash Move, Captures (SEE/MVV-LVA), Killer Moves, History Heuristic.
+    - **Élagage (Pruning)** : Null Move Pruning (NMP), Reverse Futility Pruning (RFP), Late Move Reductions (LMR).
+- **Évaluation** : Implémentation de la fonction d'évaluation **PeSTO**, utilisant des tables Piece-Square (PST) optimisées pour le milieu de jeu et la finale avec une interpolation fluide.
+- **Extensions** :
+    - **Opening Book** : Support des livres au format **PolyGlot** (`.bin`) avec sélection pondérée.
+    - **Endgame Tablebases** : Interface pour le support des **Syzygy Tablebases**.
+
+### Compilation du moteur
+Le moteur peut être compilé dans différentes versions selon les besoins :
 ```bash
-make release
+make pallas          # Version complète (avec Book et Tablebases)
+make pallas-no-book  # Version sans livre d'ouverture
+make pallas-no-tb    # Version sans tablebases de fin de partie
+make pallas-pure     # Version "Pure" (uniquement l'algorithme de recherche)
+make debug           # Version avec symboles de debug et sanitizers
 ```
 
-### Mode debug (avec sanitizers)
-```bash
-make debug
-```
+---
 
-### Nettoyer les builds
-```bash
-make clean
-```
-
-## Utilisation
-
+## 🎨 L'Interface Graphique (Pallas GUI)
 ### Moteur UCI seul
 ```bash
 ./pallas
 ```
 Le moteur accepte les commandes UCI standard (uci, isready, position, go, quit, etc.)
 
-### Interface graphique
+L'interface utilisateur permet de jouer contre Pallas de manière intuitive.
+
+### Features du GUI
+- **Moteur de rendu** : Développé avec **Pygame** pour une fluidité optimale et un rendu propre.
+- **Interactivité** : Support du Drag & Drop, mise en évidence des coups légaux, dernier coup joué et cases attaquées.
+- **Gestion de partie** : 
+    - Chargement et sauvegarde de positions via chaînes **FEN**.
+    - Historique complet des coups de la partie.
+    - Pendule intégrée supportant les incréments (Time Control UCI).
+- **Analyse en temps réel** : Affichage de l'évaluation (en centipawns), de la profondeur de recherche et du NPS (Nodes Per Second).
+- **Threading** : Le moteur tourne dans un thread séparé, garantissant que l'interface reste réactive même pendant les calculs intensifs.
+
+---
+
+## 📖 Tutoriel : Comment utiliser Pallas ?
+
+### 1. Installation Automatique (Recommandé)
+Le moyen le plus simple d'installer Pallas et ses dépendances est d'utiliser le script d'installation :
 ```bash
+# Rendre le script exécutable (si nécessaire)
+chmod +x install.sh
+
+# Lancer l'installation
+./install.sh
+```
+Ce script vérifiera vos dépendances (C, Python, Make), installera les bibliothèques Python nécessaires et compilera le moteur.
+
+### 2. Installation Manuelle
+Si vous préférez installer chaque composant séparément :
+
+#### A. Dépendances Python
+Assurez-vous d'avoir Python 3.x installé.
+```bash
+pip install -r requirements.txt
+```
+
+#### B. Compilation de l'Engine
+```bash
+# Compiler la version optimisée
+make pallas
+```
+
+### 3. Lancer le jeu
+```bash
+# Lancer l'interface graphique
 cd GUI
 python main.py
 ```
 
-Dépendances Python : `pip install -r requirements.txt`
-
-## Tests
-
-### Tests perft (génération de coups)
+### 4. Utilisation en mode console (UCI)
+Pallas peut être utilisé directement en ligne de commande ou intégré dans d'autres interfaces (comme Arena ou CuteChess).
 ```bash
-./tests/perft_test.sh
+./pallas
+uci
+isready
+position startpos
+go depth 10
 ```
 
-### Tests de compliance UCI
-```bash
-./tests/uci_compliance_test.sh
-```
+---
 
-### Tests de performance (fastchess)
-```bash
-./tests/tests_fastchess.sh
-```
+## 🛠️ Développement et Tests
 
-### Tests unitaires
-Les tests unitaires utilisent le framework Unity pour tester les modules de base du moteur.
+Le projet inclut une batterie de tests rigoureux pour garantir la stabilité et la force de jeu :
 
+### Tests unitaires (Unity)
+Le framework **Unity** permet de tester les différents composants (Board, Zobrist, MoveGen).
 ```bash
-# Compiler et exécuter tous les tests
 make test
-
-# Compiler uniquement les tests
-make build-tests
-
-# Nettoyer les tests compilés
-make clean-tests
 ```
 
-Les tests couvrent actuellement :
-- **test_board.c** : Tests de la représentation de l'échiquier et du parsing FEN
-- **test_zobrist.c** : Tests du hachage Zobrist
-
-Pour ajouter de nouveaux tests, créez un fichier `tests/test_*.c` qui utilise Unity. Les tests seront automatiquement découverts et compilés par le Makefile.
-
-## Configuration
-
-- **Makefile** : Options de compilation et optimisations
-- **GUI/config.py** : Paramètres de l'interface graphique
-- **tests/** : Configuration des tests
-
-### Logging
-
-Le moteur utilise la bibliothèque [log.c](https://github.com/rxi/log.c/) pour un système de logging flexible et configurable.
-
-📖 **[Guide complet d'utilisation du logger](docs/LOGGING_GUIDE.md)**
-
-#### Configuration du logging en C
-Le niveau de log par défaut est défini automatiquement :
-- **Mode DEBUG** (`make debug`) : LOG_DEBUG et supérieur
-- **Mode RELEASE** (`make release`) : LOG_INFO et supérieur
-
-Les logs sont envoyés sur stderr par défaut. Vous pouvez configurer le logging dans votre code :
-
-```c
-#include "logger.h"
-
-// Initialiser le système de logging
-logger_init();
-
-// Changer le niveau de log
-logger_set_level(LOG_DEBUG);  // LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR, LOG_FATAL
-
-// Ajouter un fichier de log
-logger_add_file("engine.log", LOG_DEBUG);
-
-// Utiliser les macros de logging
-LOG_DEBUG("Position évaluée : %d", score);
-LOG_INFO("Recherche terminée en %d ms", time_ms);
-LOG_WARN("Table de transposition pleine");
-LOG_ERROR("Erreur lors de l'analyse : %s", error_msg);
+### Validation de la génération de coups (Perft)
+Le moteur passe avec succès plus de 125 tests Perft standard, garantissant qu'aucun coups illégaux (roque, en passant, promotion) n'est violée.
+```bash
+bash tests/run_all_tests.sh
 ```
 
-#### Configuration du logging en Python (GUI)
-L'interface graphique utilise le module `logging` standard de Python avec une configuration centralisée :
-
-```python
-from logging_config import setup_logging, get_logger
-
-# Configurer le logging au démarrage
-setup_logging(level=logging.INFO, log_to_file=True)
-
-# Obtenir un logger pour votre module
-logger = get_logger(__name__)
-
-# Utiliser le logger
-logger.info("Application démarrée")
-logger.debug("Détails de debug")
-logger.error("Une erreur s'est produite")
+### Benchmarking (FastChess)
+Pour mesurer la progression de l'engine, des scripts permettent de lancer des matchs automatisés entre différentes versions.
+```bash
+cd tests
+bash tests_fastchess.sh
 ```
 
-Les logs Python sont sauvegardés dans `logs/gui.log`.
+---
 
-## Exemples de fonctionnalités techniques
+## 📊 Puissance et Performance
 
-- Génération de coups légaux avec move ordering
-- Recherche alpha-beta avec pruning
-- Quiescence search pour éviter l'effet horizon
-- Table de transposition pour éviter les recalculs
-- Time management pour gérer le temps de réflexion
-- Support des variantes d'échecs (via l'interface)
+Pallas a été optimisé pour offrir une expérience de jeu compétitive sur du matériel standard.
+
+- **Vitesse de calcul** : ~500,000 - 600,000 nœuds par seconde (NPS) sur un processeur moderne.
+- **Profondeur de recherche** : Atteint généralement une profondeur de 12 à 18 demi-coups en conditions de jeu standard (blitz).
+- **ELO Approximatif** : `        ` (En cours de benchmarking via tests STS et matchs contre d'autres moteurs).
+
+---
+
+## 📝 Configuration et Logging
+
+### Logging en C
+Le système de log est configurable via `Engine/logger.h`. En mode `make debug`, les logs sont très complet pour faciliter le traçage des bugs de recherche.
+
+### Logging en Python
+L'interface graphique génère des logs dans `logs/gui.log` pour diagnostiquer les problèmes de communication avec l'engine.
+
+---
+
+## 📜 Licence
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 

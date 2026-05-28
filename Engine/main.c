@@ -1,9 +1,7 @@
+#include "logger.h"
 #include "search.h"
 #include "uci.h"
-#include "movegen.h"
-#include "utils.h"
-#include "logger.h"
-#include <string.h>
+#include <stdio.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
@@ -71,7 +69,13 @@ int main() {
 }
 #else
 int main() {
+  // Désactiver le buffering pour une communication UCI fluide
+  setbuf(stdout, NULL);
+  setbuf(stderr, NULL);
+
+  // Initialize the logging system
   logger_init();
+
   init_zobrist();
   initialize_engine();
   uci_loop();
