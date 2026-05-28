@@ -40,6 +40,11 @@ export function useEngine() {
     return engine.getLegalMoves()
   }
 
+  function requestLegalMoves(callback) {
+    if (!engine) { callback(''); return }
+    engine.requestLegalMoves(callback)
+  }
+
   function sendPosition(fenOrStartpos, moves) {
     if (!engine) return
     engine.position(fenOrStartpos, moves)
@@ -69,7 +74,7 @@ export function useEngine() {
   onUnmounted(destroy)
 
   if (!instance) {
-    instance = { init, ready, error, subscribeStdout, sendCommand, getLegalMoves, sendPosition, sendGo, sendStop, destroy }
+    instance = { init, ready, error, subscribeStdout, sendCommand, getLegalMoves, requestLegalMoves, sendPosition, sendGo, sendStop, destroy }
   }
 
   return instance

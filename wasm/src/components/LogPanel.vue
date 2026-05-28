@@ -31,6 +31,8 @@ watch(() => props.log.length, async () => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 .log-title {
   padding: 6px 10px;
@@ -43,9 +45,9 @@ watch(() => props.log.length, async () => {
 }
 .log-lines {
   flex: 1;
+  overflow-x: auto;
   overflow-y: auto;
   padding: 4px 0;
-  max-height: 120px;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 0.7rem;
 }

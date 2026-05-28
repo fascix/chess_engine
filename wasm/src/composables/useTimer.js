@@ -7,6 +7,7 @@ export function useTimer() {
   let turnStartMs = 0
   let intervalId = null
   let activeColor = null
+  let testMode = false
 
   const whiteDisplay = ref('10:00')
   const blackDisplay = ref('∞')
@@ -25,6 +26,7 @@ export function useTimer() {
   }
 
   function setTime(mode) {
+    testMode = (mode === 'test')
     if (mode === 'blitz') {
       whiteTimeMs.value = 300000
       blackTimeMs.value = 300000
@@ -39,6 +41,7 @@ export function useTimer() {
   }
 
   function startTurn(color) {
+    if (testMode) return
     activeColor = color
     turnStartMs = Date.now()
     if (!intervalId) {
@@ -47,6 +50,7 @@ export function useTimer() {
   }
 
   function stopTurn() {
+    if (testMode) return 0
     if (turnStartMs === 0) return 0
     const elapsed = Date.now() - turnStartMs
     if (activeColor === 'w') {
@@ -79,6 +83,7 @@ export function useTimer() {
 
   function reset() {
     stop()
+    testMode = false
     whiteTimeMs.value = 600000
     blackTimeMs.value = 999999999
     updateDisplay()

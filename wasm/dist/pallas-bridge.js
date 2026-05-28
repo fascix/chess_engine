@@ -57,6 +57,9 @@ var PallasChess = (function () {
   PallasChess.prototype.sendCommand = function (cmd) {
     if (!this._worker) { this._cmdQueue.push(cmd); return; }
     this._cmdQueue.push(cmd);
+    if (cmd.indexOf('position ') === 0 || cmd === 'ucinewgame' || cmd === 'isready') {
+      this._legalMovesCache = '';
+    }
     this._flushQueue();
   };
 

@@ -1,6 +1,7 @@
 <template>
-  <div class="overlay" @click.self="$emit('back')">
+  <div class="overlay" @click.self="$emit('dismiss')">
     <div class="dialog">
+      <button class="close-btn" @click="$emit('dismiss')">✕</button>
       <div class="result-icon">{{ resultIcon }}</div>
       <div class="result-text">{{ resultText }}</div>
       <button class="btn" @click="$emit('back')">Nouvelle partie</button>
@@ -16,7 +17,7 @@ const props = defineProps({
   humanColor: { type: String, default: 'w' }
 })
 
-defineEmits(['back'])
+defineEmits(['back', 'dismiss'])
 
 const resultIcon = computed(() => {
   if (props.winner === 'draw') return '½–½'
@@ -43,12 +44,30 @@ const resultText = computed(() => {
   z-index: 100;
 }
 .dialog {
+  position: relative;
   background: #2b2826;
   border-radius: 12px;
   padding: 40px 50px;
   text-align: center;
   color: #fff;
   box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.close-btn:hover {
+  color: #fff;
+  background: #3a3735;
 }
 .result-icon {
   font-size: 3rem;

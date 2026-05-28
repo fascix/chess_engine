@@ -66,9 +66,9 @@ watch(() => props.moves.length, async () => {
   border-bottom: 1px solid #3a3735;
 }
 .move-pairs {
-  flex: 1;
   overflow-y: auto;
   padding: 4px 0;
+  max-height: 200px;
 }
 .move-pair {
   display: flex;
