@@ -1,6 +1,9 @@
 CC = gcc
 # Compilateur utilisé pour construire le projet, ici gcc (GNU Compiler Collection)
 
+EMSDK_DIR = emsdk
+# Chemin vers Emscripten SDK (pour la compilation WebAssembly)
+
 CFLAGS_COMMON = -Wall -Wextra -std=c11 -IEngine
 # Options communes de compilation :
 # -Wall et -Wextra activent des warnings supplémentaires pour un code plus sûr
@@ -79,6 +82,38 @@ pallas: $(OBJ_RELEASE)
 # Construction de l'exécutable de debug à partir des fichiers objets correspondants
 pallas_debug: $(OBJ_DEBUG)
 	$(CC) $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -o $@ $^ -lm
+
+# ========== COMPILATION WEBASSEMBLY (via Emscripten) ==========
+
+EMCC = $(EMSDK_DIR)/upstream/emscripten/emcc
+WASM_DIR = wasm
+
+# Sources WASM (sans main.c, on utilise notre propre entry point)
+SRC_WASM = $(MODULES_COMMON) Engine/perft.c Engine/uci.c Engine/timemanager.c Engine/search.c Engine/main.c
+
+CFLAGS_WASM = -Wall -Wextra -std=c11 -IEngine -O3 -DNDEBUG \
+  -s WASM=1 \
+  -s ALLOW_MEMORY_GROWTH=1 \
+  -s INITIAL_MEMORY=67108864 \
+  -s TOTAL_STACK=2097152 \
+  -s EXPORTED_FUNCTIONS='["_pallas_init","_pallas_uci_command","_pallas_reset","_pallas_get_legal_moves","_pallas_is_legal_move","_main","_malloc"]' \
+  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
+  -s MODULARIZE=1 \
+  -s EXPORT_NAME='PallasEngine' \
+  -s ENVIRONMENT='worker' \
+  -s SINGLE_FILE=1
+
+wasm:
+	@mkdir -p $(WASM_DIR)
+	@echo "🌐 Compilation WebAssembly..."
+	@echo "  Utilisation de: $(EMCC)"
+	$(EMCC) $(CFLAGS_WASM) -o $(WASM_DIR)/pallas.js $(SRC_WASM) -lm
+	@echo "✅ Compilation WASM terminée dans $(WASM_DIR)/"
+
+wasm-clean:
+	@echo "🧹 Nettoyage des fichiers WASM..."
+	@rm -f $(WASM_DIR)/pallas.js
+	@echo "✅ Fichiers WASM nettoyés"
 
 # ========== CIBLES DE NETTOYAGE ==========
 
@@ -184,6 +219,10 @@ help:
 	@echo "  🔄 REBUILD :"
 	@echo "    make rebuild          - Clean + rebuild release"
 	@echo ""
+	@echo "  🌐 WEBASSEMBLY :"
+	@echo "    make wasm             - Compile l'engine en WebAssembly"
+	@echo "    make wasm-clean       - Nettoie les fichiers WASM"
+	@echo ""
 	@echo "  🧪 TESTS :"
 	@echo "    make build-tests      - Compile les tests unitaires"
 	@echo "    make test             - Compile et exécute tous les tests unitaires"
@@ -194,4 +233,4 @@ help:
 	@echo ""
 
 # Déclaration des cibles "virtuelles" pour éviter des conflits avec des fichiers du même nom
-.PHONY: all debug release clean clean-logs clean-all distclean rebuild help build-tests test clean-tests
+.PHONY: all debug release clean clean-logs clean-all distclean rebuild help build-tests test clean-tests wasm wasm-clean

@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pallas Chess</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #302e2b; color: #e0e0e0;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  }
+
+  /* ---- LOBBY ---- */
+  #lobby {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 2rem; gap: 2rem;
+  }
+  #lobby.hidden { display: none; }
+  #lobby h1 { font-size: 3rem; font-weight: 700; letter-spacing: -0.02em; }
+  #lobby h1 span { color: #81b64c; }
+  #lobby p { color: #b0aba5; font-size: 1rem; }
+  .lobby-card {
+    background: #262421; border-radius: 12px; padding: 1.5rem 2rem;
+    width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 1.5rem;
+  }
+  .lobby-card .group { display: flex; flex-direction: column; gap: 0.5rem; }
+  .lobby-card .group label { font-size: 0.8rem; font-weight: 600; color: #b0aba5; text-transform: uppercase; letter-spacing: 0.05em; }
+  .lobby-card .group .btns { display: flex; gap: 0.5rem; }
+  .lobby-card .group .btns button {
+    flex: 1; padding: 0.6rem 0.5rem; border: 2px solid #565350; border-radius: 8px;
+    background: transparent; color: #e0e0e0; font-size: 0.85rem; font-weight: 500;
+    cursor: pointer; transition: all 0.12s;
+  }
+  .lobby-card .group .btns button:hover { border-color: #81b64c; color: #fff; }
+  .lobby-card .group .btns button.active { border-color: #81b64c; background: #81b64c22; color: #81b64c; }
+  .lobby-card .play-btn {
+    width: 100%; padding: 0.9rem; border: none; border-radius: 8px;
+    background: #81b64c; color: #fff; font-size: 1.2rem; font-weight: 700;
+    cursor: pointer; transition: background 0.12s;
+  }
+  .lobby-card .play-btn:hover { background: #6d9c3e; }
+  .lobby-card .play-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* ---- GAME SCREEN ---- */
+  #gameScreen { display: none; padding: 1rem; width: 100%; max-width: 1100px; }
+  #gameScreen.active { display: block; }
+  .game-layout {
+    display: flex; gap: 1.5rem; align-items: flex-start; justify-content: center;
+  }
+  .board-column { display: flex; flex-direction: column; align-items: center; gap: 0; flex-shrink: 0; }
+  .side-column { flex: 1; min-width: 240px; max-width: 320px; display: flex; flex-direction: column; gap: 0.75rem; }
+
+  /* ---- TIMER BARS ---- */
+  .player-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 0.5rem 1rem; border-radius: 6px;
+    background: #262421; transition: background 0.2s;
+  }
+  .player-bar.active { background: #3d3a37; }
+  .player-bar .name { font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+  .player-bar .name .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .player-bar .name .dot.white { background: #fff; border: 1px solid #888; }
+  .player-bar .name .dot.black { background: #1a1a1a; border: 1px solid #888; }
+  .player-bar .time { font-size: 1.6rem; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+  .player-bar .time.low { color: #e74c3c; }
+  .player-bar .time.empty { color: #e74c3c; animation: pulse 0.5s infinite; }
+
+  /* ---- BOARD ---- */
+  .board-wrapper {
+    position: relative; display: inline-block; line-height: 0;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+  .board {
+    display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+    width: min(70vw, 480px); height: min(70vw, 480px);
+    overflow: hidden; user-select: none; gap: 0;
+  }
+  .sq {
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(1.4rem, 5.5vw, 2.8rem); line-height: 1; cursor: pointer;
+    position: relative;
+  }
+  .sq.light { background: #f0d9b5; }
+  .sq.dark { background: #b58863; }
+  .sq.selected { background: #829769 !important; }
+  .sq.last-move-light { background: #cdd26a88 !important; }
+  .sq.last-move-dark { background: #aaa23a88 !important; }
+  .sq .coord {
+    position: absolute; font-size: 0.65rem; line-height: 1; font-weight: 700;
+    pointer-events: none; opacity: 0.6;
+  }
+  .sq.light .coord { color: #b58863; }
+  .sq.dark .coord { color: #f0d9b5; }
+  .sq .coord.file { bottom: 1px; right: 3px; }
+  .sq .coord.rank { top: 1px; left: 3px; }
+  .sq .piece { pointer-events: none; line-height: 1; position: relative; z-index: 3; }
+  .sq .piece.white { color: #fff; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+  .sq .piece.black { color: #1a1a1a; }
+  .sq .move-dot {
+    width: 28%; height: 28%; border-radius: 50%; position: absolute;
+    pointer-events: none; z-index: 2;
+  }
+  .sq.possible-move .move-dot { background: rgba(0,0,0,0.12); }
+  .sq.possible-capture { box-shadow: inset 0 0 0 4px rgba(0,0,0,0.12); }
+  .sq.possible-capture .move-dot { display: none; }
+
+  /* ---- SIDE PANEL ---- */
+  .side-panel {
+    background: #262421; border-radius: 8px; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .side-panel .panel-header {
+    padding: 0.5rem 1rem; border-bottom: 1px solid #3d3a37;
+    font-size: 0.75rem; font-weight: 600; color: #b0aba5; text-transform: uppercase;
+    letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center;
+  }
+  .side-panel .move-list {
+    padding: 0.3rem 0.5rem; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.8rem; line-height: 1.6; overflow-y: auto; flex: 1;
+    min-height: 250px; max-height: 350px;
+  }
+  .side-panel .move-list .move-pair { display: flex; gap: 0.5rem; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  .side-panel .move-list .move-pair:hover { background: #3d3a37; }
+  .side-panel .move-list .move-num { color: #6e6a66; min-width: 2em; text-align: right; }
+  .side-panel .move-list .move-w { color: #e0e0e0; min-width: 5em; }
+  .side-panel .move-list .move-b { color: #e0e0e0; min-width: 5em; }
+
+  .side-panel .controls {
+    display: flex; padding: 0.5rem; gap: 0.5rem; border-top: 1px solid #3d3a37;
+  }
+  .side-panel .controls button {
+    flex: 1; padding: 0.6rem; border: none; border-radius: 6px;
+    font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.12s;
+  }
+  .side-panel .controls .btn-stop { background: #7a3a3a; color: #fff; }
+  .side-panel .controls .btn-stop:hover { background: #8a4a4a; }
+  .side-panel .controls .btn-new { background: #3d3a37; color: #e0e0e0; }
+  .side-panel .controls .btn-new:hover { background: #4d4a47; }
+
+  /* ---- LOG (debug) ---- */
+  .log-panel {
+    background: #1a1a18; border-radius: 6px; overflow: hidden;
+    max-height: 150px; display: flex; flex-direction: column;
+  }
+  .log-panel .log-header {
+    padding: 0.3rem 0.8rem; border-bottom: 1px solid #3d3a37;
+    font-size: 0.65rem; font-weight: 600; color: #6e6a66; text-transform: uppercase;
+    display: flex; justify-content: space-between;
+  }
+  .log-panel .log-header button {
+    background: none; border: none; color: #6e6a66; cursor: pointer; font-size: 0.65rem;
+  }
+  .log-panel .log-header button:hover { color: #b0aba5; }
+  .log-panel .log-content {
+    padding: 0.3rem 0.8rem; font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.65rem; line-height: 1.5; overflow-y: auto; flex: 1;
+    white-space: pre-wrap; word-break: break-all; max-height: 100px;
+  }
+  .log-panel .log-content .info-line { color: #b0aba5; }
+  .log-panel .log-content .best-line { color: #81b64c; font-weight: 600; }
+  .log-panel .log-content .cmd-line { color: #6e6a66; }
+  .log-panel .log-content .error-line { color: #e74c3c; }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 780px) {
+    .game-layout { flex-direction: column; align-items: center; }
+    .side-column { max-width: 100%; width: min(70vw, 480px); }
+    .board { width: min(90vw, 480px); height: min(90vw, 480px); }
+    .sq { font-size: clamp(1.2rem, 8vw, 2.8rem); }
+    .player-bar .time { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== LOBBY ========== -->
+<div id="lobby">
+  <div style="text-align:center">
+    <h1>♚ <span>Pallas</span> Chess</h1>
+    <p>Moteur d'échecs compilé en WebAssembly</p>
+  </div>
+  <div class="lobby-card">
+    <div class="group">
+      <label>Mode de jeu</label>
+      <div class="btns" id="modeBtns">
+        <button data-mode="blitz">⚡ Blitz<br><small>5 min</small></button>
+        <button data-mode="rapid" class="active">⏱ Rapide<br><small>10 min</small></button>
+        <button data-mode="test">🧪 Test<br><small>libre</small></button>
+      </div>
+    </div>
+    <div class="group" id="depthGroup" style="display:none">
+      <label>Profondeur de recherche</label>
+      <select id="depthSelect" style="width:100%;padding:0.6rem;border:2px solid #565350;border-radius:8px;background:transparent;color:#e0e0e0;font-size:0.9rem;">
+        <option value="4">4 (rapide)</option>
+        <option value="6">6</option>
+        <option value="8">8</option>
+        <option value="10" selected>10 (recommandé)</option>
+        <option value="12">12</option>
+        <option value="14">14 (lent)</option>
+      </select>
+    </div>
+    <div class="group">
+      <label>Je joue</label>
+      <div class="btns" id="colorBtns">
+        <button data-color="w" class="active">♔ Blancs</button>
+        <button data-color="b">♚ Noirs</button>
+        <button data-color="random">🎲 Aléatoire</button>
+      </div>
+    </div>
+    <button class="play-btn" id="playBtn">Jouer</button>
+  </div>
+</div>
+
+<!-- ========== GAME SCREEN ========== -->
+<div id="gameScreen">
+  <div class="game-layout">
+    <div class="board-column">
+      <!-- Engine bar -->
+      <div class="player-bar" id="engineBar">
+        <div class="name"><span class="dot" id="engineDot"></span> Pallas</div>
+        <div class="time" id="engineTime">10:00</div>
+      </div>
+      <div class="board-wrapper">
+        <div class="board" id="board"></div>
+        <div class="loading-overlay" id="loadingOverlay" style="display:none">
+          <span>Chargement du moteur…</span>
+        </div>
+      </div>
+      <!-- Human bar -->
+      <div class="player-bar" id="humanBar">
+        <div class="name"><span class="dot" id="humanDot"></span> Vous</div>
+        <div class="time" id="humanTime">10:00</div>
+      </div>
+    </div>
+
+    <div class="side-column">
+      <!-- Move list -->
+      <div class="side-panel" style="flex:1">
+        <div class="panel-header">
+          <span>Coups</span>
+          <span id="moveCountDisplay">0</span>
+        </div>
+        <div class="move-list" id="moveList"></div>
+        <div class="controls">
+          <button class="btn-new" id="newGameBtn">↺ Nouvelle partie</button>
+        </div>
+      </div>
+
+      <!-- Log (collapsed, for debug) -->
+      <div class="log-panel">
+        <div class="log-header">
+          <span>Journal UCI</span>
+          <button onclick="clearLog()">Effacer</button>
+        </div>
+        <div class="log-content" id="logContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <script src="pallas-bridge.js?v=2"></script>
+<script>
+(function () {
+  'use strict';
+
+  var PIECES = {
+    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+  };
+  var STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
+
+  // DOM refs
+  var boardEl = document.getElementById('board');
+  var logEl = document.getElementById('logContent');
+  var loadingOverlay = document.getElementById('loadingOverlay');
+  var moveListEl = document.getElementById('moveList');
+  var moveCountDisplay = document.getElementById('moveCountDisplay');
+  var humanTimeEl = document.getElementById('humanTime');
+  var engineTimeEl = document.getElementById('engineTime');
+  var humanBar = document.getElementById('humanBar');
+  var engineBar = document.getElementById('engineBar');
+  var humanDot = document.getElementById('humanDot');
+  var engineDot = document.getElementById('engineDot');
+  var lobby = document.getElementById('lobby');
+  var gameScreen = document.getElementById('gameScreen');
+  var newGameBtn = document.getElementById('newGameBtn');
+  var playBtn = document.getElementById('playBtn');
+
+  // Game state
+  var board = [];
+  var flipped = false;
+  var selectedSq = null;
+  var lastMoveSq = null;
+  var moveHistory = [];
+  var moveCount = 0;
+  var engine = null;
+  var legalDestinations = null;
+  var _engineBusy = false;
+  var engineThinking = false;
+  var gameActive = false;
+
+  // Mode / color
+  var mode = 'rapid';
+  var humanColor = 'w';
+  var timerInterval = null;
+
+  // Time (ms per color)
+  var whiteTimeMs = 600000;
+  var blackTimeMs = 600000;
+  var turnStartMs = 0;
+
+  function formatTime(ms) {
+    if (ms >= 999999999) return '∞';
+    if (ms <= 0) return '0:00';
+    var totalSec = Math.ceil(ms / 1000);
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function getTimeForColor(isWhite) {
+    var base = isWhite ? whiteTimeMs : blackTimeMs;
+    if (turnStartMs === 0) return base;
+    var isWhiteTurn = (moveCount % 2 === 0);
+    if (isWhiteTurn !== isWhite) return base;
+    var elapsed = Date.now() - turnStartMs;
+    return Math.max(0, base - elapsed);
+  }
+
+  function updateTimerDisplay() {
+    var w = getTimeForColor(true);
+    var b = getTimeForColor(false);
+    var humanIsWhite = (humanColor === 'w');
+    var hTime = humanIsWhite ? w : b;
+    var eTime = humanIsWhite ? b : w;
+
+    humanTimeEl.textContent = formatTime(hTime);
+    engineTimeEl.textContent = formatTime(eTime);
+
+    humanTimeEl.className = 'time' + (hTime <= 10000 ? ' low' : '') + (hTime <= 0 ? ' empty' : '');
+    engineTimeEl.className = 'time' + (eTime <= 10000 ? ' low' : '') + (eTime <= 0 ? ' empty' : '');
+  }
+
+  function checkTimeOut() {
+    if (!gameActive) return;
+    if (whiteTimeMs <= 0 || blackTimeMs <= 0) {
+      var winner = blackTimeMs <= 0 ? 'Blancs' : 'Noirs';
+      addLog('⏰ ' + winner + ' gagnent par temps !', 'best-line');
+      gameActive = false;
+      engineThinking = false;
+      stopTimer();
+      updateTimerDisplay();
+    }
+  }
+
+  function startTurnTimer() {
+    turnStartMs = Date.now();
+    if (!timerInterval) {
+      timerInterval = setInterval(function () {
+        if (gameActive) updateTimerDisplay();
+      }, 200);
+    }
+  }
+
+  function stopTurnTimer() {
+    if (turnStartMs === 0) return;
+    var elapsed = Date.now() - turnStartMs;
+    var isWhiteTurn = (moveCount % 2 === 0);
+    if (isWhiteTurn) whiteTimeMs = Math.max(0, whiteTimeMs - elapsed);
+    else blackTimeMs = Math.max(0, blackTimeMs - elapsed);
+    turnStartMs = 0;
+    updateTimerDisplay();
+    checkTimeOut();
+  }
+
+  function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    turnStartMs = 0;
+  }
+
+
+
+  // ---- LOBBY ----
+  var depthGroup = document.getElementById('depthGroup');
+  document.querySelectorAll('#modeBtns button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#modeBtns button').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      mode = b.dataset.mode;
+      depthGroup.style.display = mode === 'test' ? 'block' : 'none';
+    });
+  });
+  document.querySelectorAll('#colorBtns button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#colorBtns button').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+    });
+  });
+
+  playBtn.addEventListener('click', startGame);
+  newGameBtn.addEventListener('click', function () { stopGame(); lobby.classList.remove('hidden'); });
+
+  function stopGame() {
+    gameActive = false;
+    engineThinking = false;
+    _engineBusy = false;
+    stopTimer();
+    if (engine && engine._ready) engine.stop();
+    updateStatus();
+  }
+
+  function startGame() {
+    var colorBtn = document.querySelector('#colorBtns .active');
+    var chosen = colorBtn ? colorBtn.dataset.color : 'w';
+    if (chosen === 'random') humanColor = Math.random() < 0.5 ? 'w' : 'b';
+    else humanColor = chosen;
+
+    var modeBtn = document.querySelector('#modeBtns .active');
+    if (modeBtn) mode = modeBtn.dataset.mode;
+
+    lobby.classList.add('hidden');
+    gameScreen.classList.add('active');
+    stopTimer();
+
+    // Set time
+    if (mode === 'blitz') { whiteTimeMs = 300000; blackTimeMs = 300000; }
+    else if (mode === 'rapid') { whiteTimeMs = 600000; blackTimeMs = 600000; }
+    else { whiteTimeMs = 999999999; blackTimeMs = 999999999; }
+
+    setupGame();
+  }
+
+  function setupGame() {
+    gameActive = true;
+    engineThinking = false;
+    moveHistory = [];
+    moveCount = 0;
+    selectedSq = null;
+    lastMoveSq = null;
+    legalDestinations = null;
+    _engineBusy = false;
+    flipped = (humanColor === 'b');
+    moveListEl.innerHTML = '';
+    moveCountDisplay.textContent = '0';
+    humanDot.className = 'dot ' + humanColor;
+    engineDot.className = 'dot ' + (humanColor === 'w' ? 'black' : 'white');
+    boardFromFen(STARTING_FEN);
+    renderBoard();
+    updateStatus();
+    updateTimerDisplay();
+
+    if (engine && engine._ready) {
+      engine.ucinewgame();
+      sendPosition();
+      if (isHumanTurn()) {
+        startTurnTimer();
+      } else {
+        setTimeout(function () {
+          if (gameActive) { startTurnTimer(); startEngineSearch(); }
+        }, 100);
+      }
+    }
+  }
+
+  // ---- BOARD ---
+  function boardFromFen(fen) {
+    board = [];
+    var rows = fen.split('/');
+    for (var r = 0; r < 8; r++) {
+      var row = [];
+      for (var i = 0; i < rows[r].length; i++) {
+        var ch = rows[r][i];
+        if (ch >= '1' && ch <= '8') { var empty = parseInt(ch, 10); while (empty--) row.push(''); }
+        else row.push(ch);
+      }
+      board.push(row);
+    }
+  }
+
+  function sqColor(rank, file) { return (rank + file) % 2 === 0 ? 'light' : 'dark'; }
+
+  function renderBoard() {
+    boardEl.innerHTML = '';
+    for (var r = 0; r < 8; r++) {
+      var displayRank = flipped ? 7 - r : r;
+      for (var f = 0; f < 8; f++) {
+        var displayFile = flipped ? 7 - f : f;
+        var piece = board[displayRank][displayFile];
+        var sq = document.createElement('div');
+        sq.className = 'sq ' + sqColor(displayRank, displayFile);
+        sq.dataset.rank = displayRank;
+        sq.dataset.file = displayFile;
+
+        if (selectedSq && selectedSq[0] === displayRank && selectedSq[1] === displayFile) sq.classList.add('selected');
+        if (lastMoveSq && lastMoveSq[0] === displayRank && lastMoveSq[1] === displayFile)
+          sq.classList.add((displayRank + displayFile) % 2 === 0 ? 'last-move-light' : 'last-move-dark');
+
+        if (legalDestinations && legalDestinations[displayRank][displayFile]) {
+          sq.classList.add(piece ? 'possible-capture' : 'possible-move');
+        }
+
+        var showFile = !flipped ? (r === 7) : (r === 0);
+        var showRank = !flipped ? (f === 0) : (f === 7);
+        if (showFile) {
+          var cf = document.createElement('span'); cf.className = 'coord file';
+          cf.textContent = String.fromCharCode(97 + (flipped ? 7 - f : f));
+          sq.appendChild(cf);
+        }
+        if (showRank) {
+          var cr = document.createElement('span'); cr.className = 'coord rank';
+          cr.textContent = flipped ? r + 1 : 8 - r;
+          sq.appendChild(cr);
+        }
+
+        var dot = document.createElement('span'); dot.className = 'move-dot';
+        sq.appendChild(dot);
+
+        if (piece) {
+          var span = document.createElement('span');
+          span.className = 'piece ' + (piece === piece.toUpperCase() ? 'white' : 'black');
+          span.textContent = PIECES[piece] || piece;
+          sq.appendChild(span);
+        }
+
+        sq.addEventListener('click', onSquareClick);
+        boardEl.appendChild(sq);
+      }
+    }
+  }
+
+  function updateStatus() {
+    var isWhiteTurn = (moveCount % 2 === 0);
+    var humanIsWhite = (humanColor === 'w');
+    humanBar.classList.toggle('active', isWhiteTurn === humanIsWhite && gameActive);
+    engineBar.classList.toggle('active', isWhiteTurn !== humanIsWhite && gameActive);
+    moveCountDisplay.textContent = Math.floor(moveCount / 2);
+  }
+
+  function sqToUci(rank, file) { return String.fromCharCode(97 + file) + (8 - rank); }
+
+  function isHumanTurn() {
+    return (humanColor === 'w' && moveCount % 2 === 0) || (humanColor === 'b' && moveCount % 2 === 1);
+  }
+
+  function sendPosition() {
+    if (moveHistory.length === 0) engine.position('startpos');
+    else engine.position('startpos', moveHistory);
+  }
+
+  function queryLegalMoves(from) {
+    if (!engine || !engine._ready) { legalDestinations = null; return; }
+    var movesStr = engine.getLegalMoves();
+    if (!movesStr) { legalDestinations = null; return; }
+    var toUci = sqToUci(from[0], from[1]).substring(0, 2);
+    legalDestinations = [];
+    for (var r = 0; r < 8; r++) { legalDestinations[r] = []; for (var f = 0; f < 8; f++) legalDestinations[r][f] = false; }
+    var allMoves = movesStr.split(' ');
+    for (var i = 0; i < allMoves.length; i++) {
+      var m = allMoves[i];
+      if (m.substring(0, 2) === toUci) {
+        var tf = m.charCodeAt(2) - 97;
+        var tr = 8 - parseInt(m[3], 10);
+        if (tr >= 0 && tr < 8 && tf >= 0 && tf < 8) legalDestinations[tr][tf] = true;
+      }
+    }
+  }
+
+  function clearLegalMoves() { legalDestinations = null; }
+
+  function onSquareClick(e) {
+    if (!gameActive || engineThinking || !isHumanTurn()) return;
+    var sq = e.currentTarget;
+    var rank = parseInt(sq.dataset.rank, 10);
+    var file = parseInt(sq.dataset.file, 10);
+    var piece = board[rank][file];
+
+    if (selectedSq !== null) {
+      var from = selectedSq;
+      var to = [rank, file];
+      if (from[0] === to[0] && from[1] === to[1]) { selectedSq = null; clearLegalMoves(); renderBoard(); return; }
+      if (piece && isOwnPiece(piece)) { selectedSq = to; queryLegalMoves(to); renderBoard(); return; }
+
+      if (legalDestinations && !legalDestinations[to[0]][to[1]]) {
+        selectedSq = null;
+        clearLegalMoves();
+        renderBoard();
+        return;
+      }
+
+      var uci = sqToUci(from[0], from[1]) + sqToUci(to[0], to[1]);
+      var fromPieceType = board[from[0]][from[1]].toUpperCase();
+      if (fromPieceType === 'P' && (to[0] === 0 || to[0] === 7)) uci += 'q';
+
+      selectedSq = null;
+      clearLegalMoves();
+      makeHumanMove(uci);
+    } else {
+      if (piece && isOwnPiece(piece)) { selectedSq = [rank, file]; queryLegalMoves([rank, file]); renderBoard(); }
+    }
+  }
+
+  function isOwnPiece(piece) {
+    if (humanColor === 'w') return piece === piece.toUpperCase();
+    return piece === piece.toLowerCase();
+  }
+
+  function applyUciMove(uci) {
+    var fromFile = uci.charCodeAt(0) - 97;
+    var fromRank = 8 - parseInt(uci[1]);
+    var toFile = uci.charCodeAt(2) - 97;
+    var toRank = 8 - parseInt(uci[3]);
+    var promotion = uci.length > 4 ? uci[4] : null;
+    var piece = board[fromRank][fromFile];
+
+    if (piece.toUpperCase() === 'K' && Math.abs(toFile - fromFile) === 2) {
+      var rookFrom = toFile > fromFile ? 7 : 0;
+      var rookTo = toFile > fromFile ? 5 : 3;
+      board[fromRank][rookTo] = board[fromRank][rookFrom];
+      board[fromRank][rookFrom] = '';
+    }
+    if (piece.toUpperCase() === 'P' && fromFile !== toFile && board[toRank][toFile] === '') {
+      board[fromRank][toFile] = '';
+    }
+    if (promotion) board[toRank][toFile] = (humanColor === 'w' ? promotion.toUpperCase() : promotion.toLowerCase());
+    else board[toRank][toFile] = piece;
+    board[fromRank][fromFile] = '';
+
+    lastMoveSq = [toRank, toFile];
+    renderBoard();
+    updateStatus();
+  }
+
+  function addMoveToList(num, whiteMove, blackMove) {
+    var pair = document.createElement('div');
+    pair.className = 'move-pair';
+    var n = document.createElement('span'); n.className = 'move-num'; n.textContent = num + '.';
+    var w = document.createElement('span'); w.className = 'move-w'; w.textContent = whiteMove;
+    pair.appendChild(n); pair.appendChild(w);
+    if (blackMove) {
+      var b = document.createElement('span'); b.className = 'move-b'; b.textContent = blackMove;
+      pair.appendChild(b);
+    }
+    moveListEl.appendChild(pair);
+    moveListEl.scrollTop = moveListEl.scrollHeight;
+  }
+
+  function makeHumanMove(uci) {
+    stopTurnTimer();
+    moveHistory.push(uci);
+    moveCount++;
+    applyUciMove(uci);
+    var num = Math.floor((moveCount + 1) / 2);
+    if (humanColor === 'w') {
+      addMoveToList(num, uci, '');
+    } else {
+      var lastPair = moveListEl.lastChild;
+      if (lastPair) {
+        var bSpan = lastPair.querySelector('.move-b');
+        if (bSpan) bSpan.textContent = uci;
+        else {
+          var nb = document.createElement('span');
+          nb.className = 'move-b'; nb.textContent = uci;
+          lastPair.appendChild(nb);
+        }
+      } else {
+        addMoveToList(num, '', uci);
+      }
+    }
+    moveCountDisplay.textContent = Math.floor(moveCount / 2);
+
+    setTimeout(function () {
+      if (!gameActive) return;
+      sendPosition();
+      startTurnTimer();
+      startEngineSearch();
+    }, 30);
+  }
+
+  function startEngineSearch() {
+    if (!gameActive) return;
+    if (isHumanTurn()) return;
+    engineThinking = true;
+    updateStatus();
+    if (mode === 'test') {
+      var sel = document.getElementById('depthSelect');
+      var depth = parseInt(sel ? sel.value : '10', 10);
+      engine.go({ depth: depth });
+    } else {
+      var wRemaining = Math.max(1, whiteTimeMs);
+      var bRemaining = Math.max(1, blackTimeMs);
+      engine.go({ wtime: wRemaining, btime: bRemaining, winc: 0, binc: 0 });
+    }
+  }
+
+  function handleEngineOutput(text) {
+    if (text.indexOf('bestmove') === 0) {
+      if (_engineBusy) return;
+      _engineBusy = true;
+      var parts = text.split(' ');
+      var bestmove = parts[1];
+      if (bestmove && bestmove !== '0000') {
+        stopTurnTimer();
+        addLog('⏎ ' + text, 'best-line');
+        moveHistory.push(bestmove);
+        moveCount++;
+        var num = Math.floor((moveCount + 1) / 2);
+        if (humanColor === 'w') {
+          var lastPair = moveListEl.lastChild;
+          if (lastPair) {
+            var bSpan = lastPair.querySelector('.move-b');
+            if (bSpan) bSpan.textContent = bestmove;
+            else { var nb = document.createElement('span'); nb.className = 'move-b'; nb.textContent = bestmove; lastPair.appendChild(nb); }
+          }
+        } else addMoveToList(num, bestmove, '');
+        moveCountDisplay.textContent = Math.floor(moveCount / 2);
+        applyUciMove(bestmove);
+        engineThinking = false;
+
+        setTimeout(function () {
+          _engineBusy = false;
+          if (!gameActive) return;
+          sendPosition();
+          if (!isHumanTurn()) {
+            startTurnTimer();
+            startEngineSearch();
+          } else {
+            updateStatus();
+            if (mode !== 'test') startTurnTimer();
+          }
+          updateTimerDisplay();
+        }, 0);
+      } else {
+        _engineBusy = false;
+        addLog('⏎ ' + text + ' (plus de coup légal)', 'error-line');
+        engineThinking = false;
+        gameActive = false;
+        stopTimer();
+        updateStatus();
+      }
+    } else if (text.indexOf('info') === 0) {
+      // silently ignore info lines — they flood the log
+    } else if (text.indexOf('readyok') === 0 || text.indexOf('uciok') === 0 || text.indexOf('id ') === 0 || text.indexOf('option ') === 0) {
+    } else {
+      addLog(text, 'info-line');
+    }
+  }
+
+  function handleEngineReady() {
+    loadingOverlay.style.display = 'none';
+    playBtn.disabled = false;
+    playBtn.textContent = 'Jouer';
+    engine.isready();
+  }
+
+  function handleEngineError(msg) {
+    loadingOverlay.style.display = 'none';
+    addLog('⚠ Erreur: ' + msg, 'error-line');
+  }
+
+  function addLog(msg, cls) {
+    var line = document.createElement('div');
+    line.className = cls;
+    line.textContent = msg;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function clearLog() { logEl.innerHTML = ''; }
+
+  window.onload = function () {
+    playBtn.disabled = true;
+    playBtn.textContent = 'Chargement…';
+    engine = new PallasChess();
+    engine.onready = handleEngineReady;
+    engine.onmessage = handleEngineOutput;
+    engine.onerror = handleEngineError;
+    boardFromFen(STARTING_FEN);
+    renderBoard();
+  };
+
+})();
+</script>
+</body>
+</html>
