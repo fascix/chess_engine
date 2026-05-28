@@ -10,7 +10,7 @@
 #include <time.h>
 
 // Variables globales pour gérer le temps de recherche
-static clock_t search_start_time;
+static long search_start_time_ms;
 static int search_time_limit_ms;
 static volatile int search_should_stop;
 static long global_nodes_searched; // Global counter for all nodes explored
@@ -41,9 +41,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
   if (++node_count >= 2048) {
     node_count = 0;
     if (search_time_limit_ms > 0) {
-      clock_t current = clock();
-      int elapsed_ms = (int)(((double)(current - search_start_time)) /
-                             CLOCKS_PER_SEC * 1000);
+      long elapsed_ms = get_time_ms() - search_start_time_ms;
       if (elapsed_ms >= search_time_limit_ms) {
         search_should_stop = 1;
       }
@@ -314,7 +312,7 @@ int negamax_alpha_beta(Board *board, int depth, int alpha, int beta,
 
 SearchResult search_iterative_deepening(Board *board, int max_depth,
                                         int time_limit_ms) {
-  search_start_time = clock();
+  search_start_time_ms = get_time_ms();
   search_time_limit_ms = time_limit_ms;
   search_should_stop = 0;
   global_nodes_searched = 0; // Reset global counter
@@ -405,10 +403,8 @@ SearchResult search_iterative_deepening(Board *board, int max_depth,
     best_score_overall = best_score_this_iter;
     best_result.nodes_searched = global_nodes_searched; // Use global counter
 
-    clock_t end_time = clock();
-    int elapsed_ms =
-        (int)(((double)(end_time - search_start_time)) / CLOCKS_PER_SEC * 1000);
-    if (elapsed_ms == 0)
+    int elapsed_ms = (int)(get_time_ms() - search_start_time_ms);
+    if (elapsed_ms <= 0)
       elapsed_ms = 1;
     int nps = (int)(best_result.nodes_searched * 1000 / elapsed_ms);
 

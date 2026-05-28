@@ -1,5 +1,6 @@
 import pygame
 import chess
+import os
 from settings import *
 
 # Permet de charger les images des différentes pièces blanches et noires
@@ -8,12 +9,18 @@ def load_images():
     images = {}
     # Taille de base pour le chargement, sera redimensionné à l'affichage
     base_size = 100 
+    
+    # Chemin absolu vers le dossier assets
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    assets_dir = os.path.join(current_dir, "assets", "pieces")
+    
     for color in ['w', 'b']:
         for piece in pieces:
             piece_id = color + piece
             try:
+                image_path = os.path.join(assets_dir, color, f"{piece}.png")
                 images[piece_id] = pygame.transform.scale(
-                    pygame.image.load(f"./assets/pieces/{color}/{piece}.png"), (base_size, base_size)
+                    pygame.image.load(image_path), (base_size, base_size)
                 )
             except Exception as e:
                 print(f"Erreur chargement image {piece_id}: {e}")

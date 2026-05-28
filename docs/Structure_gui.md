@@ -57,7 +57,7 @@ GUI/
 ### `game_modes.py` (Modes de jeu)
 
 - Mode 2 joueurs (`solo_game`)
-- Mode contre l'ordinateur (`pallas_game`)
+- Mode contre l'ordinateur (`pallas`)
 - Gestion des événements et boucles principales
 
 ### `support.py` (Utilitaires - inchangé)

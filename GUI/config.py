@@ -1,8 +1,9 @@
-"""
-Configuration file for bot paths and game settings
-"""
+import os
 
 # Bot engine paths
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+
 bot_engines = {
     "Stockfish": "/opt/homebrew/bin/stockfish",
     "Pallas": "../pallas",  # Our custom engine

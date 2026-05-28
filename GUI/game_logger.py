@@ -7,7 +7,7 @@ from datetime import datetime
 import io
 
 # Dossier de sauvegarde des logs
-LOGS_DIR = "./GUI/logs"
+LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 MAX_GAMES = 5  # Nombre de parties à conserver
 
 def ensure_logs_directory():

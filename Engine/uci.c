@@ -463,7 +463,13 @@ void handle_stop() {
 // Gestionnaire commande "quit"
 void handle_quit() {
   DEBUG_LOG_UCI("Quit command received, exiting\n");
+#ifdef __EMSCRIPTEN__
+  DEBUG_LOG_UCI("(ignored in WASM mode)\n");
+  fflush(stdout);
+  return;
+#else
   exit(0);
+#endif
 }
 
 // Applique un coup UCI en mettant à jour l'état du board

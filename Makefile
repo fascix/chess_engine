@@ -6,9 +6,14 @@
 
 CC = gcc
 
-# -----------------------------------------------------------------------------
-# OPTIONS DE COMPILATION
-# -----------------------------------------------------------------------------
+EMSDK_DIR = emsdk
+# Chemin vers Emscripten SDK (pour la compilation WebAssembly)
+
+CFLAGS_COMMON = -Wall -Wextra -std=c11 -IEngine
+# Options communes de compilation :
+# -Wall et -Wextra activent des warnings supplémentaires pour un code plus sûr
+# -std=c11 spécifie la norme C utilisée
+# -IEngine ajoute le dossier Engine aux chemins d'inclusion des headers
 
 CFLAGS_COMMON = -Wall -Wextra -std=c11 -IEngine
 CFLAGS_DEBUG = -g -DDEBUG -fsanitize=address,undefined
@@ -106,6 +111,29 @@ pallas-pure:
 
 # Compilation des objets Release
 $(BUILD_DIR)/%.o: Engine/%.c
+# Liste les fichiers objets pour la build debug, placés dans le dossier build_debug
+
+# Cible par défaut : compilation en mode release
+all: pallas
+
+# Cible pour la compilation en mode debug
+debug: pallas_debug
+
+# Alias pour la compilation release
+release: pallas
+
+# Création du dossier build s'il n'existe pas, nécessaire pour y placer les fichiers objets release
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+# Création du dossier build_debug s'il n'existe pas, nécessaire pour y placer les fichiers objets debug
+$(BUILD_DIR_DEBUG):
+	mkdir -p $(BUILD_DIR_DEBUG)
+
+# Règle de compilation des fichiers sources en mode release
+# $< est le fichier source, $@ est le fichier cible
+# -MMD -MP génèrent les fichiers de dépendances automatiques (.d)
+$(BUILD_DIR)/%.o: Engine/%.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -MMD -MP -c $< -o $@
 
@@ -117,6 +145,65 @@ $(BUILD_DIR_DEBUG)/%.o: Engine/%.c
 # -----------------------------------------------------------------------------
 # TESTS UNITAIRES (UNITY)
 # -----------------------------------------------------------------------------
+	$(CC) $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -MMD -MP -c $< -o $@
+
+# Construction de l'exécutable de release à partir des fichiers objets correspondants
+# -lm lie la bibliothèque mathématique
+pallas: $(OBJ_RELEASE)
+	$(CC) $(CFLAGS_COMMON) $(CFLAGS_RELEASE) -o $@ $^ -lm
+
+# Construction de l'exécutable de debug à partir des fichiers objets correspondants
+pallas_debug: $(OBJ_DEBUG)
+	$(CC) $(CFLAGS_COMMON) $(CFLAGS_DEBUG) -o $@ $^ -lm
+
+# ========== COMPILATION WEBASSEMBLY (via Emscripten) ==========
+
+EMCC = $(EMSDK_DIR)/upstream/emscripten/emcc
+WASM_DIR = wasm
+
+# Sources WASM (sans main.c, on utilise notre propre entry point)
+SRC_WASM = $(MODULES_COMMON) Engine/perft.c Engine/uci.c Engine/timemanager.c Engine/search.c Engine/main.c
+
+CFLAGS_WASM = -Wall -Wextra -std=c11 -IEngine -O3 -DNDEBUG \
+  -s WASM=1 \
+  -s ALLOW_MEMORY_GROWTH=1 \
+  -s INITIAL_MEMORY=67108864 \
+  -s TOTAL_STACK=2097152 \
+  -s EXPORTED_FUNCTIONS='["_pallas_init","_pallas_uci_command","_pallas_reset","_pallas_get_legal_moves","_pallas_is_legal_move","_main","_malloc"]' \
+  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
+  -s MODULARIZE=1 \
+  -s EXPORT_NAME='PallasEngine' \
+  -s ENVIRONMENT='worker' \
+  -s SINGLE_FILE=1
+
+wasm:
+	@mkdir -p $(WASM_DIR)
+	@echo "🌐 Compilation WebAssembly..."
+	@echo "  Utilisation de: $(EMCC)"
+	$(EMCC) $(CFLAGS_WASM) -o $(WASM_DIR)/pallas.js $(SRC_WASM) -lm
+	@echo "✅ Compilation WASM terminée dans $(WASM_DIR)/"
+
+wasm-clean:
+	@echo "🧹 Nettoyage des fichiers WASM..."
+	@rm -f $(WASM_DIR)/pallas.js
+	@echo "✅ Fichiers WASM nettoyés"
+
+# ========== CIBLES DE NETTOYAGE ==========
+
+# Nettoyage basique : supprime les exécutables et dossiers build
+clean:
+	@echo "🧹 Nettoyage des builds principaux..."
+	@rm -f pallas_debug
+	@rm -rf $(BUILD_DIR) $(BUILD_DIR_DEBUG)
+	@rm -rf pallas
+	@echo "✅ Nettoyage terminé"
+
+# Nettoyage des logs et fichiers temporaires
+clean-logs:
+	@echo "🧹 Nettoyage des logs..."
+	@rm -rf logs/*.log logs/*.txt
+	@rm -rf pgn_results/*.pgn
+	@echo "✅ Logs nettoyés"
 
 TESTS_DIR = tests
 UNITY_DIR = $(TESTS_DIR)/unity
@@ -196,6 +283,14 @@ help:
 	@echo "  make test         - Exécute les tests unitaires Unity"
 	@echo "  make test-all     - Exécute TOUS les tests (UCI, Perft, Unity)"
 	@echo "  make build-tests  - Compile uniquement les tests unitaires"
+	@echo "  🌐 WEBASSEMBLY :"
+	@echo "    make wasm             - Compile l'engine en WebAssembly"
+	@echo "    make wasm-clean       - Nettoie les fichiers WASM"
+	@echo ""
+	@echo "  🧪 TESTS :"
+	@echo "    make build-tests      - Compile les tests unitaires"
+	@echo "    make test             - Compile et exécute tous les tests unitaires"
+	@echo "    make clean-tests      - Nettoie les tests compilés"
 	@echo ""
 	@echo "CIBLES DE NETTOYAGE :"
 	@echo "  make clean        - Supprime les objets et tous les binaires Pallas"
@@ -210,3 +305,5 @@ help:
 -include $(BUILD_DIR_DEBUG)/*.d
 
 .PHONY: all debug pallas-debug pallas-no-book pallas-no-tb pallas-pure clean clean-build clean-logs clean-all test test-all build-tests help distclean
+# Déclaration des cibles "virtuelles" pour éviter des conflits avec des fichiers du même nom
+.PHONY: all debug release clean clean-logs clean-all distclean rebuild help build-tests test clean-tests wasm wasm-clean

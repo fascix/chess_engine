@@ -4,6 +4,11 @@
 Le nom Pallas fait référence à l'épithète de la déesse Athéna, symbolisant la stratégie et la sagesse guerrière.
 
 ---
+# Vidéo de démonstration : 
+
+[Voir la démo](https://youtu.be/3oYraQ3-LYk)
+
+## Caractéristiques
 
 ## 📂 Structure du Projet
 
@@ -60,6 +65,11 @@ make debug           # Version avec symboles de debug et sanitizers
 ---
 
 ## 🎨 L'Interface Graphique (Pallas GUI)
+### Moteur UCI seul
+```bash
+./pallas
+```
+Le moteur accepte les commandes UCI standard (uci, isready, position, go, quit, etc.)
 
 L'interface utilisateur permet de jouer contre Pallas de manière intuitive.
 
