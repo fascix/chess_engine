@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { useEngine } from './useEngine.js'
 import { useTimer } from './useTimer.js'
-import { boardFromFen, cloneBoard, applyUciMove, isOwnPiece, STARTING_FEN } from '@/utils/board.js'
+import { boardFromFen, cloneBoard, applyUciMove, isOwnPiece, isInCheck, positionKey, insufficientMaterial, STARTING_FEN } from '@/utils/board.js'
 
 const MAX_LOG = 50
 
@@ -25,6 +25,8 @@ export function useGame() {
   const uciLog = ref([])
   const capturedPieces = ref({ white: [], black: [] })
   const gameOverDismissed = ref(false)
+  const positionHistory = ref([])
+  const halfMoveClock = ref(0)
 
   function addLog(line) {
     uciLog.value = [...uciLog.value.slice(-(MAX_LOG - 1)), line]
@@ -45,6 +47,8 @@ export function useGame() {
     engineBusy.value = false
     uciLog.value = []
     capturedPieces.value = { white: [], black: [] }
+    positionHistory.value = []
+    halfMoveClock.value = 0
     board.value = boardFromFen(STARTING_FEN)
     timer.reset()
     timer.setTime(m)
@@ -78,6 +82,20 @@ export function useGame() {
       capturedPieces.value = { ...capturedPieces.value, [k]: [...capturedPieces.value[k], captured] }
     }
     board.value = nb
+    return { isPawn: piece && piece.toUpperCase() === 'P', captured: !!captured }
+  }
+
+  function afterMove(uci, info) {
+    if (info.isPawn || info.captured) halfMoveClock.value = 0
+    else halfMoveClock.value++
+    const key = positionKey(board.value)
+    positionHistory.value.push(key)
+    const cnt = positionHistory.value.filter(k => k === key).length
+    if (cnt >= 3 || halfMoveClock.value >= 100 || insufficientMaterial(board.value)) {
+      endGame('draw')
+      return true
+    }
+    return false
   }
 
   function isHumanTurn() {
@@ -116,10 +134,15 @@ export function useGame() {
         timer.stopTurn()
         moveHistory.value = [...moveHistory.value, bestmove]
         moveCount.value++
-        doMove(bestmove)
+        const info = doMove(bestmove)
         lastMoveSq.value = [[8 - parseInt(bestmove[1], 10), bestmove.charCodeAt(0) - 97],
                             [8 - parseInt(bestmove[3], 10), bestmove.charCodeAt(2) - 97]]
         isThinking.value = false
+
+        if (afterMove(bestmove, info)) {
+          engineBusy.value = false
+          return
+        }
 
         setTimeout(() => {
           engineBusy.value = false
@@ -131,14 +154,18 @@ export function useGame() {
           } else {
             if (mode.value !== 'test') timer.startTurn(humanColor.value)
             engine.requestLegalMoves(function (movesStr) {
-              if (!movesStr || movesStr.trim() === '') endGame('engine')
+              if (!movesStr || movesStr.trim() === '') {
+                if (isInCheck(board.value, humanColor.value)) endGame('engine')
+                else endGame('draw')
+              }
             })
           }
         }, 0)
       } else {
         engineBusy.value = false
         isThinking.value = false
-        endGame('human')
+        if (isInCheck(board.value, engineColor.value)) endGame('human')
+        else endGame('draw')
       }
     }
   }
@@ -149,7 +176,7 @@ export function useGame() {
     timer.stopTurn()
     moveHistory.value = [...moveHistory.value, uci]
     moveCount.value++
-    doMove(uci)
+    const info = doMove(uci)
     lastMoveSq.value = [[8 - parseInt(uci[1], 10), uci.charCodeAt(0) - 97],
                         [8 - parseInt(uci[3], 10), uci.charCodeAt(2) - 97]]
     selectedSq.value = null
@@ -159,6 +186,8 @@ export function useGame() {
       endGame(timer.timeoutWinner() === humanColor.value ? 'human' : 'engine')
       return
     }
+
+    if (afterMove(uci, info)) return
 
     setTimeout(() => {
       if (phase.value !== 'playing') return
@@ -206,7 +235,10 @@ export function useGame() {
     const movesStr = engine.getLegalMoves()
     if (!movesStr || movesStr.trim() === '') {
       legalDestinations.value = emptyGrid()
-      if (phase.value === 'playing') endGame('engine')
+      if (phase.value === 'playing') {
+        if (isInCheck(board.value, humanColor.value)) endGame('engine')
+        else endGame('draw')
+      }
       return
     }
     const fromUci = uciFromSquares(rank, file).substring(0, 2)
@@ -267,7 +299,7 @@ export function useGame() {
   return {
     phase, board, moveHistory, humanColor, engineColor, isThinking,
     selectedSq, lastMoveSq, legalDestinations, moveCount, mode, winner,
-    timer, engine, uciLog, capturedPieces, gameOverDismissed,
+    timer, engine, uciLog, capturedPieces, gameOverDismissed, positionHistory, halfMoveClock,
     startGame, isHumanTurn, onSquareClick, backToLobby, handleEngineOutput, dismissGameOver
   }
 }
