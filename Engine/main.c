@@ -2,6 +2,7 @@
 #include "search.h"
 #include "uci.h"
 #include <stdio.h>
+#include <string.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>

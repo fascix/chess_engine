@@ -67,6 +67,15 @@ export function sqColor(rank, file) {
   return (rank + file) % 2 === 0 ? 'light' : 'dark'
 }
 
+export function emptyGrid() {
+  const g = []
+  for (let r = 0; r < 8; r++) {
+    g[r] = []
+    for (let f = 0; f < 8; f++) g[r][f] = false
+  }
+  return g
+}
+
 export function isOwnPiece(piece, humanColor) {
   if (!piece) return false
   if (humanColor === 'w') return piece === piece.toUpperCase()

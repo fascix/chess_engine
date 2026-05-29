@@ -162,7 +162,7 @@ EMCC = $(EMSDK_DIR)/upstream/emscripten/emcc
 WASM_DIR = wasm
 
 # Sources WASM (sans main.c, on utilise notre propre entry point)
-SRC_WASM = $(MODULES_COMMON) Engine/perft.c Engine/uci.c Engine/timemanager.c Engine/search.c Engine/main.c
+SRC_WASM = $(MODULES) Engine/perft.c Engine/uci.c Engine/timemanager.c Engine/search.c Engine/main.c
 
 CFLAGS_WASM = -Wall -Wextra -std=c11 -IEngine -O3 -DNDEBUG \
   -s WASM=1 \
